@@ -523,19 +523,43 @@
             }, 50);
         });
 
-        // ================= DATE PARSER ENGINE =================
+        // ================= DATE PARSER ENGINE (ROBUST & ERROR-FREE) =================
         function parseDateCustom(dateStr) {
             if(!dateStr) return null;
             let valStr = String(dateStr).trim();
-            if(valStr === '' || valStr.toLowerCase() === 'nan' || valStr.toLowerCase() === 'na' || valStr === 'undefined') return null;
+            if(valStr === '' || valStr.toLowerCase() === 'nan' || valStr.toLowerCase() === 'na' || valStr.toLowerCase() === 'undefined') return null;
 
-            if (!isNaN(valStr) && Number(valStr) > 40000) return new Date(Math.round((Number(valStr) - 25569) * 86400 * 1000));
+            // Check if string is only numbers and decimals (Excel serial dates like 46277)
+            let isNumeric = true;
+            for(let i=0; i<valStr.length; i++) {
+                let charCode = valStr.charCodeAt(i);
+                if ((charCode < 48 || charCode > 57) && charCode !== 46) {
+                    isNumeric = false; break;
+                }
+            }
+
+            if (isNumeric && Number(valStr) > 40000) {
+                return new Date(Math.round((Number(valStr) - 25569) * 86400 * 1000));
+            }
+            
+            // Standard date parsing MM-DD-YYYY or DD-MM-YYYY
             let parts = valStr.split(/[\/\-]/);
             if(parts.length >= 3) {
-                let d = parseInt(parts[0], 10); let m = parseInt(parts[1], 10) - 1; let y = parseInt(parts[2].substring(0,4), 10);
-                if(y < 100) y += 2000; return new Date(y, m, d);
+                let p1 = parseInt(parts[0], 10); 
+                let p2 = parseInt(parts[1], 10); 
+                let y = parseInt(parts[2].substring(0,4), 10);
+                if(y < 100) y += 2000; 
+                
+                let d, m;
+                if (p1 > 12) { d = p1; m = p2 - 1; }
+                else if (p2 > 12) { m = p1 - 1; d = p2; }
+                else { d = p1; m = p2 - 1; } // Default India standard DD-MM-YYYY
+                
+                return new Date(y, m, d);
             }
-            let dObj = new Date(valStr); return isNaN(dObj.getTime()) ? null : dObj;
+            
+            let dObj = new Date(valStr); 
+            return isNaN(dObj.getTime()) ? null : dObj;
         }
 
         // ================= ABNORMALITY TAB LOGIC =================
@@ -669,17 +693,20 @@
             let colMinThk = headers.find(k => k && k === 'MIN THICKNESS') || 'MIN THICKNESS';
             let colCrit = headers.find(k => k && k === 'Criticality') || 'Criticality';
             
-            // New Columns for Admin View
             let colLength = headers.find(k => k && k.toLowerCase().includes('length')) || 'Length';
             let colWidth = headers.find(k => k && k.toLowerCase().includes('width')) || 'Width';
             let colSch1 = headers.find(k => k && (k.toLowerCase().includes('1st thickness schedule') || k === 'AH')) || '1st Thickness schedule';
             let colSch2 = headers.find(k => k && (k.toLowerCase().includes('next thickness schedule') || k === 'AI')) || 'next Thickness schedule';
 
             let today = new Date();
-            let currMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-            let currMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
-            let nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-            let nextMonthEnd = new Date(today.getFullYear(), today.getMonth() + 2, 0, 23, 59, 59);
+            let currYear = today.getFullYear();
+            let currMonth = today.getMonth(); // Current live month
+
+            let currMonthStart = new Date(currYear, currMonth, 1);
+            let currMonthEnd = new Date(currYear, currMonth + 1, 0, 23, 59, 59);
+            
+            let nextMonthStart = new Date(currYear, currMonth + 1, 1);
+            let nextMonthEnd = new Date(currYear, currMonth + 2, 0, 23, 59, 59);
 
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
             document.getElementById('next-month-card-title').innerHTML = `<i class="fas fa-calendar-plus"></i> Next Month Schedule (${monthNames[nextMonthStart.getMonth()]})`;
@@ -725,10 +752,15 @@
                 row.length = row[colLength] || '-'; row.width = row[colWidth] || '-';
                 
                 if (!row.dept.toLowerCase().includes('briquetting')) {
-                    let dSch1 = parseDateCustom(row[colSch1]);
-                    let dSch2 = parseDateCustom(row[colSch2]);
+                    
+                    let d1 = parseDateCustom(row[colSch1]);
+                    let d2 = parseDateCustom(row[colSch2]);
                     let isCrit = row.crit.toLowerCase().includes('1.critical');
                     
+                    row.d1 = d1; row.d2 = d2;
+                    row.d1Disp = d1 ? `${String(d1.getDate()).padStart(2,'0')}-${String(d1.getMonth()+1).padStart(2,'0')}-${d1.getFullYear()}` : '-';
+                    row.d2Disp = d2 ? `${String(d2.getDate()).padStart(2,'0')}-${String(d2.getMonth()+1).padStart(2,'0')}-${d2.getFullYear()}` : '-';
+
                     let lastInspDate = null;
                     if (row.histDates && row.histDates.length > 0) {
                         for(let i=row.histDates.length-1; i>=0; i--) {
@@ -736,49 +768,30 @@
                             if (d) { lastInspDate = d; break; }
                         }
                     }
-                    row.lastInspDate = lastInspDate;
                     row.lastInspDisp = lastInspDate ? `${String(lastInspDate.getDate()).padStart(2,'0')}-${String(lastInspDate.getMonth()+1).padStart(2,'0')}-${lastInspDate.getFullYear()}` : '-';
 
+                    // 1. INSPECTED LOGIC
                     row.isInspectedThisMonth = lastInspDate && (lastInspDate >= currMonthStart && lastInspDate <= currMonthEnd);
                     
-                    let isDueSch1 = dSch1 && dSch1 <= currMonthEnd;
-                    let isDueSch2 = dSch2 && dSch2 <= currMonthEnd && !isCrit;
-                    
-                    let isNextSch1 = dSch1 && dSch1 >= nextMonthStart && dSch1 <= nextMonthEnd;
-                    let isNextSch2 = dSch2 && dSch2 >= nextMonthStart && dSch2 <= nextMonthEnd && !isCrit;
+                    // 2. CURRENT LOGIC (Past + Current Month)
+                    let isC1_Sch1 = d1 && d1 <= currMonthEnd;
+                    let isC1_Sch2 = d2 && d2 <= currMonthEnd && !isCrit;
+                    row.isCurrentMonthSch = isC1_Sch1 || isC1_Sch2;
 
-                    let activeSchDate = null;
-                    let scheduleCategory = null;
+                    // 3. NEXT LOGIC (Next Month)
+                    let isN_Sch1 = d1 && (d1 >= nextMonthStart && d1 <= nextMonthEnd);
+                    let isN_Sch2 = d2 && (d2 >= nextMonthStart && d2 <= nextMonthEnd) && !isCrit;
+                    row.isNextMonthSch = isN_Sch1 || isN_Sch2;
 
-                    if (isDueSch1) { activeSchDate = dSch1; scheduleCategory = 'Current'; }
-                    else if (isDueSch2) { activeSchDate = dSch2; scheduleCategory = 'Current'; }
-                    else if (isNextSch1) { activeSchDate = dSch1; scheduleCategory = 'Next'; }
-                    else if (isNextSch2) { activeSchDate = dSch2; scheduleCategory = 'Next'; }
-                    else { activeSchDate = dSch1 || dSch2; }
+                    // 4. PENDING LOGIC (Strictly Past Dates)
+                    let isP_Sch1 = d1 && d1 < currMonthStart;
+                    let isP_Sch2 = d2 && d2 < currMonthStart && !isCrit;
+                    row.isPending = isP_Sch1 || isP_Sch2;
 
-                    row.activeSchDate = activeSchDate;
-                    row.schDateDisp = activeSchDate ? `${String(activeSchDate.getDate()).padStart(2,'0')}-${String(activeSchDate.getMonth()+1).padStart(2,'0')}-${activeSchDate.getFullYear()}` : '-';
+                    row.isPendingOver3M = row.isPending && ((isP_Sch1 && (today.getTime() - d1.getTime()) > 90 * 86400000) || (isP_Sch2 && (today.getTime() - d2.getTime()) > 90 * 86400000));
 
-                    row.isCurrentMonthSch = false;
-                    row.isNextMonthSch = false;
-                    row.isPending = false;
-                    row.isPendingOver3M = false;
-
-                    if (!row.isInspectedThisMonth) {
-                        if (scheduleCategory === 'Current') {
-                            row.isCurrentMonthSch = true;
-                            if (activeSchDate !== null && activeSchDate < currMonthStart) {
-                                row.isPending = true;
-                                if ((today.getTime() - activeSchDate.getTime()) > 90 * 24 * 60 * 60 * 1000) {
-                                    row.isPendingOver3M = true;
-                                }
-                            }
-                        } else if (scheduleCategory === 'Next') {
-                            row.isNextMonthSch = true;
-                        }
-                    }
-
-                    if (row.isInspectedThisMonth || row.isCurrentMonthSch || row.isNextMonthSch || row.isPending) {
+                    // Only push if it belongs to any admin category
+                    if (row.isCurrentMonthSch || row.isNextMonthSch || row.isInspectedThisMonth || row.isPending) {
                         adminSchData.push(row);
                     }
                 }
@@ -793,7 +806,7 @@
             document.getElementById('msDrop').innerHTML = msHtml;
             applySectionFilter();
             
-            // ADMIN DATA INITS
+            // ADMIN DATA INITS (Recalculating exact arrays to match logic)
             document.getElementById('adm-k-curr').innerText = adminSchData.filter(d => d.isCurrentMonthSch).length;
             document.getElementById('adm-k-next').innerText = adminSchData.filter(d => d.isNextMonthSch).length;
             document.getElementById('adm-k-insp').innerText = adminSchData.filter(d => d.isInspectedThisMonth).length;
@@ -889,7 +902,7 @@
             if (activeAdminFilter === 'Current') { res = res.filter(d => d.isCurrentMonthSch); title = "Current Month Schedule (Remaining)"; }
             else if (activeAdminFilter === 'Next') { res = res.filter(d => d.isNextMonthSch); title = "Next Month Schedule"; }
             else if (activeAdminFilter === 'Inspected') { res = res.filter(d => d.isInspectedThisMonth); title = "Inspected This Month"; showInspectedDate = true; }
-            else if (activeAdminFilter === 'Pending') { res = res.filter(d => d.isPending); title = "Pending (Past Date)"; }
+            else if (activeAdminFilter === 'Pending') { res = res.filter(d => d.isPending); title = "Pending Backlogs (Past Date)"; }
 
             const checkboxes = document.querySelectorAll('.adm-sec-chk:checked');
             const selectedSecs = Array.from(checkboxes).map(cb => cb.value);
@@ -916,7 +929,15 @@
             const thead = document.getElementById('adm-table-head');
             
             let tableHTML = "";
+            let today = new Date();
+            let currYear = today.getFullYear();
+            let currMonth = today.getMonth(); 
+            let currMonthEnd = new Date(currYear, currMonth + 1, 0, 23, 59, 59);
+            let nextMonthStart = new Date(currYear, currMonth + 1, 1);
+            let nextMonthEnd = new Date(currYear, currMonth + 2, 0, 23, 59, 59);
+            let currMonthStart = new Date(currYear, currMonth, 1);
             
+            // Auto Switch Table Layout based on Filter
             if (activeAdminFilter === 'Current' || activeAdminFilter === 'Next') {
                 let dateColHeader = showInspectedDate ? "Inspected On" : "Schedule Date";
                 thead.innerHTML = `<tr><th>Dept</th><th>Route</th><th>Conveyor</th><th>Length</th><th>Width</th><th>Category</th><th>Top Cover</th><th>${dateColHeader}</th><th>Status / Actions</th></tr>`;
@@ -925,12 +946,19 @@
                     let badge = `<span class="badge badge-safe">${r.crit}</span>`;
                     if(r.crit.includes('1.Critical')) badge = `<span class="badge badge-crit">${r.crit}</span>`; else if(r.crit.includes('2.Semi-Critical')) badge = `<span class="badge badge-semi">${r.crit}</span>`; else if(r.crit.includes('3.Marginal')) badge = `<span class="badge badge-marg">${r.crit}</span>`;
                     
-                    let dateDisplay = showInspectedDate ? r.lastInspDisp : r.schDateDisp;
+                    let displayDate = '-';
+                    if (activeAdminFilter === 'Current') {
+                        if (r.d1 && r.d1 <= currMonthEnd) displayDate = r.d1Disp; else displayDate = r.d2Disp;
+                    } else if (activeAdminFilter === 'Next') {
+                        if (r.d1 && r.d1 >= nextMonthStart && r.d1 <= nextMonthEnd) displayDate = r.d1Disp; else displayDate = r.d2Disp;
+                    }
+
                     let actionHTML = `<span style="color:var(--text-muted); font-size:0.8rem;">Scheduled</span>`;
-                    tableHTML += `<tr><td><b>${r.dept}</b></td><td>${r.section}</td><td><b>${r.conv}</b></td><td>${r.length}</td><td>${r.width}</td><td>${badge}</td><td>${r.topCover}</td><td><b>${dateDisplay}</b></td><td>${actionHTML}</td></tr>`;
+                    tableHTML += `<tr><td><b>${r.dept}</b></td><td>${r.section}</td><td><b>${r.conv}</b></td><td>${r.length}</td><td>${r.width}</td><td>${badge}</td><td>${r.topCover}</td><td><b>${displayDate}</b></td><td>${actionHTML}</td></tr>`;
                 });
             } else {
-                thead.innerHTML = `<tr><th>Dept</th><th>Conveyor</th><th>Min Thk.</th><th>Cur. Wear</th><th>Plan Wear</th><th>Last Replacement</th><th>Next Repl. (CBM)</th><th>Age (M)</th><th>Predicted Life (M)</th><th>AI Life Diagnostics</th><th>Status</th><th>Actions</th></tr>`;
+                let dateColHeader = showInspectedDate ? "Inspected On" : "Schedule Date";
+                thead.innerHTML = `<tr><th>Dept</th><th>Conveyor</th><th>Min Thk.</th><th>Cur. Wear</th><th>Plan Wear</th><th>Last Replacement</th><th>Next Repl. (CBM)</th><th>Age (M)</th><th>Predicted Life (M)</th><th>AI Life Diagnostics</th><th>${dateColHeader}</th><th>Actions</th></tr>`;
                 
                 data.forEach(r => {
                     let badge = `<span class="badge badge-safe">${r.crit}</span>`;
@@ -942,21 +970,26 @@
                     let actionHTML = `<i class="fas fa-chart-line action-icon icon-graph" onclick="openHistory('${r.conv}')" title="View Trend Line"></i>`;
                     
                     let trStyle = "";
+                    let displayDate = '-';
+
                     if (activeAdminFilter === 'Pending') {
+                        if (r.d1 && r.d1 < currMonthStart) displayDate = r.d1Disp; else displayDate = r.d2Disp;
+
                         if (r.isPendingOver3M) {
                             trStyle = "background: rgba(225, 29, 72, 0.08); border-left: 3px solid var(--red);";
                             let mailSubject = encodeURIComponent(`URGENT: Shutdown Required for Belt Inspection - ${r.conv}`); 
-                            let mailBody = encodeURIComponent(`Team,\n\nAlert: Belt thickness measurement is pending for > 3 months.\n\nConveyor: ${r.conv}\nRoute: ${r.section}\nCategory: ${r.crit}\nScheduled On: ${r.schDateDisp}\n\nPlease provide shutdown & proper isolation so our team can measure this belt at the earliest.\n\nRegards,\nMaintenance Planning`);
+                            let mailBody = encodeURIComponent(`Team,\n\nAlert: Belt thickness measurement is pending for > 3 months.\n\nConveyor: ${r.conv}\nRoute: ${r.section}\nCategory: ${r.crit}\nScheduled On: ${displayDate}\n\nPlease provide shutdown & proper isolation so our team can measure this belt at the earliest.\n\nRegards,\nMaintenance Planning`);
                             actionHTML += `<a href="mailto:?subject=${mailSubject}&body=${mailBody}" style="text-decoration:none; margin-left:10px;"><span class="alert-btn"><i class="fas fa-paper-plane"></i> Alert</span></a>`;
                         } else {
                             actionHTML += `<span style="color:var(--orange); font-weight:700; font-size:0.8rem; margin-left:10px;">Pending</span>`;
                         }
                     } else if (activeAdminFilter === 'Inspected') {
+                        displayDate = r.lastInspDisp; 
                         actionHTML += `<span style="color:var(--green); font-weight:700; font-size:0.8rem; margin-left:10px;"><i class="fas fa-check"></i> Completed</span>`;
                     }
                     
                     let analysisCellHTML = `<td><span style="font-size:0.75rem;">${r.lifeAnalysisHTML}</span></td>`;
-                    tableHTML += `<tr style="${trStyle}"><td><b>${r.dept}</b></td><td><b>${r.conv}</b></td><td><b>${r.minThk.toFixed(2)}</b> ${wearHtml}</td><td style="color:${wearColor};"><b>${r.cWear.toFixed(3)}</b></td><td>${r.pWear.toFixed(3)}</td><td><i class="far fa-calendar-check" style="margin-right:5px; opacity:0.5;"></i>${r.lastRep}</td><td><i class="far fa-calendar-alt" style="margin-right:5px; opacity:0.5;"></i>${r.nextCBM}</td><td><b>${r.ageAsOnDate !== 0 ? r.ageAsOnDate.toFixed(1) : '-'}</b></td><td><b>${r.predLife !== 0 ? r.predLife.toFixed(1) : '-'}</b></td>${analysisCellHTML}<td>${badge}</td><td style="display:flex; align-items:center;">${actionHTML}</td></tr>`;
+                    tableHTML += `<tr style="${trStyle}"><td><b>${r.dept}</b></td><td><b>${r.conv}</b></td><td><b>${r.minThk.toFixed(2)}</b> ${wearHtml}</td><td style="color:${wearColor};"><b>${r.cWear.toFixed(3)}</b></td><td>${r.pWear.toFixed(3)}</td><td><i class="far fa-calendar-check" style="margin-right:5px; opacity:0.5;"></i>${r.lastRep}</td><td><i class="far fa-calendar-alt" style="margin-right:5px; opacity:0.5;"></i>${r.nextCBM}</td><td><b>${r.ageAsOnDate !== 0 ? r.ageAsOnDate.toFixed(1) : '-'}</b></td><td><b>${r.predLife !== 0 ? r.predLife.toFixed(1) : '-'}</b></td>${analysisCellHTML}<td><b>${displayDate}</b></td><td style="display:flex; align-items:center;">${actionHTML}</td></tr>`;
                 });
             }
             tbody.innerHTML = tableHTML;
