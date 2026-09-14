@@ -85,7 +85,6 @@
         .kpi-val { font-size: 1.6rem; font-weight: 800; margin-top: 5px; line-height: 1; color: var(--text-main); }
         .kpi-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 1.5rem; opacity: 0.15; }
         
-        /* ADMIN SPECIAL KPI */
         .admin-kpi { background: linear-gradient(135deg, rgba(13, 148, 136, 0.15), rgba(59, 130, 246, 0.15)); border: 1px solid var(--teal); }
         .admin-kpi:hover { box-shadow: 0 8px 25px rgba(13, 148, 136, 0.4); transform: translateY(-5px); }
         
@@ -330,7 +329,7 @@
                             <div class="kpi-title"><i class="fas fa-calendar-day"></i> Current Schedule (Actionable)</div><div class="kpi-val" id="adm-k-curr">0</div>
                         </div>
                         <div class="kpi-card" onclick="filterAdminThk('Next')" style="border-bottom: 3px solid var(--orange);">
-                            <div class="kpi-title"><i class="fas fa-calendar-plus"></i> Next Month Schedule</div><div class="kpi-val" id="adm-k-next">0</div>
+                            <div class="kpi-title" id="next-month-card-title"><i class="fas fa-calendar-plus"></i> Next Month Schedule</div><div class="kpi-val" id="adm-k-next">0</div>
                         </div>
                         <div class="kpi-card" onclick="filterAdminThk('Inspected')" style="border-bottom: 3px solid var(--green); background: rgba(16, 185, 129, 0.05);">
                             <div class="kpi-title" style="color:var(--green);"><i class="fas fa-check-circle"></i> Inspected This Month</div><div class="kpi-val" id="adm-k-insp" style="color:var(--green);">0</div>
@@ -527,14 +526,16 @@
         // ================= DATE PARSER ENGINE =================
         function parseDateCustom(dateStr) {
             if(!dateStr) return null;
-            if (!isNaN(dateStr) && Number(dateStr) > 40000) return new Date(Math.round((Number(dateStr) - 25569) * 86400 * 1000));
-            let str = String(dateStr).trim();
-            let parts = str.split(/[\/\-]/);
+            let valStr = String(dateStr).trim();
+            if(valStr === '' || valStr.toLowerCase() === 'nan' || valStr.toLowerCase() === 'na') return null;
+
+            if (valStr.replace('.','',1).isdigit() && Number(valStr) > 40000) return new Date(Math.round((Number(valStr) - 25569) * 86400 * 1000));
+            let parts = valStr.split(/[\/\-]/);
             if(parts.length >= 3) {
                 let d = parseInt(parts[0], 10); let m = parseInt(parts[1], 10) - 1; let y = parseInt(parts[2].substring(0,4), 10);
                 if(y < 100) y += 2000; return new Date(y, m, d);
             }
-            let dObj = new Date(str); return isNaN(dObj.getTime()) ? null : dObj;
+            let dObj = new Date(valStr); return isNaN(dObj.getTime()) ? null : dObj;
         }
 
         // ================= ABNORMALITY TAB LOGIC =================
@@ -668,19 +669,19 @@
             let colMinThk = headers.find(k => k === 'MIN THICKNESS') || 'MIN THICKNESS';
             let colCrit = headers.find(k => k === 'Criticality') || 'Criticality';
             
-            // New Columns for Admin View
             let colLength = headers.find(k => k.toLowerCase().includes('length')) || 'Length';
             let colWidth = headers.find(k => k.toLowerCase().includes('width')) || 'Width';
             let colSch1 = headers.find(k => k.toLowerCase().includes('1st thickness schedule') || k === 'AH') || '1st Thickness schedule';
             let colSch2 = headers.find(k => k.toLowerCase().includes('next thickness schedule') || k === 'AI') || 'next Thickness schedule';
 
             let today = new Date();
-            
-            // EXACT MONTH BOUNDARIES
             let currMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
             let currMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
             let nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1);
             let nextMonthEnd = new Date(today.getFullYear(), today.getMonth() + 2, 0, 23, 59, 59);
+
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('next-month-card-title').innerHTML = `<i class="fas fa-calendar-plus"></i> Next Month Schedule (${monthNames[nextMonthStart.getMonth()]})`;
 
             adminSchData = [];
 
@@ -690,7 +691,9 @@
                 row.minThk = parseFloat(row[colMinThk]) || 0;
                 row.crit = row[colCrit] ? row[colCrit].trim() : 'Unknown';
                 row.cWear = parseFloat(row[colCWear]) || 0; row.pWear = parseFloat(row[colPWear]) || 0;
-                row.cbmLife = parseFloat(row[colCBMLife]) || 999;
+                
+                let cbmStr = String(row[colCBMLife]).trim();
+                row.cbmLife = (cbmStr !== '' && cbmStr.toLowerCase() !== 'nan' && cbmStr !== '-' && !cbmStr.includes('#')) ? parseFloat(cbmStr) : 999;
           
                 let lRepDate = parseDateCustom(row[colLastRep]);
                 row.lastRep = lRepDate ? `${String(lRepDate.getDate()).padStart(2,'0')}-${String(lRepDate.getMonth()+1).padStart(2,'0')}-${lRepDate.getFullYear()}` : (row[colLastRep] || '-');
@@ -735,14 +738,11 @@
                     row.lastInspDate = lastInspDate;
                     row.lastInspDisp = lastInspDate ? `${String(lastInspDate.getDate()).padStart(2,'0')}-${String(lastInspDate.getMonth()+1).padStart(2,'0')}-${lastInspDate.getFullYear()}` : '-';
 
-                    // INSpected this month?
                     row.isInspectedThisMonth = lastInspDate && (lastInspDate >= currMonthStart && lastInspDate <= currMonthEnd);
                     
-                    // Logic to include CURRENT and PAST months in "Current Schedule"
                     let isDueSch1 = dSch1 && dSch1 <= currMonthEnd;
                     let isDueSch2 = dSch2 && dSch2 <= currMonthEnd && !isCrit;
                     
-                    // Strictly NEXT month
                     let isNextSch1 = dSch1 && dSch1 >= nextMonthStart && dSch1 <= nextMonthEnd;
                     let isNextSch2 = dSch2 && dSch2 >= nextMonthStart && dSch2 <= nextMonthEnd && !isCrit;
 
@@ -763,14 +763,12 @@
                     row.isPending = false;
                     row.isPendingOver3M = false;
 
-                    if (row.isInspectedThisMonth) {
-                        // Already inspected this month, skip checking due.
-                    } else {
+                    if (!row.isInspectedThisMonth) {
                         if (scheduleCategory === 'Current') {
                             row.isCurrentMonthSch = true;
                             if (activeSchDate < currMonthStart) {
-                                row.isPending = true; // Still counting as current, but flag as pending
-                                if ((today - activeSchDate) > 90 * 24 * 60 * 60 * 1000) {
+                                row.isPending = true;
+                                if ((today.getTime() - activeSchDate.getTime()) > 90 * 24 * 60 * 60 * 1000) {
                                     row.isPendingOver3M = true;
                                 }
                             }
