@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+<!DOCTYPE html><html lang="en"><head>
     <!-- 
     ========================================================================
     RESTRICTED SYSTEM
@@ -179,4 +177,961 @@
     <!-- MAIN WRAPPER -->
     <div id="mainDashboard">
         <div class="sidebar" id="appSidebar">
-            <button class="close-sidebar-btn" onclick="toggleSid
+            <button class="close-sidebar-btn" onclick="toggleSidebar(event)"><i class="fas fa-times"></i></button>
+            <div class="sidebar-header">
+                <div class="conv-logo" title="System Active">
+                    <div class="conv-belt"></div><div class="conv-pulley left"></div><div class="conv-idler i1"></div><div class="conv-idler i2"></div><div class="conv-idler i3"></div><div class="conv-pulley right"></div>
+                </div>
+                <div class="sidebar-title">RTG Dashboard</div>
+            </div>
+            <div style="text-align: center; margin-bottom: 25px;">
+                <span id="roleBadge" class="badge" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;"></span>
+            </div>
+            <div class="sidebar-menu">
+                <label for="csvFileInput" class="sidebar-btn" id="uploadLabel"><i class="fas fa-cloud-upload-alt text-teal"></i> Upload CSV</label>
+                <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                
+                <button class="sidebar-btn" onclick="toggleTheme()"><i class="fas fa-adjust" id="themeIcon"></i> Toggle Theme</button>
+                <button id="resetBtn" class="sidebar-btn sidebar-btn-red" style="display: none;" onclick="resetDashboard()"><i class="fas fa-sync-alt"></i> Reset System</button>
+                <button id="pdfBtn" class="sidebar-btn" style="display: none; color: var(--green);" onclick="exportToPDF()"><i class="fas fa-file-pdf"></i> Export Report</button>
+            </div>
+            <div style="margin-top: auto;">
+                <button class="sidebar-btn sidebar-btn-red" style="justify-content: center; background: rgba(225, 29, 72, 0.1);" onclick="logout()"><i class="fas fa-power-off"></i> Disconnect</button>
+            </div>
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <div class="header">
+                <div class="header-title">
+                    <button class="menu-toggle" onclick="toggleSidebar(event)" title="Open Menu"><i class="fas fa-bars"></i></button>
+                    <div class="conv-logo" title="System Active"><div class="conv-belt"></div><div class="conv-pulley left"></div><div class="conv-idler i1"></div><div class="conv-idler i2"></div><div class="conv-idler i3"></div><div class="conv-pulley right"></div></div>
+                    RTG Dashboard
+                </div>
+            </div>
+            
+            <div class="sticky-tabs" id="tabs-menu" style="display: none;">
+                <button class="tab-btn active" id="btn-abn" onclick="switchTab('abnTab', 'btn-abn')"><i class="fas fa-triangle-exclamation"></i> Abnormality</button>
+                <button class="tab-btn" id="btn-thk" onclick="switchTab('thkTab', 'btn-thk')"><i class="fas fa-ruler-combined"></i> Thickness & Life</button>
+            </div>
+            
+            <div id="initial-message" class="liquid-glass">
+                <i class="fas fa-spinner fa-spin" id="loading-spinner" style="display:none; font-size: 3rem; color: var(--teal); margin-bottom: 15px;"></i>
+                <i class="fas fa-file-csv" id="upload-icon" style="font-size: 4rem; color: var(--glass-border); margin-bottom: 15px;"></i><br>
+                <span id="initial-text">Open Menu <i class="fas fa-bars"></i> to Upload <b>Abnormality</b> OR <b>Thickness</b> CSV file.</span>
+            </div>
+            
+            <!-- ABNORMALITY TAB -->
+            <div id="abnTab" class="tab-content">
+                <div class="sticky-kpi">
+                    <div class="kpi-grid">
+                        <div class="kpi-card" id="abn-kpi-total" onclick="filterAbnTable('Total')" style="border-bottom: 3px solid var(--blue);"><div class="kpi-title">Total Abnormalities</div><div class="kpi-val" id="a-k-total">0</div><i class="fas fa-hand-pointer kpi-icon"></i></div>
+                        <div class="kpi-card" id="abn-kpi-closed" onclick="filterAbnTable('Closed')" style="border-bottom: 3px solid var(--green);"><div class="kpi-title">Total Closed</div><div class="kpi-val" id="a-k-closed">0</div><i class="fas fa-hand-pointer kpi-icon"></i></div>
+                        <div class="kpi-card" id="abn-kpi-open" onclick="filterAbnTable('Open')" style="border-bottom: 3px solid var(--red); background: rgba(225, 29, 72, 0.05);"><div class="kpi-title" style="color: var(--red);">Total Open</div><div class="kpi-val" id="a-k-open" style="color:var(--red);">0</div><i class="fas fa-hand-pointer kpi-icon" style="color:var(--red);"></i></div>
+                        <div class="kpi-card" id="abn-kpi-crit" onclick="filterAbnTable('Critical')" style="border-bottom: 3px solid var(--orange); background: rgba(217, 119, 6, 0.05);"><div class="kpi-title" style="color: var(--orange);">Critical Open</div><div class="kpi-val" id="a-k-crit" style="color:var(--orange);">0</div><i class="fas fa-hand-pointer kpi-icon" style="color:var(--orange);"></i></div>
+                        <div class="kpi-card" id="kpi-card-abn-6m" onclick="filterAbnTable('Over6M')" style="border-bottom: 3px solid var(--pink); background: rgba(236, 72, 153, 0.05); display: none;"><div class="kpi-title" style="color: var(--pink);"><i class="fas fa-clock"></i> >6M Backlog</div><div class="kpi-val" id="a-k-6m" style="color:var(--pink);">0</div></div>
+                    </div>
+                </div>
+
+                <div id="abn-chart-section" class="interactive-section">
+                    <div class="charts-grid-2">
+                        <div class="chart-box"><div class="chart-title">Open Volume by Department</div><div class="chart-container"><canvas id="abnDeptChart"></canvas></div></div>
+                        <div class="chart-box"><div class="chart-title">Plan as per New Philosophy</div><div class="chart-container"><canvas id="abnActionChart"></canvas></div></div>
+                    </div>
+                    <div class="charts-grid-3" id="abn-admin-charts">
+                        <div class="chart-box"><div class="chart-title">Aging Analysis (Open Issues)</div><div class="chart-container"><canvas id="abnAgingChart"></canvas></div></div>
+                        <div class="chart-box"><div class="chart-title">Issue Pareto</div><div class="chart-container"><canvas id="abnCategoryChart"></canvas></div></div>
+                        <div class="chart-box"><div class="chart-title">Top 5 Defaulters (All Time)</div><div class="chart-container"><canvas id="abnDefaulterChart"></canvas></div></div>
+                    </div>
+                </div>
+
+                <div id="abn-table-section" class="interactive-section table-section-wrapper">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                        <h3 id="abn-table-title" style="margin: 0;">All Open Abnormalities <span class="count-badge" id="abn-table-count">0</span></h3>
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 8px;">
+                            <input type="text" id="abnSearch" class="search-input" placeholder="🔍 Search Conveyor..." onkeyup="applyAbnFilterUiEvent()">
+                            <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);"><i class="fas fa-filter text-teal"></i> Dept Filter:</label>
+                            <div class="ms-container">
+                                <div class="ms-btn" onclick="toggleAbnMultiSelect()" style="padding: 6px 12px;"><span id="abnMsBtnText">All Departments</span><i class="fas fa-chevron-down" style="font-size:0.8rem; margin-left: 10px;"></i></div>
+                                <div class="ms-dropdown" id="abnMsDrop"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Dept</th><th>Conveyor</th><th>Date</th><th class="abn-admin-col">Age (Days)</th><th class="abn-admin-col">Category</th><th>Technical Issue</th><th>Plan</th><th>Status</th><th class="abn-admin-col">Actions</th></tr></thead>
+                            <tbody id="abn-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>  
+
+            <!-- THICKNESS TAB -->
+            <div id="thkTab" class="tab-content">
+                <div class="sticky-kpi">
+                    <div class="kpi-grid">
+                        <div class="kpi-card" onclick="filterThkTable('All')" style="border-bottom: 3px solid var(--blue);"><div class="kpi-title"><i class="fas fa-hand-pointer"></i> Total Belts</div><div class="kpi-val" id="t-k-total">0</div></div>
+                        <div class="kpi-card" onclick="filterThkTable('1.Critical')" style="border-bottom: 3px solid var(--red); background: rgba(225, 29, 72, 0.05);"><div class="kpi-title" style="color: var(--red);"><i class="fas fa-hand-pointer"></i> Critical</div><div class="kpi-val" id="t-k-crit" style="color:var(--red);">0</div></div>
+                        <div class="kpi-card" onclick="filterThkTable('HighWear')" style="border-bottom: 3px solid var(--orange); background: rgba(217, 119, 6, 0.05);"><div class="kpi-title" style="color: var(--orange);"><i class="fas fa-hand-pointer"></i> High Wear</div><div class="kpi-val" id="t-k-wear" style="color:var(--orange);">0</div></div>
+                        <div class="kpi-card" onclick="filterThkTable('LowLife')" style="border-bottom: 3px solid var(--purple); background: rgba(139, 92, 246, 0.05);"><div class="kpi-title" style="color: var(--purple);"><i class="fas fa-hand-pointer"></i> Low Life (<6M)</div><div class="kpi-val" id="t-k-life" style="color:var(--purple);">0</div></div>
+                        <div class="kpi-card" onclick="filterThkTable('SkirtWear')" style="border-bottom: 3px solid var(--teal); background: rgba(13, 148, 136, 0.05);"><div class="kpi-title" style="color: var(--teal);"><i class="fas fa-hand-pointer"></i> Skirt / Center</div><div class="kpi-val" id="t-k-ratio" style="font-size: 1.5rem; color:var(--teal);">0 / 0</div></div>
+                        <div class="kpi-card" id="kpi-card-next6m" onclick="filterThkTable('Next6M')" style="border-bottom: 3px solid var(--pink); background: rgba(236, 72, 153, 0.05); display: none;"><div class="kpi-title" style="color: var(--pink);"><i class="fas fa-calendar-alt"></i> Next 6M Repl.</div><div class="kpi-val" id="t-k-next6m" style="color:var(--pink);">0</div></div>
+                        <div class="kpi-card" id="kpi-card-thk-backlog" onclick="filterThkTable('Backlog')" style="border-bottom: 3px solid var(--red); background: rgba(225, 29, 72, 0.05); display: none;"><div class="kpi-title" style="color: var(--red);"><i class="fas fa-exclamation-circle"></i> Overdue Backlog</div><div class="kpi-val" id="t-k-backlog" style="color:var(--red);">0</div></div>
+                        
+                        <!-- ADMIN KPI CARD FOR SCHEDULE PAGE -->
+                        <div class="kpi-card admin-kpi" id="admin-schedule-kpi" onclick="openAdminThkPage()" style="display: none;"><div class="kpi-title" style="color: var(--teal);"><i class="fas fa-clipboard-list"></i> Admin Master</div><div class="kpi-val" style="font-size: 1.1rem; color: var(--text-main); margin-top: 10px;">Thickness Schedules <i class="fas fa-arrow-right" style="font-size: 0.9rem;"></i></div></div>
+                    </div>
+                </div>
+
+                <div id="thk-chart-section" class="interactive-section" style="display: block;">
+                    <div class="charts-grid-2">
+                        <div class="chart-box"><div class="chart-title">Health Overview</div><div class="chart-container"><canvas id="thkDeptChart"></canvas></div></div>
+                        <div class="chart-box"><div class="chart-title">Wear Pattern</div><div class="chart-container"><canvas id="thkWearChart"></canvas></div></div>
+                    </div>
+                </div>
+
+                <div id="thk-table-section" class="interactive-section table-section-wrapper" style="display: block;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                        <h3 id="thk-table-title" style="margin: 0;">All Conveyor Belts <span class="count-badge">0</span></h3>
+                        <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 8px;">
+                            <input type="text" id="thkSearch" class="search-input" placeholder="🔍 Search Conveyor..." onkeyup="applyTableDeptFilter()">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);"><i class="fas fa-network-wired text-teal"></i> Routes:</label>
+                                <div class="ms-container" style="max-width: 180px;">
+                                    <div class="ms-btn" onclick="toggleMultiSelect()" style="padding: 6px 12px;"><span id="msBtnText">All Sections</span><i class="fas fa-chevron-down" style="font-size:0.8rem; margin-left: 5px;"></i></div>
+                                    <div class="ms-dropdown" id="msDrop"></div>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Dept:</label>
+                                <select id="tableDeptFilter" class="native-select" onchange="applyTableDeptFilter()" style="padding: 6px 12px; width: 140px;"><option value="All">All Depts</option></select>
+                            </div>
+                       </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Dept</th><th>Conveyor</th><th>Min Thk.</th><th>Cur. Wear</th><th>Plan Wear</th><th>Last Replacement</th><th>Next Repl. (CBM)</th><th>Age As on Date (M)</th><th>Predicted Life (M)</th><th id="th-life-analysis" style="display:none;">AI Life Diagnostics</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody id="thk-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ================= ADMIN THICKNESS SCHEDULE SUB-PAGE ================= -->
+            <div id="adminThkPage" style="display: none;">
+                <div class="header" style="padding-top:0;">
+                    <div class="header-title" style="gap:15px;">
+                        <button class="btn btn-slate" onclick="closeAdminThkPage()"><i class="fas fa-arrow-left"></i> Back</button>
+                        <span><i class="fas fa-clipboard-check text-teal"></i> Admin: Thickness Measurement Schedules</span>
+                    </div>
+                    <button class="btn btn-green" onclick="exportAdminSchedulePDF()"><i class="fas fa-file-pdf"></i> Export to PDF</button>
+                </div>
+                
+                <div class="sticky-kpi" style="top: 0; padding-top:10px;">
+                    <div class="kpi-grid">
+                        <div class="kpi-card" onclick="filterAdminThk('Current')" style="border-bottom: 3px solid var(--blue);">
+                            <div class="kpi-title"><i class="fas fa-calendar-day"></i> Current Schedule (Actionable)</div><div class="kpi-val" id="adm-k-curr">0</div>
+                        </div>
+                        <div class="kpi-card" onclick="filterAdminThk('Next')" style="border-bottom: 3px solid var(--orange);">
+                            <div class="kpi-title" id="next-month-card-title"><i class="fas fa-calendar-plus"></i> Next Month Schedule</div><div class="kpi-val" id="adm-k-next">0</div>
+                        </div>
+                        <div class="kpi-card" onclick="filterAdminThk('Inspected')" style="border-bottom: 3px solid var(--green); background: rgba(16, 185, 129, 0.05);">
+                            <div class="kpi-title" style="color:var(--green);"><i class="fas fa-check-circle"></i> Inspected This Month</div><div class="kpi-val" id="adm-k-insp" style="color:var(--green);">0</div>
+                        </div>
+                        <div class="kpi-card" onclick="filterAdminThk('Pending')" style="border-bottom: 3px solid var(--red); background: rgba(225, 29, 72, 0.05);">
+                            <div class="kpi-title" style="color:var(--red);"><i class="fas fa-exclamation-triangle"></i> Pending Backlogs (Past Date)</div><div class="kpi-val" id="adm-k-pend" style="color:var(--red);">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="interactive-section table-section-wrapper" style="display: block; margin-top:10px;" id="adminExportSection">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                        <h3 id="adm-table-title" style="margin: 0;">Current Month Schedule <span class="count-badge">0</span></h3>
+                        <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 8px;">
+                            <input type="text" id="admSearch" class="search-input" placeholder="🔍 Search Conveyor..." onkeyup="applyAdminFilters()">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Route:</label>
+                                <div class="ms-container" style="max-width: 180px;">
+                                    <div class="ms-btn" onclick="document.getElementById('admMsDrop').classList.toggle('show')" style="padding: 6px 12px;"><span id="admMsBtnText">All Routes</span><i class="fas fa-chevron-down" style="font-size:0.8rem; margin-left: 5px;"></i></div>
+                                    <div class="ms-dropdown" id="admMsDrop"></div>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Dept:</label>
+                                <select id="admDeptFilter" class="native-select" onchange="applyAdminFilters()" style="padding: 6px 12px; width: 140px;"><option value="All">All Depts</option></select>
+                            </div>
+                       </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead id="adm-table-head">
+                                <!-- Dynamic Headers handled in JS -->
+                            </thead>
+                            <tbody id="adm-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Historical Degradation Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Thickness Degradation Trend</h3>
+                <button class="close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="chart-container" style="height: 350px;"><canvas id="historyChart"></canvas></div>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top:10px; text-align:center;">*Graph auto-resets upon new belt installation. Baseline: Top Cover Thickness.</p>
+        </div>
+    </div>
+
+    <!-- CHATBOT -->
+    <div class="chat-widget">
+        <button class="chat-toggle" onclick="toggleChat()"><i class="fas fa-robot"></i></button>
+        <div class="chat-window" id="chatWindow">
+            <div class="chat-header"><div class="bot-icon"><i class="fas fa-bolt"></i></div> RTG-Bot Assistant</div>
+            <div class="chat-body" id="chatBody"><div class="msg msg-bot">Systems Online. How can I assist you with the data today? Try asking "How many are critical?" or "Show backlog".</div></div>
+            <div class="typing-indicator" id="typingIndicator">RTG-Bot is analyzing...</div>
+            <div class="chat-footer">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Type your query..." onkeypress="if(event.key === 'Enter') handleChat()">
+                <button class="chat-send" onclick="handleChat()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let parsedData = []; let filteredData = []; let fileType = ''; let currentKpiFilter = 'All'; 
+        let isDarkMode = true; let currentRole = 'user';
+        let chartA1 = null, chartA2 = null, chartA3 = null, chartA4 = null, chartA5 = null;
+        let chartT1 = null, chartT2 = null, historyChartInst = null;
+        window.abnAllRecords = []; window.openRecords = []; let activeAbnRecords = [];
+        
+        // ADMIN SCHEDULE DATA
+        let adminSchData = []; let activeAdminFilter = 'Current'; let filteredAdminData = [];
+
+        function getCssVar(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
+        function scrollToTable(sectionId) { const el = document.getElementById(sectionId); if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        function toggleSidebar(e) { if(e) e.stopPropagation(); document.getElementById('appSidebar').classList.toggle('active'); }
+        
+        function switchTab(tabId, btnId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            if(btnId) document.getElementById(btnId).classList.add('active');
+            closeAdminThkPage(); 
+            window.scrollTo(0,0); 
+        }
+
+        function handleLogin(role) {
+            if(role === 'admin') {
+                let pwd = prompt("Enter Admin Password:");
+                if(pwd && btoa(pwd) === 'UlRHQDEyMw==') { currentRole = 'admin'; finalizeLogin('Admin', 'var(--teal)'); } 
+                else { alert("Authorization Rejected."); }
+            } else {
+                currentRole = 'user'; finalizeLogin('User Mode', 'var(--blue)'); applyUserRestrictions();
+            }
+        }
+        function finalizeLogin(roleText, badgeColor) {
+            document.getElementById('loginScreen').style.display = 'none';
+            let badge = document.getElementById('roleBadge');
+            badge.innerText = roleText; badge.style.background = badgeColor; badge.style.color = '#fff';
+            
+            const abnAdminCols = document.querySelectorAll('.abn-admin-col');
+            abnAdminCols.forEach(col => col.style.display = currentRole === 'admin' ? 'table-cell' : 'none');
+            document.getElementById('kpi-card-next6m').style.display = currentRole === 'admin' ? 'block' : 'none';
+            document.getElementById('kpi-card-abn-6m').style.display = currentRole === 'admin' ? 'block' : 'none';
+            document.getElementById('kpi-card-thk-backlog').style.display = currentRole === 'admin' ? 'block' : 'none';
+            document.getElementById('abn-admin-charts').style.display = currentRole === 'admin' ? 'grid' : 'none';
+            document.getElementById('admin-schedule-kpi').style.display = currentRole === 'admin' ? 'block' : 'none';
+            
+            if (fileType === 'thk') {
+                document.getElementById('th-life-analysis').style.display = currentRole === 'admin' ? 'table-cell' : 'none';
+                applyTableDeptFilter(); 
+            } else if (fileType === 'abn') {
+                if(currentRole === 'user') { filterAbnTable('Critical'); } else { filterAbnTable('Open'); }
+            }
+        }
+        function logout() { location.reload(); }
+
+        // ================= MANUAL CSV UPLOAD LOGIC =================
+        document.getElementById('csvFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            document.getElementById('uploadLabel').style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'flex';
+            document.getElementById('pdfBtn').style.display = 'flex';
+            document.getElementById('upload-icon').style.display = 'none';
+            document.getElementById('loading-spinner').style.display = 'inline-block';
+            document.getElementById('initial-text').innerText = 'Processing Data...';
+            document.getElementById('appSidebar').classList.remove('active');
+            
+            setTimeout(() => {
+                let headerCounts = {};
+                
+                Papa.parse(file, {
+                    header: true, 
+                    skipEmptyLines: true,
+                    transformHeader: function(h) {
+                        h = h.trim();
+                        if (h === 'NO_x002e_') { h = 'NO.'; }
+                        if (headerCounts[h]) { headerCounts[h]++; return h + '_' + headerCounts[h]; } 
+                        else { headerCounts[h] = 1; return h; }
+                    },
+                    complete: function(results) {
+                        headerCounts = {};
+                        const rawHeaders = results.meta.fields;
+                        const cleanHeaders = rawHeaders.slice(2); 
+                        
+                        let gradeCol = cleanHeaders.find(h => h.trim().toLowerCase() === 'belt covergrade') || 'Belt CoverGrade';
+                        let secCol = cleanHeaders.find(h => h.trim().toLowerCase() === 'section') || 'Section';
+                        
+                        let cleanedData = [];
+                        for (let i = 0; i < results.data.length; i++) {
+                            let oldRow = results.data[i];
+                            let newRow = {};
+                            
+                            // 1. STRICT BASE EXCLUSION
+                            let gradeVal = String(oldRow[gradeCol] || '').toLowerCase();
+                            let secVal = String(oldRow[secCol] || '').toLowerCase();
+                            
+                            if (gradeVal.includes('bucket') || gradeVal.includes('not existing') || secVal.includes('briq')) {
+                                continue; 
+                            }
+                            
+                            for (let j = 0; j < cleanHeaders.length; j++) {
+                                let head = cleanHeaders[j];
+                                newRow[head] = oldRow[head];
+                            }
+                            cleanedData.push(newRow);
+                        }
+                        
+                        let isAbn = cleanHeaders.some(h => h.includes('Major Abnormality') || h.includes('Belt philosophy'));
+                        let isThk = cleanHeaders.some(h => h.includes('Current Wear Rate') || h.includes('Thickness EDGE 1') || h.trim() === 'Conveyor');
+                        
+                        if (isAbn) { 
+                            fileType = 'abn';
+                            processAbnormality(cleanedData); 
+                        } else if (isThk) { 
+                            fileType = 'thk';
+                            processThickness(cleanedData, cleanHeaders); 
+                        } else { 
+                            alert("Unrecognized format.");
+                            resetDashboard(); 
+                        }
+                    }
+                });
+            }, 50);
+        });
+
+        // ================= DATE PARSER ENGINE =================
+        function parseDateCustom(dateStr) {
+            if(!dateStr) return null;
+            let valStr = String(dateStr).trim();
+            if(valStr === '' || valStr.toLowerCase() === 'nan' || valStr.toLowerCase() === 'na' || valStr.toLowerCase() === 'undefined') return null;
+            
+            let isNumeric = true;
+            for(let i=0; i<valStr.length; i++) {
+                let charCode = valStr.charCodeAt(i);
+                if ((charCode < 48 || charCode > 57) && charCode !== 46) {
+                    isNumeric = false; break;
+                }
+            }
+            if (isNumeric && Number(valStr) > 40000) {
+                return new Date(Math.round((Number(valStr) - 25569) * 86400 * 1000));
+            }
+            
+            let parts = valStr.split(/[\/\-]/);
+            if(parts.length >= 3) {
+                let p1 = parseInt(parts[0], 10); 
+                let p2 = parseInt(parts[1], 10); 
+                let y = parseInt(parts[2].substring(0,4), 10);
+                if(y < 100) y += 2000;
+                
+                let d, m;
+                if (p1 > 12) { d = p1; m = p2 - 1; }
+                else if (p2 > 12) { d = p2; m = p1 - 1; } 
+                else { d = p1; m = p2 - 1; }
+                
+                return new Date(y, m, d);
+            }
+            
+            let dObj = new Date(valStr); 
+            return isNaN(dObj.getTime()) ? null : dObj;
+        }
+
+        // ================= ABNORMALITY TAB LOGIC =================
+        function processAbnormality(data) {
+            document.getElementById('initial-message').style.display = 'none';
+            document.getElementById('tabs-menu').style.display = 'flex';
+            document.getElementById('btn-thk').style.display = 'none';
+            document.getElementById('btn-abn').style.display = 'block';
+            switchTab('abnTab', 'btn-abn');
+            
+            let today = new Date();
+            window.abnAllRecords = data.filter(row => row['NO.'] && row['NO.'].trim() !== '').map(row => {
+                let rawPlan = row['Plan as per New Belt philosophy'] ? row['Plan as per New Belt philosophy'].replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').trim() : '';
+                let lowerPlan = rawPlan.toLowerCase();
+                if(lowerPlan.includes('replace')) row.plan = 'Replace'; else if(lowerPlan.includes('rejoint')) row.plan = 'Rejoint'; else if(lowerPlan.includes('piece')) row.plan = 'Piece Addition'; else if(lowerPlan.includes('operate under observation')) row.plan = 'Operate under Observation'; else if(lowerPlan === 'operate' || lowerPlan.includes('operate')) row.plan = 'Operate'; else row.plan = rawPlan;
+                
+                row.status = row['Status'] ? row['Status'].trim() : ''; row.Dept = row['DEPT'] || row['Dept'] || 'Unknown';
+                let issueLower = (row['Major Abnormality'] || '').toLowerCase();
+                if(issueLower.includes('idler') || issueLower.includes('roller') || issueLower.includes('bracket')) row.category = 'Idler / Roller'; else if(issueLower.includes('skirt') || issueLower.includes('seal') || issueLower.includes('board')) row.category = 'Skirt / Sealing'; else if(issueLower.includes('cut') || issueLower.includes('tear') || issueLower.includes('puncture') || issueLower.includes('damage') || issueLower.includes('peel')) row.category = 'Belt Damage'; else if(issueLower.includes('track') || issueLower.includes('align') || issueLower.includes('sway')) row.category = 'Tracking / Alignment'; else if(issueLower.includes('pulley') || issueLower.includes('drum') || issueLower.includes('lagging')) row.category = 'Pulley / Lagging'; else if(issueLower.includes('joint') || issueLower.includes('splice')) row.category = 'Joint Issue'; else row.category = 'Ply visible / Thickness reduced';
+                
+                let pDate = parseDateCustom(row['Abnormality Date']); row.ageDays = 0;
+                if(pDate && row.status.toLowerCase() === 'open') { row.ageDays = Math.floor((today - pDate) / (1000 * 60 * 60 * 24)); if(row.ageDays < 0) row.ageDays = 0; }
+                if (pDate) { row['Abnormality Date'] = `${String(pDate.getDate()).padStart(2, '0')}-${String(pDate.getMonth() + 1).padStart(2, '0')}-${pDate.getFullYear()}`; }
+                return row;
+            });
+            window.openRecords = window.abnAllRecords.filter(d => d.status.toLowerCase() === 'open');
+            const criticalActions = ['Replace', 'Rejoint', 'Piece Addition', 'Operate under Observation'];
+            document.getElementById('a-k-total').innerText = window.abnAllRecords.length; document.getElementById('a-k-closed').innerText = window.abnAllRecords.filter(d => d.status.toLowerCase() === 'closed').length; document.getElementById('a-k-open').innerText = window.openRecords.length; document.getElementById('a-k-crit').innerText = window.openRecords.filter(d => criticalActions.includes(d.plan)).length; document.getElementById('a-k-6m').innerText = window.openRecords.filter(d => d.ageDays > 180).length;
+            populateAbnDeptDropdown(); showAbnCharts();
+        }
+        
+        function populateAbnDeptDropdown() {
+            const depts = new Set(window.abnAllRecords.map(d => d.Dept || 'Unknown'));
+            let msHtml = `<label class="ms-opt"><input type="checkbox" id="chkAllAbn" onchange="toggleAllAbnDept(this)" checked> <b>Select All Depts</b></label><hr style="border-color:var(--glass-border); margin:5px 0;">`;
+            Array.from(depts).sort().forEach(dept => { msHtml += `<label class="ms-opt"><input type="checkbox" class="abn-dept-chk" value="${dept}" onchange="applyAbnFilterUiEvent()" checked> ${dept}</label>`; });
+            document.getElementById('abnMsDrop').innerHTML = msHtml;
+        }
+        function toggleAllAbnDept(source) { document.querySelectorAll('.abn-dept-chk').forEach(cb => cb.checked = source.checked); applyAbnFilterUiEvent(); }
+        function applyAbnFilterUiEvent() {
+            const checkboxes = document.querySelectorAll('.abn-dept-chk:checked'); const total = document.querySelectorAll('.abn-dept-chk').length; const selected = Array.from(checkboxes).map(cb => cb.value); const btnText = document.getElementById('abnMsBtnText');
+            if(selected.length === 0) { btnText.innerText = "0 Selected"; document.getElementById('chkAllAbn').checked = false; } else if(selected.length === total) { btnText.innerText = "All Departments"; document.getElementById('chkAllAbn').checked = true; } else { btnText.innerText = `${selected.length} Selected`; document.getElementById('chkAllAbn').checked = false; }
+            renderAbnTableHTML(activeAbnRecords, null);
+        }
+        
+        function showAbnCharts() {
+            document.getElementById('abn-chart-section').style.display = 'block'; const deptsMap = {}; window.openRecords.forEach(d => { const dept = d.Dept || 'Unknown'; deptsMap[dept] = (deptsMap[dept] || 0) + 1; }); const depts = Object.keys(deptsMap).sort();
+            if(chartA1) chartA1.destroy();
+            chartA1 = new Chart(document.getElementById('abnDeptChart').getContext('2d'), { type: 'bar', data: { labels: depts, datasets: [{ data: depts.map(dept => deptsMap[dept]), backgroundColor: getCssVar('--blue'), borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, onClick: (e, elements) => { if (currentRole === 'user' || elements.length === 0) return; let selectedDept = depts[elements[0].index]; renderAbnTableHTML(window.openRecords.filter(d => d.Dept === selectedDept), `Dept: ${selectedDept} (Open)`); scrollToTable('abn-table-section'); } } });
+            
+            if(chartA2) chartA2.destroy();
+            const actions = ['Replace', 'Rejoint', 'Piece Addition', 'Operate under Observation']; const colors = [getCssVar('--red'), getCssVar('--orange'), getCssVar('--blue'), getCssVar('--teal')];
+            chartA2 = new Chart(document.getElementById('abnActionChart').getContext('2d'), { type: 'bar', data: { labels: depts, datasets: actions.map((act, idx) => ({ label: act, backgroundColor: colors[idx], borderRadius: 4, data: depts.map(dep => window.openRecords.filter(d => d.Dept === dep && d.plan === act).length) })) }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } } });
+            
+            let ageBuckets = {'< 30 Days': 0, '31 - 90 Days': 0, '91 - 180 Days': 0, '> 180 Days': 0};
+            window.openRecords.forEach(d => { if(d.ageDays <= 30) ageBuckets['< 30 Days']++; else if(d.ageDays <= 90) ageBuckets['31 - 90 Days']++; else if(d.ageDays <= 180) ageBuckets['91 - 180 Days']++; else ageBuckets['> 180 Days']++; });
+            if(chartA3) chartA3.destroy();
+            chartA3 = new Chart(document.getElementById('abnAgingChart').getContext('2d'), { type: 'bar', data: { labels: Object.keys(ageBuckets), datasets: [{ data: Object.values(ageBuckets), backgroundColor: [getCssVar('--green'), getCssVar('--orange'), getCssVar('--pink'), getCssVar('--red')], borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+            
+            if(chartA4) chartA4.destroy();
+            let catMap = {}; window.abnAllRecords.forEach(d => { catMap[d.category] = (catMap[d.category] || 0) + 1; });
+            chartA4 = new Chart(document.getElementById('abnCategoryChart').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(catMap), datasets: [{ data: Object.values(catMap), backgroundColor: [getCssVar('--blue'), getCssVar('--purple'), getCssVar('--red'), getCssVar('--orange'), getCssVar('--green')], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '65%' } });
+            
+            if(chartA5) chartA5.destroy();
+            let convMap = {}; window.abnAllRecords.forEach(d => { convMap[d['NO.']] = (convMap[d['NO.']] || 0) + 1; }); let top5 = Object.keys(convMap).map(k => ({name: k, count: convMap[k]})).sort((a,b) => b.count - a.count).slice(0,5);
+            chartA5 = new Chart(document.getElementById('abnDefaulterChart').getContext('2d'), { type: 'bar', data: { labels: top5.map(d=>d.name), datasets: [{ data: top5.map(d=>d.count), backgroundColor: getCssVar('--purple'), borderRadius: 4 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+            if (currentRole === 'user') { filterAbnTable('Critical'); } else { filterAbnTable('Open'); }
+        }
+        
+        function filterAbnTable(type) {
+            let records = []; let title = "";
+            if (type === 'Total') { records = window.abnAllRecords; title = "All Abnormalities (Open & Closed)"; } else if (type === 'Closed') { records = window.abnAllRecords.filter(d => d.status.toLowerCase() === 'closed'); title = "Closed Abnormalities"; } else if (type === 'Open') { records = window.openRecords; title = "All Open Abnormalities"; } else if (type === 'Over6M') { records = window.openRecords.filter(d => d.ageDays > 180); title = "> 6 Months Pending Backlog"; } else if (type === 'Critical') { records = window.openRecords.filter(d => ['Replace', 'Rejoint', 'Piece Addition', 'Operate under Observation'].includes(d.plan)); title = "Critical Open Abnormalities"; }
+            renderAbnTableHTML(records, title);
+        }
+        
+        function renderAbnTableHTML(records, titleBase) {
+            activeAbnRecords = records; let finalRecords = records;
+            const checkedDepts = Array.from(document.querySelectorAll('.abn-dept-chk:checked')).map(cb => cb.value);
+            if(checkedDepts.length !== document.querySelectorAll('.abn-dept-chk').length) { finalRecords = finalRecords.filter(d => checkedDepts.includes(d.Dept || 'Unknown')); }
+            const searchVal = document.getElementById('abnSearch').value.toLowerCase();
+            if(searchVal) finalRecords = finalRecords.filter(d => (d['NO.'] || '').toLowerCase().includes(searchVal));
+            if(currentRole === 'user') finalRecords = finalRecords.filter(d => d.plan !== 'Operate');
+            if(titleBase) document.getElementById('abn-table-title').innerHTML = `${titleBase} <span class="count-badge">Count: ${finalRecords.length}</span>`;
+            
+            let tableHTML = ""; let tdAdminStyle = currentRole === 'admin' ? '' : 'display:none;';
+            finalRecords.forEach(r => {
+                let badge = `<span class="badge" style="background: rgba(148, 163, 184, 0.1); color: var(--text-muted);">${r.plan}</span>`;
+                if(r.plan === 'Replace') badge = `<span class="badge badge-crit">${r.plan}</span>`; else if(r.plan === 'Rejoint' || r.plan === 'Piece Addition') badge = `<span class="badge badge-semi">${r.plan}</span>`; else if(r.plan === 'Operate under Observation') badge = `<span class="badge badge-marg">${r.plan}</span>`;
+                let sColor = r.status.toLowerCase() === 'closed' ? 'var(--green)' : 'var(--red)'; let ageDisp = r.status.toLowerCase() === 'open' ? `<b>${r.ageDays}</b>` : '-';
+                
+                let actionHTML = "";
+                if (currentRole === 'admin' && r.status.toLowerCase() === 'open' && ['Replace', 'Rejoint', 'Piece Addition'].includes(r.plan)) {
+                    let mailSubject = encodeURIComponent(`URGENT ACTION: Abnormality on ${r['NO.']}`);
+                    let mailBody = encodeURIComponent(`Dear Team,\n\nSystem alert: Conveyor ${r['NO.']} (Dept: ${r.Dept}) has an open critical abnormality.\n\nIssue Details: ${r['Major Abnormality']}\nPlan: ${r.plan}\nPending Since: ${r.ageDays} days.\n\nPlease take immediate action.\n\nRegards,\nMaintenance Planning`);
+                    actionHTML = `<a href="mailto:?subject=${mailSubject}&body=${mailBody}"><button class="alert-btn"><i class="fas fa-paper-plane"></i> Alert</button></a>`;
+                } else { actionHTML = `<span style="color:var(--text-muted); font-size:0.75rem;">No Action</span>`; }
+                tableHTML += `<tr><td><b>${r.Dept}</b></td><td><b>${r['NO.']}</b></td><td>${r['Abnormality Date']}</td><td style="${tdAdminStyle}">${ageDisp}</td><td style="${tdAdminStyle}"><span class="badge" style="background:rgba(59, 130, 246, 0.15); color:var(--blue);">${r.category}</span></td><td>${r['Major Abnormality']}</td><td>${badge}</td><td><b style="color:${sColor};">${r.status}</b></td><td style="${tdAdminStyle}">${actionHTML}</td></tr>`;
+            });
+            document.getElementById('abn-table-body').innerHTML = tableHTML;
+        }
+
+        // ================= THICKNESS LOGIC =================
+        function processThickness(data, headers) {
+            document.getElementById('initial-message').style.display = 'none';
+            document.getElementById('tabs-menu').style.display = 'flex';
+            document.getElementById('btn-abn').style.display = 'none';
+            document.getElementById('btn-thk').style.display = 'block';
+            switchTab('thkTab', 'btn-thk');
+            
+            let colNo = headers.find(k => k && k.trim() === 'Conveyor') || 'Conveyor';
+            let colDept = headers.find(k => k && k.trim() === 'DEPT') || 'DEPT';
+            let colSec = headers.find(k => k && k.trim() === 'Section') || 'Section';
+            
+            let colCWear = headers.find(k => k && k.includes('Current Wear Rate')) || 'Current Wear Rate (mm/Month)';
+            let colPWear = headers.find(k => k && k.includes('Planned Wear Rate')) || 'Planned Wear Rate (mm/Month)';
+            let colCBMLife = headers.find(k => k && k === 'CBM life1') || 'CBM life1';
+            let colLastRep = headers.find(k => k && k === 'Last Belt Replacement') || 'Last Belt Replacement';
+            let colNextCBM = headers.find(k => k && k.replace(/[\r\n]+/g, ' ').includes('Next Prediction (CBM)')) || 'Next Prediction (CBM)';
+            let colPredLife = headers.find(k => k && k.includes('Predicted Life (in Months) (Actual)')) || 'Predicted Life (in Months) (Actual)';
+            let colAgeAsOnDate = headers.find(k => k && k.includes('Age as on Date')) || 'Age as on Date (in Months)';
+            let colTopCover = headers.find(k => k && k === 'TOP') || 'TOP';
+            
+            let colDateHistory = headers.find(k => k && k === 'Date') || 'Date';
+            let colEdgeHist = headers.find(k => k && k === 'EDGE1') || 'EDGE1';
+            let colCenterHist = headers.find(k => k && k === 'CENTER') || 'CENTER';
+            let colEdge2Hist = headers.find(k => k && k === 'EDGE2') || 'EDGE2';
+            
+            let colRecEdge1 = headers.find(k => k && k === 'Thickness EDGE 1') || 'Thickness EDGE 1';
+            let colRecCenter = headers.find(k => k && k === 'CENTER2') || 'CENTER2';
+            let colRecEdge2 = headers.find(k => k && k === 'Thickness EDGE 2') || 'Thickness EDGE 2';
+            let colMinThk = headers.find(k => k && k === 'MIN THICKNESS') || 'MIN THICKNESS';
+            let colCrit = headers.find(k => k && k === 'Criticality') || 'Criticality';
+            
+            let colLength = headers.find(k => k && k.toLowerCase().includes('length')) || 'Length';
+            let colWidth = headers.find(k => k && k.toLowerCase().includes('width')) || 'Width';
+            let colSch1 = headers.find(k => k && (k.toLowerCase().includes('1st thickness schedule') || k === 'AH')) || '1st Thickness schedule';
+            let colSch2 = headers.find(k => k && (k.toLowerCase().includes('next thickness schedule') || k === 'AI')) || 'next Thickness schedule';
+            
+            let today = new Date(); 
+            let currYear = today.getFullYear();
+            let currMonth = today.getMonth(); 
+            let currMonthStart = new Date(currYear, currMonth, 1);
+            let currMonthEnd = new Date(currYear, currMonth + 1, 0, 23, 59, 59);
+            let nextMonthStart = new Date(currYear, currMonth + 1, 1);
+            let nextMonthEnd = new Date(currYear, currMonth + 2, 0, 23, 59, 59);
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            
+            document.getElementById('next-month-card-title').innerHTML = `<i class="fas fa-calendar-plus"></i> Next Month Schedule (${monthNames[nextMonthStart.getMonth()]})`;
+            
+            adminSchData = [];
+            parsedData = data.filter(row => row[colNo] && row[colNo].trim() !== '').map(row => {
+                row.dept = row[colDept] || 'Unknown';
+                row.section = row[colSec] || row.dept; row.conv = row[colNo] || '-';
+                row.minThk = parseFloat(row[colMinThk]) || 0;
+                row.crit = row[colCrit] ? row[colCrit].trim() : 'Unknown';
+                row.cWear = parseFloat(row[colCWear]) || 0; row.pWear = parseFloat(row[colPWear]) || 0;
+                
+                let cbmStr = row[colCBMLife] ? String(row[colCBMLife]).trim() : '';
+                row.cbmLife = (cbmStr !== '' && cbmStr.toLowerCase() !== 'nan' && cbmStr !== 'undefined' && cbmStr !== '-' && !cbmStr.includes('#')) ? parseFloat(cbmStr) : 999;          
+                let lRepDate = parseDateCustom(row[colLastRep]);
+                row.lastRep = lRepDate ? `${String(lRepDate.getDate()).padStart(2,'0')}-${String(lRepDate.getMonth()+1).padStart(2,'0')}-${lRepDate.getFullYear()}` : (row[colLastRep] || '-');
+                let rawNextCBM = row[colNextCBM] || row['Next Prediction (CBM)'] || '';
+                let nCbmDate = parseDateCustom(rawNextCBM);
+                row.nextCBM = nCbmDate ? `${String(nCbmDate.getDate()).padStart(2,'0')}-${String(nCbmDate.getMonth()+1).padStart(2,'0')}-${nCbmDate.getFullYear()}` : (rawNextCBM || '-');
+                
+                row.predLife = parseFloat(row[colPredLife]) || 0;
+                row.ageAsOnDate = parseFloat(row[colAgeAsOnDate]) || 0;
+                row.topCover = parseFloat(row[colTopCover]) || 0;
+                
+                let cbmValid = (row.cbmLife !== 999);
+                let lifeDiff = cbmValid ? (row.cbmLife - row.predLife) : 0;
+                row.actualRemainingLife = cbmValid ? (row.cbmLife - row.ageAsOnDate) : 0;
+                
+                if (row.ageAsOnDate >= row.predLife && row.predLife > 0) { row.lifeAnalysisHTML = `<div class="analysis-box" style="color:var(--green);"><b>Life Achieved</b><br>Belt is running beyond predicted life</div>`; row.lifeAnalysisText = `Life Achieved`; } else if (!cbmValid) { row.lifeAnalysisHTML = `<span style="color:var(--text-muted); font-size:0.75rem;">Data N/A</span>`; row.lifeAnalysisText = `Data N/A`; } else if (lifeDiff < 0) { row.lifeAnalysisHTML = `<div class="analysis-box" style="color:var(--red);"><b>${Math.abs(lifeDiff).toFixed(1)}M Short</b><br>Premature failure predicted</div>`; row.lifeAnalysisText = `${Math.abs(lifeDiff).toFixed(1)}M Short - Premature failure predicted`; } else { if (row.crit.includes('1.Critical')) { row.lifeAnalysisHTML = `<div class="analysis-box" style="color:var(--blue);"><b>Target Achieved</b><br>Healthy life completed</div>`; row.lifeAnalysisText = `Target Achieved - Healthy life completed`; } else { row.lifeAnalysisHTML = `<div class="analysis-box" style="color:var(--green);"><b>Belt is giving healthy life</b></div>`; row.lifeAnalysisText = `Belt is giving healthy life`; } }
+                
+                row.histDates = row[colDateHistory] ? row[colDateHistory].split('\n') : [];
+                row.histE1 = row[colEdgeHist] ? row[colEdgeHist].split('\n') : [];
+                row.histC = row[colCenterHist] ? row[colCenterHist].split('\n') : [];
+                row.histE2 = row[colEdge2Hist] ? row[colEdge2Hist].split('\n') : [];
+                
+                let edge1 = parseFloat(row[colRecEdge1]) || 999; let center = parseFloat(row[colRecCenter]) || 999; let edge2 = parseFloat(row[colRecEdge2]) || 999;
+                let minVal = Math.min(edge1, center, edge2);
+                if (minVal === center && minVal !== 999) row.wearType = 'Center Wear'; else if (minVal === edge1 && minVal === edge2 && minVal !== 999) row.wearType = 'Both Edges Wear'; else if (minVal === edge1 && minVal !== 999) row.wearType = 'Edge 1 Wear'; else if (minVal === edge2 && minVal !== 999) row.wearType = 'Edge 2 Wear'; else row.wearType = 'Unknown';
+                
+                row.length = row[colLength] || '-'; row.width = row[colWidth] || '-'; 
+                
+                let d1 = parseDateCustom(row[colSch1]);
+                let d2 = parseDateCustom(row[colSch2]);
+                let isCrit = row.crit.toLowerCase().includes('1.critical');
+                
+                row.d1 = d1; row.d2 = d2;
+                row.d1Disp = d1 ? `${String(d1.getDate()).padStart(2,'0')}-${String(d1.getMonth()+1).padStart(2,'0')}-${d1.getFullYear()}` : '-';
+                row.d2Disp = d2 ? `${String(d2.getDate()).padStart(2,'0')}-${String(d2.getMonth()+1).padStart(2,'0')}-${d2.getFullYear()}` : '-';
+                let lastInspDate = null;
+                if (row.histDates && row.histDates.length > 0) {
+                    for(let i=row.histDates.length-1; i>=0; i--) {
+                        let d = parseDateCustom(row.histDates[i]);
+                        if (d) { lastInspDate = d; break; }
+                    }
+                }
+                row.lastInspDisp = lastInspDate ? `${String(lastInspDate.getDate()).padStart(2,'0')}-${String(lastInspDate.getMonth()+1).padStart(2,'0')}-${lastInspDate.getFullYear()}` : '-';
+                
+                // Card 3: Inspected This Month
+                row.isInspectedThisMonth = lastInspDate && (lastInspDate >= currMonthStart && lastInspDate <= currMonthEnd);
+                
+                // --- STRICT LOGIC FOR CARD 1, 2, AND 4 ---
+                let isPast_AH = d1 && d1 < currMonthStart;
+                let isPast_AI = d2 && d2 < currMonthStart && !isCrit;
+                
+                let isCurr_AH = d1 && d1 >= currMonthStart && d1 <= currMonthEnd;
+                let isCurr_AI = d2 && d2 >= currMonthStart && d2 <= currMonthEnd && !isCrit;
+                
+                let isNext_AH = d1 && d1 >= nextMonthStart && d1 <= nextMonthEnd;
+                let isNext_AI = d2 && d2 >= nextMonthStart && d2 <= nextMonthEnd && !isCrit;
+
+                // Card 1: Current Schedule (Past Dates + Current Month Dates)
+                row.isCurrentMonthSch = isPast_AH || isCurr_AH || isPast_AI || isCurr_AI;
+                
+                // Card 2: Next Schedule (Strictly Next Month)
+                row.isNextMonthSch = isNext_AH || isNext_AI;
+                
+                // Card 4: Pending Backlog (Strictly Past Dates before Current Month)
+                row.isPending = isPast_AH || isPast_AI;
+                
+                // Highlight Rule for Pending: > 3 months
+                let threeMonthsAgo = new Date(currYear, currMonth - 3, 1);
+                row.isPendingOver3M = row.isPending && ((isPast_AH && d1 < threeMonthsAgo) || (isPast_AI && d2 < threeMonthsAgo));
+                
+                if (row.isCurrentMonthSch || row.isNextMonthSch || row.isInspectedThisMonth || row.isPending) {
+                    adminSchData.push(row);
+                }
+
+                return row;
+            });
+            
+            document.getElementById('th-life-analysis').style.display = currentRole === 'admin' ? 'table-cell' : 'none';
+            const secSet = new Set(parsedData.map(d => d.section));
+            let msHtml = `<label class="ms-opt"><input type="checkbox" id="chkAll" onchange="toggleAllSec(this)" checked> <b>Select All Conveyor Routes</b></label><hr style="border-color:var(--glass-border); margin:5px 0;">`;
+            Array.from(secSet).sort().forEach(sec => { if(sec && sec !== 'Unknown') { msHtml += `<label class="ms-opt"><input type="checkbox" class="sec-chk" value="${sec}" onchange="applySectionFilter()" checked> ${sec}</label>`; }});
+            document.getElementById('msDrop').innerHTML = msHtml;
+            applySectionFilter();
+            
+            document.getElementById('adm-k-curr').innerText = adminSchData.filter(d => d.isCurrentMonthSch).length;
+            document.getElementById('adm-k-next').innerText = adminSchData.filter(d => d.isNextMonthSch).length;
+            document.getElementById('adm-k-insp').innerText = adminSchData.filter(d => d.isInspectedThisMonth).length;
+            document.getElementById('adm-k-pend').innerText = adminSchData.filter(d => d.isPending).length;
+            
+            const admSecSet = new Set(adminSchData.map(d => d.section));
+            let admMsHtml = `<label class="ms-opt"><input type="checkbox" id="chkAllAdm" onchange="toggleAllAdmSec(this)" checked> <b>Select All Routes</b></label><hr style="border-color:var(--glass-border); margin:5px 0;">`;
+            Array.from(admSecSet).sort().forEach(sec => { if(sec && sec !== 'Unknown') { admMsHtml += `<label class="ms-opt"><input type="checkbox" class="adm-sec-chk" value="${sec}" onchange="applyAdminFilters()" checked> ${sec}</label>`; }});
+            document.getElementById('admMsDrop').innerHTML = admMsHtml;
+        }
+
+        // ================= STANDARD THICKNESS UI =================
+        function toggleAllSec(src) { document.querySelectorAll('.sec-chk').forEach(cb => cb.checked = src.checked); applySectionFilter(); }
+        function populateTableDeptDropdown() {
+            const depts = new Set(filteredData.map(d => d.dept)); const select = document.getElementById('tableDeptFilter'); let currentVal = select.value;
+            let optionsHtml = `<option value="All">All Departments</option>`; Array.from(depts).sort().forEach(dept => { if(dept && dept !== 'Unknown') optionsHtml += `<option value="${dept}">${dept}</option>`; });
+            select.innerHTML = optionsHtml; if (Array.from(depts).includes(currentVal)) { select.value = currentVal; } else { select.value = 'All'; }
+        }
+        function applySectionFilter() {
+            const checkboxes = document.querySelectorAll('.sec-chk:checked'); const totalBoxes = document.querySelectorAll('.sec-chk').length; const selectedSecs = Array.from(checkboxes).map(cb => cb.value); const btnText = document.getElementById('msBtnText');
+            if(selectedSecs.length === 0) { btnText.innerText = "0 Selected"; filteredData = []; document.getElementById('chkAll').checked = false; } else if(selectedSecs.length === totalBoxes) { btnText.innerText = "All Conveyor Routes"; filteredData = parsedData; document.getElementById('chkAll').checked = true; } else { btnText.innerText = `${selectedSecs.length} Selected`; filteredData = parsedData.filter(d => selectedSecs.includes(d.section)); document.getElementById('chkAll').checked = false; }
+            populateTableDeptDropdown();
+            document.getElementById('t-k-total').innerText = filteredData.length; document.getElementById('t-k-crit').innerText = filteredData.filter(d => d.crit.includes('1.Critical')).length; document.getElementById('t-k-wear').innerText = filteredData.filter(d => d.cWear > d.pWear).length; document.getElementById('t-k-life').innerText = filteredData.filter(d => d.actualRemainingLife < 6 && d.actualRemainingLife >= 0 && !d.crit.includes('1.Critical') && d.cbmLife !== 999).length; document.getElementById('t-k-next6m').innerText = filteredData.filter(d => d.actualRemainingLife >= 0 && d.actualRemainingLife <= 6 && d.cbmLife !== 999).length; document.getElementById('t-k-backlog').innerText = filteredData.filter(d => d.actualRemainingLife < 0 && d.cbmLife !== 999).length;
+            let sk = 0, cn = 0; filteredData.forEach(d => { if(d.wearType.includes('Edge')) sk++; else cn++; }); document.getElementById('t-k-ratio').innerText = `${sk} / ${cn}`;
+            showThkCharts(); applyTableDeptFilter(); 
+        }
+        function showThkCharts() {
+            const checkboxes = document.querySelectorAll('.sec-chk:checked'); const isAll = checkboxes.length === document.querySelectorAll('.sec-chk').length; Chart.defaults.color = getCssVar('--text-muted'); const deptsMap = {};
+            filteredData.forEach(d => { let group = isAll ? d.dept : d.section; if(!deptsMap[group]) deptsMap[group] = {'1.Critical':0, '2.Semi-Critical':0, '3.Marginal':0, '4.Non-Critical':0}; if(deptsMap[group][d.crit] !== undefined) deptsMap[group][d.crit]++; });
+            const depts = Object.keys(deptsMap).sort();
+            if(chartT1) chartT1.destroy(); const colors = {'1.Critical': getCssVar('--red'), '2.Semi-Critical': getCssVar('--orange'), '3.Marginal': getCssVar('--blue'), '4.Non-Critical': getCssVar('--green')};
+            const ds1 = Object.keys(colors).map(c => ({ label: c, backgroundColor: colors[c], borderRadius: 4, data: depts.map(dept => deptsMap[dept][c]) }));
+            chartT1 = new Chart(document.getElementById('thkDeptChart').getContext('2d'), { type: 'bar', data: { labels: depts, datasets: ds1 }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { legend: { position: 'bottom' } }, onClick: (e, elements) => { if(elements.length > 0) { const group = depts[elements[0].index]; const status = chartT1.data.datasets[elements[0].datasetIndex].label; document.getElementById('tableDeptFilter').value = 'All'; currentKpiFilter = 'CustomChartClick'; const subFiltered = filteredData.filter(d => (isAll ? d.dept === group : d.section === group) && d.crit === status); renderThkTable(subFiltered, `Filtered: ${group} - ${status}`); scrollToTable('thk-table-section'); } } } });
+            if(chartT2) chartT2.destroy(); let e1 = 0, e2 = 0, bth = 0, cn = 0; filteredData.forEach(d => { if(d.wearType === 'Edge 1 Wear') e1++; else if(d.wearType === 'Edge 2 Wear') e2++; else if(d.wearType === 'Both Edges Wear') bth++; else cn++; });
+            chartT2 = new Chart(document.getElementById('thkWearChart').getContext('2d'), { type: 'doughnut', data: { labels: ['Edge 1 Wear', 'Edge 2 Wear', 'Both Edges', 'Center Wear'], datasets: [{ data: [e1, e2, bth, cn], backgroundColor: [getCssVar('--red'), getCssVar('--orange'), getCssVar('--purple'), getCssVar('--blue')], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right' } }, onClick: (e, elements) => { if(elements.length > 0) { let type = chartT2.data.labels[elements[0].index]; if(type === 'Both Edges') type = 'Both Edges Wear'; document.getElementById('tableDeptFilter').value = 'All'; currentKpiFilter = 'CustomChartClick'; renderThkTable(filteredData.filter(d => d.wearType === type), `Pattern: ${type}`); scrollToTable('thk-table-section'); } } } });
+        }
+        function filterThkTable(type) { currentKpiFilter = type; applyTableDeptFilter(); scrollToTable('thk-table-section'); }
+        function applyTableDeptFilter() {
+            let res = filteredData; let title = "";
+            if(currentKpiFilter === 'All') { title = "All Conveyor Belts"; } else if(currentKpiFilter === '1.Critical') { res = res.filter(d => d.crit.includes('1.Critical')); title = "Critical Condition"; } else if(currentKpiFilter === 'HighWear') { res = res.filter(d => d.cWear > d.pWear); title = "High Wear Rate"; } else if(currentKpiFilter === 'LowLife') { res = res.filter(d => d.actualRemainingLife < 6 && d.actualRemainingLife >= 0 && !d.crit.includes('1.Critical') && d.cbmLife !== 999); title = "Low Life Expectancy (<6M)"; } else if(currentKpiFilter === 'Next6M') { res = res.filter(d => d.actualRemainingLife >= 0 && d.actualRemainingLife <= 6 && d.cbmLife !== 999); title = "Next 6 Months Repl."; } else if(currentKpiFilter === 'Backlog') { res = res.filter(d => d.actualRemainingLife < 0 && d.cbmLife !== 999); title = "Overdue Backlog"; } else if(currentKpiFilter === 'SkirtWear') { res = res.filter(d => d.wearType.includes('Edge')); title = "Edge / Skirt Wear"; } else if(currentKpiFilter === 'CustomChartClick') { return; }
+            const selectedDept = document.getElementById('tableDeptFilter').value; if (selectedDept !== 'All') { res = res.filter(d => d.dept === selectedDept); title += ` (Dept: ${selectedDept})`; }
+            const searchVal = document.getElementById('thkSearch').value.toLowerCase(); if(searchVal) { res = res.filter(d => (d.conv || '').toLowerCase().includes(searchVal)); }
+            renderThkTable(res, title);
+        }
+        function renderThkTable(data, titleText) {
+            document.getElementById('thk-table-title').innerHTML = `${titleText} <span class="count-badge">Count: ${data.length}</span>`;
+            const tbody = document.getElementById('thk-table-body'); let tableHTML = ""; 
+            data.forEach(r => {
+                let badge = `<span class="badge badge-safe">${r.crit}</span>`; if(r.crit.includes('1.Critical')) badge = `<span class="badge badge-crit">${r.crit}</span>`; else if(r.crit.includes('2.Semi-Critical')) badge = `<span class="badge badge-semi">${r.crit}</span>`; else if(r.crit.includes('3.Marginal')) badge = `<span class="badge badge-marg">${r.crit}</span>`;
+                let wearColor = r.cWear > r.pWear ? 'var(--red)' : 'var(--green)'; let wearClass = r.wearType.includes('Center') ? 'wear-cn' : ''; let wearHtml = `<span class="wear-loc ${wearClass}">(${r.wearType})</span>`; let actionHTML = `<i class="fas fa-chart-line action-icon icon-graph" onclick="openHistory('${r.conv}')" title="View Trend Line"></i>`;
+                if(currentRole === 'admin') {
+                    let mailSubject = encodeURIComponent(`URGENT Alert: Belt Condition - ${r.conv}`); let mailBody = encodeURIComponent(`Team,\n\nPlease note the following condition for Conveyor Belt:\n\nDept/Section: ${r.dept} / ${r.section}\nConveyor: ${r.conv}\nHealth: ${r.crit}\nMin Thickness: ${r.minThk}mm (${r.wearType})\n\n-- PREDICTIVE ANALYSIS --\nTarget Life: ${r.predLife} M\nRunning Age: ${r.ageAsOnDate} M\nRemaining: ${r.cbmLife !== 999 ? r.actualRemainingLife.toFixed(1) : '-'} M\nAnalysis: ${r.lifeAnalysisText}\n\nPlease take necessary preventive action.\n\nRegards,\nMaintenance Planning`);
+                    actionHTML += `<a href="mailto:?subject=${mailSubject}&body=${mailBody}" style="text-decoration:none; margin-left:10px;"><span class="alert-btn"><i class="fas fa-paper-plane"></i> Alert</span></a>`;
+                } else { actionHTML += `<span class="badge" style="background:rgba(255,255,255,0.1); color:var(--text-muted); margin-left:10px; cursor:not-allowed;"><i class="fas fa-lock"></i> Locked</span>`; }
+                let analysisCellHTML = currentRole === 'admin' ? `<td><span style="font-size:0.75rem;">${r.lifeAnalysisHTML}</span></td>` : '';
+                tableHTML += `<tr><td><b>${r.dept}</b></td><td><b>${r.conv}</b></td><td><b>${r.minThk.toFixed(2)}</b> ${wearHtml}</td><td style="color:${wearColor};"><b>${r.cWear.toFixed(3)}</b></td><td>${r.pWear.toFixed(3)}</td><td><i class="far fa-calendar-check" style="margin-right:5px; opacity:0.5;"></i>${r.lastRep}</td><td><i class="far fa-calendar-alt" style="margin-right:5px; opacity:0.5;"></i>${r.nextCBM}</td><td><b>${r.ageAsOnDate !== 0 ? r.ageAsOnDate.toFixed(1) : '-'}</b></td><td><b>${r.predLife !== 0 ? r.predLife.toFixed(1) : '-'}</b></td>${analysisCellHTML}<td>${badge}</td><td style="display:flex; align-items:center;">${actionHTML}</td></tr>`;
+            }); tbody.innerHTML = tableHTML;
+        }
+
+        // ================= ADMIN SUB-PAGE LOGIC =================
+        function openAdminThkPage() {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById('tabs-menu').style.display = 'none';
+            document.getElementById('adminThkPage').style.display = 'block';
+            filterAdminThk('Current'); // Default
+        }
+        function closeAdminThkPage() {
+            document.getElementById('adminThkPage').style.display = 'none';
+            document.getElementById('tabs-menu').style.display = 'flex';
+            document.getElementById('btn-thk').click();
+        }
+        function toggleAllAdmSec(source) { document.querySelectorAll('.adm-sec-chk').forEach(cb => cb.checked = source.checked); applyAdminFilters(); }
+        function filterAdminThk(type) {
+            activeAdminFilter = type;
+            populateAdmDeptDropdown();
+            applyAdminFilters();
+        }
+        function populateAdmDeptDropdown() {
+            const depts = new Set(adminSchData.map(d => d.dept));
+            const select = document.getElementById('admDeptFilter'); let currentVal = select.value;
+            let optionsHtml = `<option value="All">All Departments</option>`;
+            Array.from(depts).sort().forEach(dept => { if(dept && dept !== 'Unknown') optionsHtml += `<option value="${dept}">${dept}</option>`; });
+            select.innerHTML = optionsHtml;
+            if (Array.from(depts).includes(currentVal)) { select.value = currentVal; } else { select.value = 'All'; }
+        }
+        function applyAdminFilters() {
+            let res = adminSchData; let title = ""; let showInspectedDate = false;
+            if (activeAdminFilter === 'Current') { res = res.filter(d => d.isCurrentMonthSch); title = "Current Month Schedule (Actionable)"; }
+            else if (activeAdminFilter === 'Next') { res = res.filter(d => d.isNextMonthSch); title = "Next Month Schedule"; }
+            else if (activeAdminFilter === 'Inspected') { res = res.filter(d => d.isInspectedThisMonth); title = "Inspected This Month"; showInspectedDate = true; }
+            else if (activeAdminFilter === 'Pending') { res = res.filter(d => d.isPending); title = "Pending Backlogs (Past Date)"; }
+            
+            const checkboxes = document.querySelectorAll('.adm-sec-chk:checked');
+            const selectedSecs = Array.from(checkboxes).map(cb => cb.value);
+            const totalBoxes = document.querySelectorAll('.adm-sec-chk').length;
+            const btnText = document.getElementById('admMsBtnText');
+            
+            if(selectedSecs.length === 0) { btnText.innerText = "0 Selected"; res = []; document.getElementById('chkAllAdm').checked = false; } 
+            else if(selectedSecs.length === totalBoxes) { btnText.innerText = "All Routes"; document.getElementById('chkAllAdm').checked = true; } 
+            else { btnText.innerText = `${selectedSecs.length} Selected`; res = res.filter(d => selectedSecs.includes(d.section)); document.getElementById('chkAllAdm').checked = false; }
+            
+            const selectedDept = document.getElementById('admDeptFilter').value;
+            if (selectedDept !== 'All') { res = res.filter(d => d.dept === selectedDept); }
+            
+            const searchVal = document.getElementById('admSearch').value.toLowerCase();
+            if(searchVal) { res = res.filter(d => (d.conv || '').toLowerCase().includes(searchVal)); }
+            
+            filteredAdminData = res;
+            renderAdminThkTable(res, title, showInspectedDate);
+        }
+        function renderAdminThkTable(data, title, showInspectedDate) {
+            document.getElementById('adm-table-title').innerHTML = `${title} <span class="count-badge">Count: ${data.length}</span>`;
+            const tbody = document.getElementById('adm-table-body');
+            const thead = document.getElementById('adm-table-head');
+            
+            let tableHTML = "";
+            let today = new Date();
+            let currYear = today.getFullYear();
+            let currMonth = today.getMonth(); 
+            let currMonthStart = new Date(currYear, currMonth, 1);
+            let currMonthEnd = new Date(currYear, currMonth + 1, 0, 23, 59, 59);
+            let nextMonthStart = new Date(currYear, currMonth + 1, 1);
+            let nextMonthEnd = new Date(currYear, currMonth + 2, 0, 23, 59, 59);
+            
+            // Auto Switch Table Layout
+            if (activeAdminFilter === 'Current' || activeAdminFilter === 'Next') {
+                let dateColHeader = showInspectedDate ? "Inspected On" : "Schedule Date";
+                thead.innerHTML = `<tr><th>Dept</th><th>Route</th><th>Conveyor</th><th>Length</th><th>Width</th><th>Category</th><th>Top Cover</th><th>${dateColHeader}</th><th>Status / Actions</th></tr>`;
+                
+                data.forEach(r => {
+                    let badge = `<span class="badge badge-safe">${r.crit}</span>`;
+                    if(r.crit.includes('1.Critical')) badge = `<span class="badge badge-crit">${r.crit}</span>`; else if(r.crit.includes('2.Semi-Critical')) badge = `<span class="badge badge-semi">${r.crit}</span>`; else if(r.crit.includes('3.Marginal')) badge = `<span class="badge badge-marg">${r.crit}</span>`;
+                    
+                    // Show corresponding date
+                    let displayDate = '-';
+                    if (activeAdminFilter === 'Current') {
+                        let isCurr_AH = r.d1 && r.d1 >= currMonthStart && r.d1 <= currMonthEnd;
+                        let isPast_AH = r.d1 && r.d1 < currMonthStart;
+                        if (isCurr_AH || isPast_AH) displayDate = r.d1Disp; else displayDate = r.d2Disp;
+                    } else if (activeAdminFilter === 'Next') {
+                        let isN_Sch1 = r.d1 && r.d1 >= nextMonthStart && r.d1 <= nextMonthEnd;
+                        if (isN_Sch1) displayDate = r.d1Disp; else displayDate = r.d2Disp;
+                    }
+                    let actionHTML = `<span style="color:var(--text-muted); font-size:0.8rem;">Scheduled</span>`;
+                    tableHTML += `<tr><td><b>${r.dept}</b></td><td>${r.section}</td><td><b>${r.conv}</b></td><td>${r.length}</td><td>${r.width}</td><td>${badge}</td><td>${r.topCover}</td><td><b>${displayDate}</b></td><td>${actionHTML}</td></tr>`;
+                });
+            } else {
+                let dateColHeader = showInspectedDate ? "Inspected On" : "Schedule Date";
+                thead.innerHTML = `<tr><th>Dept</th><th>Conveyor</th><th>Min Thk.</th><th>Cur. Wear</th><th>Plan Wear</th><th>Last Replacement</th><th>Next Repl. (CBM)</th><th>Age (M)</th><th>Predicted Life (M)</th><th>AI Life Diagnostics</th><th>${dateColHeader}</th><th>Actions</th></tr>`;
+                
+                data.forEach(r => {
+                    let badge = `<span class="badge badge-safe">${r.crit}</span>`;
+                    if(r.crit.includes('1.Critical')) badge = `<span class="badge badge-crit">${r.crit}</span>`; else if(r.crit.includes('2.Semi-Critical')) badge = `<span class="badge badge-semi">${r.crit}</span>`; else if(r.crit.includes('3.Marginal')) badge = `<span class="badge badge-marg">${r.crit}</span>`;
+                    
+                    let wearColor = r.cWear > r.pWear ? 'var(--red)' : 'var(--green)';
+                    let wearClass = r.wearType.includes('Center') ? 'wear-cn' : '';
+                    let wearHtml = `<span class="wear-loc ${wearClass}">(${r.wearType})</span>`;
+                    let actionHTML = `<i class="fas fa-chart-line action-icon icon-graph" onclick="openHistory('${r.conv}')" title="View Trend Line"></i>`;
+                    
+                    let trStyle = "";
+                    let displayDate = '-';
+                    if (activeAdminFilter === 'Pending') {
+                        let isP_Sch1 = r.d1 && r.d1 < currMonthStart;
+                        if (isP_Sch1) displayDate = r.d1Disp; else displayDate = r.d2Disp;
+                        
+                        if (r.isPendingOver3M) {
+                            trStyle = "background: rgba(225, 29, 72, 0.08); border-left: 3px solid var(--red);";
+                            let mailSubject = encodeURIComponent(`URGENT: Shutdown Required for Belt Inspection - ${r.conv}`); 
+                            let mailBody = encodeURIComponent(`Team,\n\nAlert: Belt thickness measurement is pending for > 3 months.\n\nConveyor: ${r.conv}\nRoute: ${r.section}\nCategory: ${r.crit}\nScheduled On: ${displayDate}\n\nPlease provide shutdown & proper isolation so our team can measure this belt at the earliest.\n\nRegards,\nMaintenance Planning`);
+                            actionHTML += `<a href="mailto:?subject=${mailSubject}&body=${mailBody}" style="text-decoration:none; margin-left:10px;"><span class="alert-btn"><i class="fas fa-paper-plane"></i> Request Shutdown</span></a>`;
+                        } else {
+                            actionHTML += `<span style="color:var(--orange); font-weight:700; font-size:0.8rem; margin-left:10px;">Pending</span>`;
+                        }
+                    } else if (activeAdminFilter === 'Inspected') {
+                        displayDate = r.lastInspDisp; 
+                        actionHTML += `<span style="color:var(--green); font-weight:700; font-size:0.8rem; margin-left:10px;"><i class="fas fa-check"></i> Completed</span>`;
+                    }
+                    
+                    let analysisCellHTML = `<td><span style="font-size:0.75rem;">${r.lifeAnalysisHTML}</span></td>`;
+                    tableHTML += `<tr style="${trStyle}"><td><b>${r.dept}</b></td><td><b>${r.conv}</b></td><td><b>${r.minThk.toFixed(2)}</b> ${wearHtml}</td><td style="color:${wearColor};"><b>${r.cWear.toFixed(3)}</b></td><td>${r.pWear.toFixed(3)}</td><td><i class="far fa-calendar-check" style="margin-right:5px; opacity:0.5;"></i>${r.lastRep}</td><td><i class="far fa-calendar-alt" style="margin-right:5px; opacity:0.5;"></i>${r.nextCBM}</td><td><b>${r.ageAsOnDate !== 0 ? r.ageAsOnDate.toFixed(1) : '-'}</b></td><td><b>${r.predLife !== 0 ? r.predLife.toFixed(1) : '-'}</b></td>${analysisCellHTML}<td><b>${displayDate}</b></td><td style="display:flex; align-items:center;">${actionHTML}</td></tr>`;
+                });
+            }
+            tbody.innerHTML = tableHTML;
+        }
+
+        // ================= PDF EXPORT FIX LOGIC =================
+        async function exportAdminSchedulePDF() {
+            const element = document.getElementById('adminExportSection');
+            const tableContainer = element.querySelector('.table-container');
+            let origMaxHeight = '', origOverflow = '';
+            
+            // Expand table before PDF generation
+            if(tableContainer) {
+                origMaxHeight = tableContainer.style.maxHeight;
+                origOverflow = tableContainer.style.overflow;
+                tableContainer.style.maxHeight = 'none';
+                tableContainer.style.overflow = 'visible';
+            }
+
+            const opt = { 
+                margin: 5, 
+                filename: `Schedule_Report_${new Date().toISOString().split('T')[0]}.pdf`, 
+                image: { type: 'jpeg', quality: 0.98 }, 
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 }, 
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+            
+            element.style.background = getCssVar('--bg'); 
+            element.style.padding = '20px';
+            
+            await html2pdf().set(opt).from(element).save();
+            
+            // Restore styling after generation
+            element.style.background = ''; 
+            element.style.padding = '';
+            if(tableContainer) {
+                tableContainer.style.maxHeight = origMaxHeight;
+                tableContainer.style.overflow = origOverflow;
+            }
+        }
+
+        async function exportToPDF() {
+            document.getElementById('appSidebar').classList.remove('active');
+            const elementId = fileType === 'thk' ? 'thkTab' : 'abnTab'; 
+            const element = document.getElementById(elementId);
+            
+            const stickies = element.querySelectorAll('.sticky-kpi, .sticky-tabs'); 
+            stickies.forEach(el => el.style.position = 'static');
+            
+            const tableContainer = element.querySelector('.table-container');
+            let origMaxHeight = '', origOverflow = '';
+            
+            // Expand table before PDF generation
+            if(tableContainer) {
+                origMaxHeight = tableContainer.style.maxHeight;
+                origOverflow = tableContainer.style.overflow;
+                tableContainer.style.maxHeight = 'none';
+                tableContainer.style.overflow = 'visible';
+            }
+
+            const opt = { 
+                margin: 5, 
+                filename: `RTG_Main_Report_${new Date().toISOString().split('T')[0]}.pdf`, 
+                image: { type: 'jpeg', quality: 0.98 }, 
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 }, 
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+            
+            element.style.background = getCssVar('--bg'); 
+            element.style.padding = '20px'; 
+            
+            await html2pdf().set(opt).from(element).save();
+            
+            // Restore styling after generation
+            element.style.background = ''; 
+            element.style.padding = ''; 
+            stickies.forEach(el => el.style.position = '');
+            if(tableContainer) {
+                tableContainer.style.maxHeight = origMaxHeight;
+                tableContainer.style.overflow = origOverflow;
+            }
+        }
+
+        // ================= HISTORICAL TREND MODAL =================
+        function openHistory(convName) {
+            const row = parsedData.find(d => d.conv === convName);
+            if(!row || row.histDates.length === 0) { alert('No thickness data available for this belt.'); return; }
+            document.getElementById('modalTitle').innerText = `Thickness Degradation Trend: ${convName}`; document.getElementById('historyModal').style.display = 'flex';
+            if(historyChartInst) historyChartInst.destroy();
+            let labels = []; let dE1 = []; let dC = []; let dE2 = []; let dTopCover = [];
+            let lastRepDate = parseDateCustom(row.lastRep);
+            row.histDates.forEach((dateStr, i) => {
+                if(dateStr.trim() !== '') {
+                    let readingDate = parseDateCustom(dateStr.trim());
+                    if (!lastRepDate || (readingDate && readingDate >= lastRepDate)) { labels.push(dateStr.trim()); dE1.push(parseFloat(row.histE1[i]) || null); dC.push(parseFloat(row.histC[i]) || null); dE2.push(parseFloat(row.histE2[i]) || null); dTopCover.push(row.topCover); }
+                }
+            });
+            if(labels.length === 0) { alert('New belt installed. Awaiting first thickness reading since ' + row.lastRep); closeModal(); return; }
+            historyChartInst = new Chart(document.getElementById('historyChart').getContext('2d'), { type: 'line', data: { labels: labels, datasets: [ { label: `Original Top Cover (${row.topCover}mm)`, data: dTopCover, borderColor: getCssVar('--green'), backgroundColor: 'transparent', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, tension: 0 }, { label: 'Edge 1', data: dE1, borderColor: getCssVar('--red'), backgroundColor: getCssVar('--red'), tension: 0.3 }, { label: 'Center', data: dC, borderColor: getCssVar('--blue'), backgroundColor: getCssVar('--blue'), tension: 0.3 }, { label: 'Edge 2', data: dE2, borderColor: getCssVar('--orange'), backgroundColor: getCssVar('--orange'), tension: 0.3 } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: {display: true, text: 'Thickness (mm)'} } }, plugins: { tooltip: { mode: 'index', intersect: false } } } });
+        }
+        function closeModal() { document.getElementById('historyModal').style.display = 'none'; }
+        
+        // ================= UI & UTILS =================
+        function closeDropdownEvent(e) { if (!e.target.closest('.ms-container')) { document.querySelectorAll('.ms-dropdown').forEach(d => d.classList.remove('show')); } }
+        document.addEventListener('click', closeDropdownEvent); document.addEventListener('touchstart', closeDropdownEvent);
+        
+        function toggleTheme() {
+            isDarkMode = !isDarkMode; document.body.classList.toggle('light-mode', !isDarkMode);
+            const icons = ['themeIcon', 'loginThemeIcon'];
+            icons.forEach(id => { const el = document.getElementById(id); if(el) { el.classList.toggle('fa-moon', isDarkMode); el.classList.toggle('fa-sun', !isDarkMode); } });
+            Chart.defaults.color = getCssVar('--text-muted');
+            if(fileType === 'abn') showAbnCharts(); if(fileType === 'thk') showThkCharts();
+        }
+        
+        function resetDashboard() {
+            document.getElementById('csvFileInput').value = '';
+            document.getElementById('uploadLabel').style.display = 'flex';
+            document.getElementById('resetBtn').style.display = 'none';
+            document.getElementById('pdfBtn').style.display = 'none';
+            document.getElementById('initial-message').style.display = 'block';
+            document.getElementById('upload-icon').style.display = 'inline-block';
+            document.getElementById('loading-spinner').style.display = 'none';
+            document.getElementById('tabs-menu').style.display = 'none';
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            parsedData = []; filteredData = []; fileType = ''; window.abnAllRecords = [];
+            currentKpiFilter = 'All';
+            if(chartA1) chartA1.destroy(); if(chartA2) chartA2.destroy(); if(chartA3) chartA3.destroy(); if(chartA4) chartA4.destroy(); if(chartA5) chartA5.destroy();
+            if(chartT1) chartT1.destroy(); if(chartT2) chartT2.destroy();
+            document.getElementById('appSidebar').classList.remove('active');
+        }
+
+        // ================= CHATBOT LOGIC =================
+        function toggleChat() { const cw = document.getElementById('chatWindow'); cw.style.display = cw.style.display === 'flex' ? 'none' : 'flex'; }
+        function appendMessage(sender, text) { const body = document.getElementById('chatBody'); const msgDiv = document.createElement('div'); msgDiv.className = `msg msg-${sender}`; msgDiv.innerHTML = text; body.appendChild(msgDiv); body.scrollTop = body.scrollHeight; }
+        function handleChat() {
+            const inputEl = document.getElementById('chatInput'); const text = inputEl.value.trim().toLowerCase(); if(!text) return; appendMessage('user', text); inputEl.value = '';
+            const typing = document.getElementById('typingIndicator'); typing.style.display = 'block';
+            setTimeout(() => {
+                typing.style.display = 'none'; let response = "I couldn't isolate that parameter. Try asking about **critical belts**, **open issues**, **backlog (>6 months)**, or **top defaulters**.";
+                let isCritical = /critical|danger|risk/i.test(text); let isOpen = /open|unresolved/i.test(text); let isBacklog = /backlog|overdue|pending|6 month|6m/i.test(text); let isDefaulter = /default|worst|top|bad/i.test(text); let isTotal = /total|how many|count/i.test(text); let isGreet = /hi|hello|hey|wake/i.test(text);
+                if (window.abnAllRecords.length === 0 && parsedData.length === 0) { response = "Offline mode active. Please upload a CSV file before running analytics."; } 
+                else if (isGreet) { response = "At your service. I am ready to pull numbers for critical conditions, open issues, or pending backlogs."; } 
+                else if (isCritical) { if (fileType === 'thk') { let crit = filteredData.filter(d => d.crit.includes('1.Critical')).length; response = `Scan complete. Found <b style="color:var(--red); font-size:1.1rem;">${crit}</b> critical belts in the active data.`; } else if (fileType === 'abn') { const critActions = ['Replace', 'Rejoint', 'Piece Addition', 'Operate under Observation']; let crit = window.openRecords.filter(d => critActions.includes(d.plan)).length; response = `Scan complete. There are <b style="color:var(--orange); font-size:1.1rem;">${crit}</b> critical open abnormalities demanding immediate action.`; } } 
+                else if (isBacklog) { if (fileType === 'abn') { let over6 = window.openRecords.filter(d => d.ageDays > 180).length; response = `Warning. We have <b style="color:var(--pink); font-size:1.1rem;">${over6}</b> severe abnormalities pending for more than 180 days.`; } else if (fileType === 'thk') { let next6 = filteredData.filter(d => d.actualRemainingLife >= 0 && d.actualRemainingLife <= 6 && d.cbmLife !== 999).length; let backlog = filteredData.filter(d => d.actualRemainingLife < 0 && d.cbmLife !== 999).length; response = `Alert: <b style="color:var(--pink); font-size:1.1rem;">${next6}</b> belts are due in the next 6 months, and <b style="color:var(--red); font-size:1.1rem;">${backlog}</b> belts are already in overdue backlog!`; } } 
+                else if (isDefaulter) { if (fileType === 'abn') { let convMap = {}; window.abnAllRecords.forEach(d => { convMap[d['NO.']] = (convMap[d['NO.']] || 0) + 1; }); let top5 = Object.keys(convMap).map(k => ({name: k, count: convMap[k]})).sort((a,b) => b.count - a.count).slice(0,3); response = `Top 3 Defaulter Conveyors:<br><br>1. <b style="color:var(--teal);">${top5[0]?.name}</b> (${top5[0]?.count} alerts)<br>2. <b style="color:var(--teal);">${top5[1]?.name}</b> (${top5[1]?.count} alerts)<br>3. <b style="color:var(--teal);">${top5[2]?.name}</b> (${top5[2]?.count} alerts)`; } else { response = "Defaulter matrix is currently limited to the Abnormality dataset."; } }
+                else if (isOpen) { if (fileType === 'abn') { response = `I am currently tracking <b style="color:var(--red); font-size:1.1rem;">${window.openRecords.length}</b> active open abnormalities in the console.`; } else { response = `Open issues are tracked in the Abnormality Tab. Please switch sections.`; } } 
+                else if (isTotal) { if(fileType==='thk') response = `The system is currently tracking <b style="color:var(--teal); font-size:1.1rem;">${filteredData.length}</b> belts in this selection.`; if(fileType==='abn') response = `A total of <b style="color:var(--teal); font-size:1.1rem;">${window.abnAllRecords.length}</b> historical and active records are loaded.`; }
+                appendMessage('bot', response);
+            }, 800);
+        }
+    </script>
+</body>
+</html>
