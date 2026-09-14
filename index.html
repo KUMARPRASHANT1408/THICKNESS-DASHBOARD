@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- 
+    ========================================================================
+    RESTRICTED SYSTEM
+    THIS FILE IS PROPERTY OF THE RELIABILITY & MAINTENANCE DEPARTMENT.
+    ========================================================================
+    -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>RTG Master Control Dashboard</title>
@@ -11,16 +17,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        :root {
-            --bg: #0f172a; --glass-base: rgba(30, 41, 59, 0.7); --glass-border: rgba(255, 255, 255, 0.1);
-            --text-main: #f1f5f9; --text-muted: #94a3b8; --teal: #0d9488; --red: #e11d48;
-            --blue: #3b82f6; --orange: #d97706; --green: #10b981; --purple: #8b5cf6; --slate: #64748b; --pink: #ec4899;
-            --modal-bg: rgba(15, 23, 42, 0.95);
-        }
-        body.light-mode {
-            --bg: #f8fafc; --glass-base: rgba(255, 255, 255, 0.9); --glass-border: rgba(0, 0, 0, 0.15);
-            --text-main: #0f172a; --text-muted: #475569; --modal-bg: rgba(255, 255, 255, 0.95);
-        }
+        :root { --bg: #0f172a; --glass-base: rgba(30, 41, 59, 0.7); --glass-border: rgba(255, 255, 255, 0.1); --text-main: #f1f5f9; --text-muted: #94a3b8; --teal: #0d9488; --red: #e11d48; --blue: #3b82f6; --orange: #d97706; --green: #10b981; --purple: #8b5cf6; --slate: #64748b; --pink: #ec4899; --modal-bg: rgba(15, 23, 42, 0.95); }
+        body.light-mode { --bg: #f8fafc; --glass-base: rgba(255, 255, 255, 0.9); --glass-border: rgba(0, 0, 0, 0.15); --text-main: #0f172a; --text-muted: #475569; --modal-bg: rgba(255, 255, 255, 0.95); }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg); color: var(--text-main); line-height: 1.5; transition: background-color 0.3s, color 0.3s; overflow-x: hidden;}
         button, .btn, .kpi-card, .action-icon, .ms-btn, .ms-opt, .tab-btn { touch-action: manipulation; }
@@ -31,13 +29,11 @@
         .login-subtitle { color: var(--text-muted); margin-bottom: 30px; font-size: 0.9rem; }
         .role-btn-container { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
         .role-btn { padding: 15px 25px; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; border: none; display: flex; align-items: center; gap: 10px; transition: 0.3s; flex: 1; min-width: 200px; justify-content: center; color: white; position: relative; z-index: 10;}
-        .role-btn-user { background: var(--blue); }
-        .role-btn-admin { background: var(--teal); }
+        .role-btn-user { background: var(--blue); } .role-btn-admin { background: var(--teal); }
         .role-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.3); }
         .theme-toggle-top { position: absolute; top: 20px; right: 20px; z-index: 10000; padding: 10px 15px; border-radius: 8px; font-weight: bold; background: var(--slate); color: white; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);}
         
         #mainDashboard { display: flex; min-height: 100vh; }
-        
         .sidebar { width: 260px; background: var(--glass-base); border-right: 1px solid var(--glass-border); display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; left: -260px; top: 0; z-index: 2000; transition: left 0.3s ease; backdrop-filter: blur(15px); }
         .sidebar.active { left: 0; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
         .sidebar-header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 20px; position: relative; }
@@ -46,8 +42,7 @@
         .sidebar-menu { display: flex; flex-direction: column; gap: 12px; flex: 1; margin-top: 10px; }
         .sidebar-btn { background: rgba(148, 163, 184, 0.1); color: var(--text-main); padding: 15px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 1rem; border: 1px solid transparent; transition: 0.2s; display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; }
         .sidebar-btn:hover { background: rgba(13, 148, 136, 0.2); border-color: var(--teal); color: var(--teal); transform: translateX(5px); }
-        .sidebar-btn-red { color: var(--red); }
-        .sidebar-btn-red:hover { background: rgba(225, 29, 72, 0.1); border-color: var(--red); color: var(--red); }
+        .sidebar-btn-red { color: var(--red); } .sidebar-btn-red:hover { background: rgba(225, 29, 72, 0.1); border-color: var(--red); color: var(--red); }
         
         .main-content { margin-left: 0; padding: 0 25px 25px 25px; flex: 1; max-width: 100%; }
         .menu-toggle { background: transparent; color: var(--text-main); border: none; font-size: 1.5rem; cursor: pointer; margin-right: 15px; transition: 0.2s; padding: 5px; }
@@ -57,14 +52,10 @@
         .conv-belt { position: absolute; top: 0; left: 0; width: 80px; height: 22px; border: 3px solid var(--text-main); border-radius: 12px; z-index: 2; box-sizing: border-box; overflow: hidden; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
         .conv-belt::after { content: ''; position: absolute; top: -3px; left: 0; width: 200%; height: 24px; background: repeating-linear-gradient(90deg, transparent, transparent 15px, var(--teal) 15px, var(--teal) 20px); opacity: 0.5; animation: moveBelt 0.6s linear infinite; }
         .conv-pulley { position: absolute; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--bg); border: 2px solid var(--text-main); z-index: 1; animation: spin 1s linear infinite; }
-        .conv-pulley.left { left: 4px; }
-        .conv-pulley.right { right: 4px; }
+        .conv-pulley.left { left: 4px; } .conv-pulley.right { right: 4px; }
         .conv-idler { position: absolute; bottom: 0px; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); z-index: 3; animation: spin 1s linear infinite reverse;}
-        .conv-idler.i1 { left: 24px; }
-        .conv-idler.i2 { left: 36px; }
-        .conv-idler.i3 { left: 48px; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        @keyframes moveBelt { 100% { transform: translateX(-15px); } }
+        .conv-idler.i1 { left: 24px; } .conv-idler.i2 { left: 36px; } .conv-idler.i3 { left: 48px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } } @keyframes moveBelt { 100% { transform: translateX(-15px); } }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; padding-top: 15px;}
         .header-title { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; color: var(--text-main); }
@@ -186,6 +177,7 @@
         </div>
     </div>
 
+    <!-- MAIN WRAPPER -->
     <div id="mainDashboard">
         <div class="sidebar" id="appSidebar">
             <button class="close-sidebar-btn" onclick="toggleSidebar(event)"><i class="fas fa-times"></i></button>
@@ -231,6 +223,7 @@
                 <span id="initial-text">Open Menu <i class="fas fa-bars"></i> to Upload <b>Abnormality</b> OR <b>Thickness</b> CSV file.</span>
             </div>
             
+            <!-- ABNORMALITY TAB -->
             <div id="abnTab" class="tab-content">
                 <div class="sticky-kpi">
                     <div class="kpi-grid">
@@ -273,6 +266,7 @@
                 </div>
             </div>
   
+            <!-- THICKNESS TAB -->
             <div id="thkTab" class="tab-content">
                 <div class="sticky-kpi">
                     <div class="kpi-grid">
@@ -333,7 +327,7 @@
                 <div class="sticky-kpi" style="top: 0; padding-top:10px;">
                     <div class="kpi-grid">
                         <div class="kpi-card" onclick="filterAdminThk('Current')" style="border-bottom: 3px solid var(--blue);">
-                            <div class="kpi-title"><i class="fas fa-calendar-day"></i> Current Month Schedule</div><div class="kpi-val" id="adm-k-curr">0</div>
+                            <div class="kpi-title"><i class="fas fa-calendar-day"></i> Current Schedule (Actionable)</div><div class="kpi-val" id="adm-k-curr">0</div>
                         </div>
                         <div class="kpi-card" onclick="filterAdminThk('Next')" style="border-bottom: 3px solid var(--orange);">
                             <div class="kpi-title"><i class="fas fa-calendar-plus"></i> Next Month Schedule</div><div class="kpi-val" id="adm-k-next">0</div>
@@ -342,7 +336,7 @@
                             <div class="kpi-title" style="color:var(--green);"><i class="fas fa-check-circle"></i> Inspected This Month</div><div class="kpi-val" id="adm-k-insp" style="color:var(--green);">0</div>
                         </div>
                         <div class="kpi-card" onclick="filterAdminThk('Pending')" style="border-bottom: 3px solid var(--red); background: rgba(225, 29, 72, 0.05);">
-                            <div class="kpi-title" style="color:var(--red);"><i class="fas fa-exclamation-triangle"></i> Pending (Past Date)</div><div class="kpi-val" id="adm-k-pend" style="color:var(--red);">0</div>
+                            <div class="kpi-title" style="color:var(--red);"><i class="fas fa-exclamation-triangle"></i> Pending Backlog (Past Date)</div><div class="kpi-val" id="adm-k-pend" style="color:var(--red);">0</div>
                         </div>
                     </div>
                 </div>
@@ -543,7 +537,7 @@
             let dObj = new Date(str); return isNaN(dObj.getTime()) ? null : dObj;
         }
 
-        // ================= ABNORMALITY TAB LOGIC (Kept Intact) =================
+        // ================= ABNORMALITY TAB LOGIC =================
         function processAbnormality(data) {
             document.getElementById('initial-message').style.display = 'none';
             document.getElementById('tabs-menu').style.display = 'flex';
@@ -681,8 +675,12 @@
             let colSch2 = headers.find(k => k.toLowerCase().includes('next thickness schedule') || k === 'AI') || 'next Thickness schedule';
 
             let today = new Date();
-            let currMonth = today.getMonth(); let currYear = today.getFullYear();
-            let nextMonth = (currMonth + 1) % 12; let nextYear = currMonth === 11 ? currYear + 1 : currYear;
+            
+            // EXACT MONTH BOUNDARIES
+            let currMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            let currMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+            let nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+            let nextMonthEnd = new Date(today.getFullYear(), today.getMonth() + 2, 0, 23, 59, 59);
 
             adminSchData = [];
 
@@ -723,9 +721,9 @@
                 row.length = row[colLength] || '-'; row.width = row[colWidth] || '-';
                 
                 if (!row.dept.toLowerCase().includes('briquetting')) {
-                    let s1 = parseDateCustom(row[colSch1]); let s2 = parseDateCustom(row[colSch2]);
-                    row.activeSchDate = s1 || s2;
-                    row.schDateDisp = row.activeSchDate ? `${String(row.activeSchDate.getDate()).padStart(2,'0')}-${String(row.activeSchDate.getMonth()+1).padStart(2,'0')}-${row.activeSchDate.getFullYear()}` : '-';
+                    let dSch1 = parseDateCustom(row[colSch1]);
+                    let dSch2 = parseDateCustom(row[colSch2]);
+                    let isCrit = row.crit.toLowerCase().includes('1.critical');
                     
                     let lastInspDate = null;
                     if (row.histDates && row.histDates.length > 0) {
@@ -737,11 +735,49 @@
                     row.lastInspDate = lastInspDate;
                     row.lastInspDisp = lastInspDate ? `${String(lastInspDate.getDate()).padStart(2,'0')}-${String(lastInspDate.getMonth()+1).padStart(2,'0')}-${lastInspDate.getFullYear()}` : '-';
 
-                    row.isInspectedThisMonth = (lastInspDate && lastInspDate.getMonth() === currMonth && lastInspDate.getFullYear() === currYear);
-                    row.isCurrentMonthSch = (row.activeSchDate && row.activeSchDate.getMonth() === currMonth && row.activeSchDate.getFullYear() === currYear && row.activeSchDate >= today);
-                    row.isNextMonthSch = (row.activeSchDate && row.activeSchDate.getMonth() === nextMonth && row.activeSchDate.getFullYear() === nextYear);
-                    row.isPending = (row.activeSchDate && row.activeSchDate < today && (!lastInspDate || lastInspDate < row.activeSchDate));
-                    row.isPendingOver3M = (row.isPending && (today - row.activeSchDate) > 90 * 24 * 60 * 60 * 1000);
+                    // INSpected this month?
+                    row.isInspectedThisMonth = lastInspDate && (lastInspDate >= currMonthStart && lastInspDate <= currMonthEnd);
+                    
+                    // Logic to include CURRENT and PAST months in "Current Schedule"
+                    let isDueSch1 = dSch1 && dSch1 <= currMonthEnd;
+                    let isDueSch2 = dSch2 && dSch2 <= currMonthEnd && !isCrit;
+                    
+                    // Strictly NEXT month
+                    let isNextSch1 = dSch1 && dSch1 >= nextMonthStart && dSch1 <= nextMonthEnd;
+                    let isNextSch2 = dSch2 && dSch2 >= nextMonthStart && dSch2 <= nextMonthEnd && !isCrit;
+
+                    let activeSchDate = null;
+                    let scheduleCategory = null;
+
+                    if (isDueSch1) { activeSchDate = dSch1; scheduleCategory = 'Current'; }
+                    else if (isDueSch2) { activeSchDate = dSch2; scheduleCategory = 'Current'; }
+                    else if (isNextSch1) { activeSchDate = dSch1; scheduleCategory = 'Next'; }
+                    else if (isNextSch2) { activeSchDate = dSch2; scheduleCategory = 'Next'; }
+                    else { activeSchDate = dSch1 || dSch2; }
+
+                    row.activeSchDate = activeSchDate;
+                    row.schDateDisp = activeSchDate ? `${String(activeSchDate.getDate()).padStart(2,'0')}-${String(activeSchDate.getMonth()+1).padStart(2,'0')}-${activeSchDate.getFullYear()}` : '-';
+
+                    row.isCurrentMonthSch = false;
+                    row.isNextMonthSch = false;
+                    row.isPending = false;
+                    row.isPendingOver3M = false;
+
+                    if (row.isInspectedThisMonth) {
+                        // Already inspected this month, skip checking due.
+                    } else {
+                        if (scheduleCategory === 'Current') {
+                            row.isCurrentMonthSch = true;
+                            if (activeSchDate < currMonthStart) {
+                                row.isPending = true; // Still counting as current, but flag as pending
+                                if ((today - activeSchDate) > 90 * 24 * 60 * 60 * 1000) {
+                                    row.isPendingOver3M = true;
+                                }
+                            }
+                        } else if (scheduleCategory === 'Next') {
+                            row.isNextMonthSch = true;
+                        }
+                    }
 
                     if (row.isInspectedThisMonth || row.isCurrentMonthSch || row.isNextMonthSch || row.isPending) {
                         adminSchData.push(row);
