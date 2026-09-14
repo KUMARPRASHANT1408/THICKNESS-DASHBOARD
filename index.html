@@ -527,9 +527,9 @@
         function parseDateCustom(dateStr) {
             if(!dateStr) return null;
             let valStr = String(dateStr).trim();
-            if(valStr === '' || valStr.toLowerCase() === 'nan' || valStr.toLowerCase() === 'na') return null;
+            if(valStr === '' || valStr.toLowerCase() === 'nan' || valStr.toLowerCase() === 'na' || valStr === 'undefined') return null;
 
-            if (valStr.replace('.','',1).isdigit() && Number(valStr) > 40000) return new Date(Math.round((Number(valStr) - 25569) * 86400 * 1000));
+            if (!isNaN(valStr) && Number(valStr) > 40000) return new Date(Math.round((Number(valStr) - 25569) * 86400 * 1000));
             let parts = valStr.split(/[\/\-]/);
             if(parts.length >= 3) {
                 let d = parseInt(parts[0], 10); let m = parseInt(parts[1], 10) - 1; let y = parseInt(parts[2].substring(0,4), 10);
@@ -645,34 +645,35 @@
             document.getElementById('btn-thk').style.display = 'block';
             switchTab('thkTab', 'btn-thk');
 
-            let colNo = headers.find(k => k === 'Conveyor') || 'Conveyor';
-            let colDept = headers.find(k => k === 'DEPT') || 'DEPT';
-            let colSec = headers.find(k => k === 'Section') || 'Section';
+            let colNo = headers.find(k => k && k.trim() === 'Conveyor') || 'Conveyor';
+            let colDept = headers.find(k => k && k.trim() === 'DEPT') || 'DEPT';
+            let colSec = headers.find(k => k && k.trim() === 'Section') || 'Section';
             
-            let colCWear = headers.find(k => k.includes('Current Wear Rate')) || 'Current Wear Rate (mm/Month)';
-            let colPWear = headers.find(k => k.includes('Planned Wear Rate')) || 'Planned Wear Rate (mm/Month)';
-            let colCBMLife = headers.find(k => k === 'CBM life1') || 'CBM life1';
-            let colLastRep = headers.find(k => k === 'Last Belt Replacement') || 'Last Belt Replacement';
+            let colCWear = headers.find(k => k && k.includes('Current Wear Rate')) || 'Current Wear Rate (mm/Month)';
+            let colPWear = headers.find(k => k && k.includes('Planned Wear Rate')) || 'Planned Wear Rate (mm/Month)';
+            let colCBMLife = headers.find(k => k && k === 'CBM life1') || 'CBM life1';
+            let colLastRep = headers.find(k => k && k === 'Last Belt Replacement') || 'Last Belt Replacement';
             let colNextCBM = headers.find(k => k && k.replace(/[\r\n]+/g, ' ').includes('Next Prediction (CBM)')) || 'Next Prediction (CBM)';
-            let colPredLife = headers.find(k => k.includes('Predicted Life (in Months) (Actual)')) || 'Predicted Life (in Months) (Actual)';
-            let colAgeAsOnDate = headers.find(k => k.includes('Age as on Date')) || 'Age as on Date (in Months)';
-            let colTopCover = headers.find(k => k === 'TOP') || 'TOP';
+            let colPredLife = headers.find(k => k && k.includes('Predicted Life (in Months) (Actual)')) || 'Predicted Life (in Months) (Actual)';
+            let colAgeAsOnDate = headers.find(k => k && k.includes('Age as on Date')) || 'Age as on Date (in Months)';
+            let colTopCover = headers.find(k => k && k === 'TOP') || 'TOP';
             
-            let colDateHistory = headers.find(k => k === 'Date') || 'Date';
-            let colEdgeHist = headers.find(k => k === 'EDGE1') || 'EDGE1';
-            let colCenterHist = headers.find(k => k === 'CENTER') || 'CENTER';
-            let colEdge2Hist = headers.find(k => k === 'EDGE2') || 'EDGE2';
+            let colDateHistory = headers.find(k => k && k === 'Date') || 'Date';
+            let colEdgeHist = headers.find(k => k && k === 'EDGE1') || 'EDGE1';
+            let colCenterHist = headers.find(k => k && k === 'CENTER') || 'CENTER';
+            let colEdge2Hist = headers.find(k => k && k === 'EDGE2') || 'EDGE2';
             
-            let colRecEdge1 = headers.find(k => k === 'Thickness EDGE 1') || 'Thickness EDGE 1';
-            let colRecCenter = headers.find(k => k === 'CENTER2') || 'CENTER2';
-            let colRecEdge2 = headers.find(k => k === 'Thickness EDGE 2') || 'Thickness EDGE 2';
-            let colMinThk = headers.find(k => k === 'MIN THICKNESS') || 'MIN THICKNESS';
-            let colCrit = headers.find(k => k === 'Criticality') || 'Criticality';
+            let colRecEdge1 = headers.find(k => k && k === 'Thickness EDGE 1') || 'Thickness EDGE 1';
+            let colRecCenter = headers.find(k => k && k === 'CENTER2') || 'CENTER2';
+            let colRecEdge2 = headers.find(k => k && k === 'Thickness EDGE 2') || 'Thickness EDGE 2';
+            let colMinThk = headers.find(k => k && k === 'MIN THICKNESS') || 'MIN THICKNESS';
+            let colCrit = headers.find(k => k && k === 'Criticality') || 'Criticality';
             
-            let colLength = headers.find(k => k.toLowerCase().includes('length')) || 'Length';
-            let colWidth = headers.find(k => k.toLowerCase().includes('width')) || 'Width';
-            let colSch1 = headers.find(k => k.toLowerCase().includes('1st thickness schedule') || k === 'AH') || '1st Thickness schedule';
-            let colSch2 = headers.find(k => k.toLowerCase().includes('next thickness schedule') || k === 'AI') || 'next Thickness schedule';
+            // New Columns for Admin View
+            let colLength = headers.find(k => k && k.toLowerCase().includes('length')) || 'Length';
+            let colWidth = headers.find(k => k && k.toLowerCase().includes('width')) || 'Width';
+            let colSch1 = headers.find(k => k && (k.toLowerCase().includes('1st thickness schedule') || k === 'AH')) || '1st Thickness schedule';
+            let colSch2 = headers.find(k => k && (k.toLowerCase().includes('next thickness schedule') || k === 'AI')) || 'next Thickness schedule';
 
             let today = new Date();
             let currMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -692,8 +693,8 @@
                 row.crit = row[colCrit] ? row[colCrit].trim() : 'Unknown';
                 row.cWear = parseFloat(row[colCWear]) || 0; row.pWear = parseFloat(row[colPWear]) || 0;
                 
-                let cbmStr = String(row[colCBMLife]).trim();
-                row.cbmLife = (cbmStr !== '' && cbmStr.toLowerCase() !== 'nan' && cbmStr !== '-' && !cbmStr.includes('#')) ? parseFloat(cbmStr) : 999;
+                let cbmStr = row[colCBMLife] ? String(row[colCBMLife]).trim() : '';
+                row.cbmLife = (cbmStr !== '' && cbmStr.toLowerCase() !== 'nan' && cbmStr !== 'undefined' && cbmStr !== '-' && !cbmStr.includes('#')) ? parseFloat(cbmStr) : 999;
           
                 let lRepDate = parseDateCustom(row[colLastRep]);
                 row.lastRep = lRepDate ? `${String(lRepDate.getDate()).padStart(2,'0')}-${String(lRepDate.getMonth()+1).padStart(2,'0')}-${lRepDate.getFullYear()}` : (row[colLastRep] || '-');
@@ -766,7 +767,7 @@
                     if (!row.isInspectedThisMonth) {
                         if (scheduleCategory === 'Current') {
                             row.isCurrentMonthSch = true;
-                            if (activeSchDate < currMonthStart) {
+                            if (activeSchDate !== null && activeSchDate < currMonthStart) {
                                 row.isPending = true;
                                 if ((today.getTime() - activeSchDate.getTime()) > 90 * 24 * 60 * 60 * 1000) {
                                     row.isPendingOver3M = true;
