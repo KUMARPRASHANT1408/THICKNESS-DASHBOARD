@@ -1,9 +1,16 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- 
+    ========================================================================
+    RESTRICTED SYSTEM
+    THIS FILE IS PROPERTY OF THE RELIABILITY & MAINTENANCE DEPARTMENT.
+    ========================================================================
+    -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>RTG Master Control Dashboard</title>
+    <!-- Normal Fast Loading Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -689,256 +696,260 @@
     </div>
     <script>
         let parsedData = [];
-let filteredData = []; let fileType = ''; 
+        let filteredData = []; let fileType = ''; 
         let currentKpiFilter = 'All'; 
         let isDarkMode = true; let currentRole = 'user';
-let chartA1 = null, chartA2 = null, chartA3 = null, chartA4 = null, chartA5 = null;
-let chartT1 = null, chartT2 = null, historyChartInst = null;
+        let chartA1 = null, chartA2 = null, chartA3 = null, chartA4 = null, chartA5 = null;
+        let chartT1 = null, chartT2 = null, historyChartInst = null;
         
         window.abnAllRecords = []; 
         window.openRecords = [];
         let activeAbnRecords = [];
-function getCssVar(name) {
+
+        function getCssVar(name) {
             return getComputedStyle(document.body).getPropertyValue(name).trim();
-}
+        }
+
         // ================= SMOOTH AUTO-SCROLL TO TABLE =================
         function scrollToTable(sectionId) {
             const el = document.getElementById(sectionId);
-if(el) {
+            if(el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
+            }
         }
+
         // ================= SIDEBAR TOGGLE FIX =================
         function toggleSidebar(e) {
             if(e) e.stopPropagation();
             document.getElementById('appSidebar').classList.toggle('active');
-}
+        }
         
         document.getElementById('mainContent').addEventListener('click', () => {
             document.getElementById('appSidebar').classList.remove('active');
         });
-// ================= CHATBOT LOGIC =================
+
+        // ================= CHATBOT LOGIC =================
         function toggleChat() {
             const cw = document.getElementById('chatWindow');
-cw.style.display = cw.style.display === 'flex' ? 'none' : 'flex';
+            cw.style.display = cw.style.display === 'flex' ? 'none' : 'flex';
         }
+
         function appendMessage(sender, text) {
             const body = document.getElementById('chatBody');
-const msgDiv = document.createElement('div');
+            const msgDiv = document.createElement('div');
             msgDiv.className = `msg msg-${sender}`;
             msgDiv.innerHTML = text; 
             body.appendChild(msgDiv);
             body.scrollTop = body.scrollHeight;
-}
+        }
+
         function handleChat() {
             const inputEl = document.getElementById('chatInput');
-const text = inputEl.value.trim().toLowerCase();
+            const text = inputEl.value.trim().toLowerCase();
             if(!text) return;
             appendMessage('user', text);
             inputEl.value = '';
             
             const typing = document.getElementById('typingIndicator');
             typing.style.display = 'block';
-setTimeout(() => {
+            setTimeout(() => {
                 typing.style.display = 'none';
                 let response = "I couldn't isolate that parameter. Try asking about **critical belts**, **open issues**, **backlog (>6 months)**, or **top defaulters**.";
                 
                 let isCritical = /critical|danger|risk/i.test(text);
          
-       let isOpen = /open|unresolved/i.test(text);
+                let isOpen = /open|unresolved/i.test(text);
                 let isBacklog = /backlog|overdue|pending|6 month|6m/i.test(text);
                 let isDefaulter = /default|worst|top|bad/i.test(text);
                 let isTotal = /total|how many|count/i.test(text);
                 let isGreet = /hi|hello|hey|wake/i.test(text);
             
-    if (window.abnAllRecords.length === 0 && parsedData.length === 0) {
+                if (window.abnAllRecords.length === 0 && parsedData.length === 0) {
                     response = "Offline mode active. Please upload a CSV file before running analytics.";
                 } 
                 else if (isGreet) {
-                    
-response = "At your service. I am ready to pull numbers for critical conditions, open issues, or pending backlogs.";
-} 
+                    response = "At your service. I am ready to pull numbers for critical conditions, open issues, or pending backlogs.";
+                } 
                 else if (isCritical) {
                     if (fileType === 'thk') {
                         let crit = filteredData.filter(d => d.crit.includes('1.Critical')).length;
-response = `Scan complete. Found <b style="color:var(--red); font-size:1.1rem;">${crit}</b> critical belts in the active data.`;
-} else if (fileType === 'abn') {
+                        response = `Scan complete. Found <b style="color:var(--red); font-size:1.1rem;">${crit}</b> critical belts in the active data.`;
+                    } else if (fileType === 'abn') {
                         const critActions = ['Replace', 'Rejoint', 'Piece Addition', 'Operate under Observation'];
-let crit = window.openRecords.filter(d => critActions.includes(d.plan)).length;
-                        response = `Scan complete.
-There are <b style="color:var(--orange); font-size:1.1rem;">${crit}</b> critical open abnormalities demanding immediate action.`;
-}
+                        let crit = window.openRecords.filter(d => critActions.includes(d.plan)).length;
+                        response = `Scan complete. There are <b style="color:var(--orange); font-size:1.1rem;">${crit}</b> critical open abnormalities demanding immediate action.`;
+                    }
                 } 
                 else if (isBacklog) {
                     if (fileType === 'abn') {
                         let over6 = window.openRecords.filter(d => d.ageDays > 180).length;
-response = `Warning. We have <b style="color:var(--pink); font-size:1.1rem;">${over6}</b> severe abnormalities pending for more than 180 days.`;
-} else if (fileType === 'thk') {
+                        response = `Warning. We have <b style="color:var(--pink); font-size:1.1rem;">${over6}</b> severe abnormalities pending for more than 180 days.`;
+                    } else if (fileType === 'thk') {
                         let next6 = filteredData.filter(d => d.actualRemainingLife >= 0 && d.actualRemainingLife <= 6 && d.cbmLife !== 999).length;
-let backlog = filteredData.filter(d => d.actualRemainingLife < 0 && d.cbmLife !== 999).length;
-response = `Alert: <b style="color:var(--pink); font-size:1.1rem;">${next6}</b> belts are due in the next 6 months, and <b style="color:var(--red); font-size:1.1rem;">${backlog}</b> belts are already in overdue backlog!`;
-}
+                        let backlog = filteredData.filter(d => d.actualRemainingLife < 0 && d.cbmLife !== 999).length;
+                        response = `Alert: <b style="color:var(--pink); font-size:1.1rem;">${next6}</b> belts are due in the next 6 months, and <b style="color:var(--red); font-size:1.1rem;">${backlog}</b> belts are already in overdue backlog!`;
+                    }
                 } 
                 else if (isDefaulter) {
                     if (fileType === 'abn') {
                         let convMap = {};
-window.abnAllRecords.forEach(d => { convMap[d['NO.']] = (convMap[d['NO.']] || 0) + 1; });
-let top5 = Object.keys(convMap).map(k => ({name: k, count: convMap[k]})).sort((a,b) => b.count - a.count).slice(0,3);
-                        response = `Top 3 Defaulter Conveyors:<br><br>1.
-<b style="color:var(--teal);">${top5[0]?.name}</b> (${top5[0]?.count} alerts)<br>2. <b style="color:var(--teal);">${top5[1]?.name}</b> (${top5[1]?.count} alerts)<br>3. <b style="color:var(--teal);">${top5[2]?.name}</b> (${top5[2]?.count} alerts)`;
-} else {
+                        window.abnAllRecords.forEach(d => { convMap[d['NO.']] = (convMap[d['NO.']] || 0) + 1; });
+                        let top5 = Object.keys(convMap).map(k => ({name: k, count: convMap[k]})).sort((a,b) => b.count - a.count).slice(0,3);
+                        response = `Top 3 Defaulter Conveyors:<br><br>1. <b style="color:var(--teal);">${top5[0]?.name}</b> (${top5[0]?.count} alerts)<br>2. <b style="color:var(--teal);">${top5[1]?.name}</b> (${top5[1]?.count} alerts)<br>3. <b style="color:var(--teal);">${top5[2]?.name}</b> (${top5[2]?.count} alerts)`;
+                    } else {
                         response = "Defaulter matrix is currently limited to the Abnormality dataset.";
-}
+                    }
                 }
                 else if (isOpen) {
                     if (fileType === 'abn') {
                         response = `I am currently tracking <b style="color:var(--red); font-size:1.1rem;">${window.openRecords.length}</b> active open abnormalities in the console.`;
-} else {
-                        response = `Open issues are tracked in the Abnormality Tab.
-Please switch sections.`;
+                    } else {
+                        response = `Open issues are tracked in the Abnormality Tab. Please switch sections.`;
                     }
                 } 
                 else if (isTotal) {
                     if(fileType==='thk') response = `The system is currently tracking <b style="color:var(--teal); font-size:1.1rem;">${filteredData.length}</b> belts in this selection.`;
-if(fileType==='abn') response = `A total of <b style="color:var(--teal); font-size:1.1rem;">${window.abnAllRecords.length}</b> historical and active records are loaded.`;
-}
+                    if(fileType==='abn') response = `A total of <b style="color:var(--teal); font-size:1.1rem;">${window.abnAllRecords.length}</b> historical and active records are loaded.`;
+                }
                 appendMessage('bot', response);
             }, 800);
-}
+        }
+
         // ================= ROLE & SECURITY LOGIC =================
         function handleLogin(role) {
             if(role === 'admin') {
                 let pwd = prompt("Enter Admin Password:");
-if(pwd && btoa(pwd) === 'UlRHQDEyMw==') { 
+                if(pwd && btoa(pwd) === 'UlRHQDEyMw==') { 
                     currentRole = 'admin';
-finalizeLogin('Admin', 'var(--teal)');
+                    finalizeLogin('Admin', 'var(--teal)');
                 } else {
                     alert("Authorization Rejected.");
-}
+                }
             } else {
                 currentRole = 'user';
-finalizeLogin('User Mode', 'var(--blue)');
+                finalizeLogin('User Mode', 'var(--blue)');
                 applyUserRestrictions();
             }
         }
+
         function finalizeLogin(roleText, badgeColor) {
             document.getElementById('loginScreen').style.display = 'none';
-let badge = document.getElementById('roleBadge');
+            let badge = document.getElementById('roleBadge');
             badge.innerText = roleText;
             badge.style.background = badgeColor;
             badge.style.color = '#fff';
             
             const abnCards = ['abn-kpi-total', 'abn-kpi-closed', 'abn-kpi-open'];
-abnCards.forEach(id => {
+            abnCards.forEach(id => {
                 const el = document.getElementById(id);
                 if(el) {
                     el.style.cursor = currentRole === 'admin' ? 'pointer' : 'not-allowed';
                     el.style.opacity = currentRole === 'admin' ? '1' : '0.6';
-      
-          }
+                }
             });
-const abnAdminCols = document.querySelectorAll('.abn-admin-col');
+            const abnAdminCols = document.querySelectorAll('.abn-admin-col');
             abnAdminCols.forEach(col => col.style.display = currentRole === 'admin' ? 'table-cell' : 'none');
-document.getElementById('kpi-card-next6m').style.display = currentRole === 'admin' ? 'block' : 'none';
+            document.getElementById('kpi-card-next6m').style.display = currentRole === 'admin' ? 'block' : 'none';
             document.getElementById('kpi-card-abn-6m').style.display = currentRole === 'admin' ? 'block' : 'none';
-document.getElementById('kpi-card-thk-backlog').style.display = currentRole === 'admin' ? 'block' : 'none';
+            document.getElementById('kpi-card-thk-backlog').style.display = currentRole === 'admin' ? 'block' : 'none';
             document.getElementById('abn-admin-charts').style.display = currentRole === 'admin' ? 'grid' : 'none';
-if (fileType === 'thk') {
-                document.getElementById('th-life-analysis').style.display = currentRole === 'admin' ?
-'table-cell' : 'none';
+            if (fileType === 'thk') {
+                document.getElementById('th-life-analysis').style.display = currentRole === 'admin' ? 'table-cell' : 'none';
                 applyTableDeptFilter(); 
             } else if (fileType === 'abn') {
-                if(currentRole === 'user') { filterAbnTable('Critical');
-}
-                else { filterAbnTable('Open');
-}
+                if(currentRole === 'user') { filterAbnTable('Critical'); }
+                else { filterAbnTable('Open'); }
             }
         }
-        function logout() { location.reload();
-}
+
+        function logout() { location.reload(); }
+
         function applyUserRestrictions() {
             document.addEventListener('contextmenu', event => {
                 if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') event.preventDefault();
             });
-document.body.style.userSelect = 'none';
+            document.body.style.userSelect = 'none';
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'F12' || (e.ctrlKey && ['u', 'c', 'i', 'j', 's', 'p'].includes(e.key.toLowerCase()))) {
                     e.preventDefault();
                 }
             });
-}
+        }
+
         // ================= UI & UTILS =================
         function closeDropdownEvent(e) {
             if (!e.target.closest('.ms-container')) {
                 document.querySelectorAll('.ms-dropdown').forEach(d => d.classList.remove('show'));
-}
+            }
         }
         document.addEventListener('click', closeDropdownEvent);
         document.addEventListener('touchstart', closeDropdownEvent);
-function toggleMultiSelect() { document.getElementById('msDrop').classList.toggle('show'); }
-        function toggleAbnMultiSelect() { document.getElementById('abnMsDrop').classList.toggle('show');
-}
+        function toggleMultiSelect() { document.getElementById('msDrop').classList.toggle('show'); }
+        function toggleAbnMultiSelect() { document.getElementById('abnMsDrop').classList.toggle('show'); }
+
         function toggleTheme() {
             isDarkMode = !isDarkMode;
-document.body.classList.toggle('light-mode', !isDarkMode);
+            document.body.classList.toggle('light-mode', !isDarkMode);
             
             const icons = ['themeIcon', 'loginThemeIcon'];
             icons.forEach(id => {
                 const el = document.getElementById(id);
                 if(el) { el.classList.toggle('fa-moon', isDarkMode); el.classList.toggle('fa-sun', !isDarkMode); }
             });
-Chart.defaults.color = getCssVar('--text-muted');
+            Chart.defaults.color = getCssVar('--text-muted');
             if(fileType === 'abn') showAbnCharts();
             if(fileType === 'thk') showThkCharts();
-}
+        }
+
         function switchTab(tabId, btnId) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             if(btnId) document.getElementById(btnId).classList.add('active');
             window.scrollTo(0,0); 
         }
+
         function resetDashboard() {
             document.getElementById('csvFileInput').value = '';
-document.getElementById('uploadLabel').style.display = 'flex';
+            document.getElementById('uploadLabel').style.display = 'flex';
             document.getElementById('resetBtn').style.display = 'none';
             document.getElementById('pdfBtn').style.display = 'none';
             document.getElementById('initial-message').style.display = 'block';
             document.getElementById('upload-icon').style.display = 'inline-block';
             document.getElementById('loading-spinner').style.display = 'none';
-document.getElementById('tabs-menu').style.display = 'none';
+            document.getElementById('tabs-menu').style.display = 'none';
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             parsedData = []; filteredData = []; fileType = ''; window.abnAllRecords = [];
-currentKpiFilter = 'All';
+            currentKpiFilter = 'All';
             if(chartA1) chartA1.destroy(); if(chartA2) chartA2.destroy(); if(chartA3) chartA3.destroy(); if(chartA4) chartA4.destroy(); if(chartA5) chartA5.destroy();
             if(chartT1) chartT1.destroy(); if(chartT2) chartT2.destroy();
             document.getElementById('appSidebar').classList.remove('active');
-}
+        }
+
         async function exportToPDF() {
             document.getElementById('appSidebar').classList.remove('active');
-const elementId = fileType === 'thk' ? 'thkTab' : 'abnTab';
+            const elementId = fileType === 'thk' ? 'thkTab' : 'abnTab';
             const element = document.getElementById(elementId);
             
             const stickies = element.querySelectorAll('.sticky-kpi, .sticky-tabs');
-stickies.forEach(el => el.style.position = 'static');
+            stickies.forEach(el => el.style.position = 'static');
             const opt = {
                 margin: 5, filename: `RTG_Report_${new Date().toISOString().split('T')[0]}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
             };
-element.style.background = getCssVar('--bg');
+            element.style.background = getCssVar('--bg');
             element.style.padding = '20px';
             await html2pdf().set(opt).from(element).save();
             
             element.style.background = ''; element.style.padding = '';
             stickies.forEach(el => el.style.position = '');
-}
+        }
 
         // ================= DATE PARSER (UPDATED) =================
         function parseDateCustom(dateStr) {
             if(!dateStr) return null;
             
-            // MAGIC TRICK: Agar Power Automate ne date ko 45731 jaisa number bana diya hai
             if (!isNaN(dateStr) && Number(dateStr) > 40000) {
                 return new Date(Math.round((Number(dateStr) - 25569) * 86400 * 1000));
             }
@@ -999,6 +1010,18 @@ element.style.background = getCssVar('--bg');
                             let oldRow = results.data[i];
                             let newRow = {};
                             
+                            // --- BUCKET & NOT EXISTING FILTER ---
+                            let skipRow = false;
+                            for (let key in oldRow) {
+                                let cellVal = oldRow[key] ? String(oldRow[key]).toLowerCase() : '';
+                                if (cellVal.includes('bucket') || cellVal.includes('not existing')) {
+                                    skipRow = true;
+                                    break;
+                                }
+                            }
+                            if (skipRow) continue; 
+                            // ------------------------------------
+                            
                             for (let j = 0; j < cleanHeaders.length; j++) {
                                 let head = cleanHeaders[j];
                                 newRow[head] = oldRow[head];
@@ -1023,7 +1046,7 @@ element.style.background = getCssVar('--bg');
                         }
                     }
                 });
-}, 50);
+            }, 50);
         });
         
         // ================= ABNORMALITY LOGIC =================
@@ -1072,7 +1095,7 @@ element.style.background = getCssVar('--bg');
                 }
 
                 return row;
-});
+            });
             window.openRecords = window.abnAllRecords.filter(d => d.status.toLowerCase() === 'open');
             const criticalActions = ['Replace', 'Rejoint', 'Piece Addition', 'Operate under Observation'];
             document.getElementById('a-k-total').innerText = window.abnAllRecords.length;
@@ -1341,9 +1364,7 @@ element.style.background = getCssVar('--bg');
             let colCBMLife = headers.find(k => k === 'CBM life1') || 'CBM life1';
             let colLastRep = headers.find(k => k === 'Last Belt Replacement') || 'Last Belt Replacement';
             
-            // --- ROBUST CATCHER FOR NEXT PREDICTION CBM (Handles newlines and spaces) ---
             let colNextCBM = headers.find(k => k && k.replace(/[\r\n]+/g, ' ').includes('Next Prediction (CBM)')) || 'Next Prediction (CBM)';
-            // -----------------------------------------------------------------------------
             
             let colTopCover = headers.find(k => k === 'TOP') || 'TOP';
             let colPredLife = headers.find(k => k.includes('Predicted Life (in Months) (Actual)')) || 'Predicted Life (in Months) (Actual)';
@@ -1361,7 +1382,10 @@ element.style.background = getCssVar('--bg');
             let colMinThk = headers.find(k => k === 'MIN THICKNESS') || 'MIN THICKNESS';
             let colCrit = headers.find(k => k === 'Criticality') || 'Criticality';
 
-            parsedData = data.filter(row => row[colNo] && row[colNo].trim() !== '').map(row => {
+            parsedData = data.filter(row => {
+                if (!row[colNo] || row[colNo].trim() === '') return false;
+                return true;
+            }).map(row => {
                 row.dept = row[colDept] || 'Unknown';
                 row.section = row[colSec] || row.dept; 
                 row.conv = row[colNo] || '-';
@@ -1376,7 +1400,6 @@ element.style.background = getCssVar('--bg');
                 let lRepDate = parseDateCustom(row[colLastRep]);
                 row.lastRep = lRepDate ? `${String(lRepDate.getDate()).padStart(2,'0')}-${String(lRepDate.getMonth()+1).padStart(2,'0')}-${lRepDate.getFullYear()}` : (row[colLastRep] || '-');
                 
-                // SAFELY PARSE NEXT CBM DATE
                 let rawNextCBM = row[colNextCBM] || row['Next Prediction (CBM)'] || '';
                 let nCbmDate = parseDateCustom(rawNextCBM);
                 row.nextCBM = nCbmDate ? `${String(nCbmDate.getDate()).padStart(2,'0')}-${String(nCbmDate.getMonth()+1).padStart(2,'0')}-${nCbmDate.getFullYear()}` : (rawNextCBM || '-');
