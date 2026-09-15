@@ -436,7 +436,7 @@
                 if(pwd && btoa(pwd) === 'UlRHQDEyMw==') { currentRole = 'admin'; finalizeLogin('Admin', 'var(--teal)'); } 
                 else { alert("Authorization Rejected."); }
             } else {
-                currentRole = 'user'; finalizeLogin('User Mode', 'var(--blue)'); applyUserRestrictions();
+                currentRole = 'user'; finalizeLogin('User Mode', 'var(--blue)'); 
             }
         }
         function finalizeLogin(roleText, badgeColor) {
@@ -459,7 +459,7 @@
 
         // ================= AUTO FETCH LIVE DATA LOGIC =================
         function fetchLiveData() {
-            if(sheetCsvUrl === "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9FGXXTFb7_k0QCC1kAYkxj3xjh9nBQ0ceQ3Nu-xtWjWhbR01Tx8lmJCGCCtfXkPR7SW2Za7DLrcSE/pub?gid=0&single=true&output=csv" || !sheetCsvUrl) {
+            if(sheetCsvUrl === "YAHAN_APNA_PUBLISHED_CSV_LINK_PASTE_KARO" || !sheetCsvUrl) {
                 alert("Please add your Google Sheet CSV URL in the code!");
                 return;
             }
@@ -543,6 +543,7 @@
                     document.getElementById('loading-spinner').style.display = 'none';
                 });
         }
+
         // ================= DATE PARSER ENGINE =================
         function parseDateCustom(dateStr) {
             if(!dateStr) return null;
