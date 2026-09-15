@@ -38,7 +38,7 @@
         .close-sidebar-btn { position: absolute; top: 0; right: 0; background: transparent; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
         .sidebar-title { font-size: 1.4rem; font-weight: 800; color: var(--text-main); margin-top: 15px; letter-spacing: 0.5px; }
         .sidebar-menu { display: flex; flex-direction: column; gap: 12px; flex: 1; margin-top: 10px; }
-        .sidebar-btn { background: rgba(148, 163, 184, 0.1); color: var(--text-main); padding: 15px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 1rem; border: 1px solid transparent; transition: 0.2s; display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border:none; }
+        .sidebar-btn { background: rgba(148, 163, 184, 0.1); color: var(--text-main); padding: 15px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 1rem; border: 1px solid transparent; transition: 0.2s; display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; }
         .sidebar-btn:hover { background: rgba(13, 148, 136, 0.2); border-color: var(--teal); color: var(--teal); transform: translateX(5px); }
         .sidebar-btn-red { color: var(--red); } .sidebar-btn-red:hover { background: rgba(225, 29, 72, 0.1); border-color: var(--red); color: var(--red); }
         
@@ -188,8 +188,8 @@
                 <span id="roleBadge" class="badge" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;"></span>
             </div>
             <div class="sidebar-menu">
-                <!-- Changed Upload button to Sync Live Data -->
-                <button class="sidebar-btn" id="uploadLabel" onclick="fetchLiveData()"><i class="fas fa-sync-alt text-teal"></i> Sync Live Data</button>
+                <!-- Sync Live Data Button Instead of File Upload -->
+                <button class="sidebar-btn" id="syncBtn" onclick="fetchLiveData()"><i class="fas fa-sync-alt text-teal"></i> Sync Live Data</button>
                 
                 <button class="sidebar-btn" onclick="toggleTheme()"><i class="fas fa-adjust" id="themeIcon"></i> Toggle Theme</button>
                 <button id="resetBtn" class="sidebar-btn sidebar-btn-red" style="display: none;" onclick="resetDashboard()"><i class="fas fa-trash-restore"></i> Reset System</button>
@@ -214,6 +214,7 @@
                 <button class="tab-btn" id="btn-thk" onclick="switchTab('thkTab', 'btn-thk')"><i class="fas fa-ruler-combined"></i> Thickness & Life</button>
             </div>
             
+            <!-- Updated Initial Message for Auto-Fetch -->
             <div id="initial-message" class="liquid-glass">
                 <i class="fas fa-spinner fa-spin" id="loading-spinner" style="display:none; font-size: 3rem; color: var(--teal); margin-bottom: 15px;"></i>
                 <i class="fas fa-cloud-download-alt" id="upload-icon" style="font-size: 4rem; color: var(--glass-border); margin-bottom: 15px;"></i><br>
@@ -405,7 +406,7 @@
         // ==========================================
         // YAHAN APNA GOOGLE SHEET WALA URL PASTE KARO
         // ==========================================
-        const sheetCsvUrl = "YAHAN_APNA_PUBLISHED_CSV_LINK_PASTE_KARO";
+        const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9FGXXTFb7_k0QCC1kAYkxj3xjh9nBQ0ceQ3Nu-xtWjWhbR01Tx8lmJCGCCtfXkPR7SW2Za7DLrcSE/pub?gid=0&single=true&output=csv";
 
 
         let parsedData = []; let filteredData = []; let fileType = ''; let currentKpiFilter = 'All'; 
@@ -458,12 +459,11 @@
 
         // ================= AUTO FETCH LIVE DATA LOGIC =================
         function fetchLiveData() {
-            if(sheetCsvUrl === "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9FGXXTFb7_k0QCC1kAYkxj3xjh9nBQ0ceQ3Nu-xtWjWhbR01Tx8lmJCGCCtfXkPR7SW2Za7DLrcSE/pub?gid=0&single=true&output=csv" || !sheetCsvUrl) {
+            if(sheetCsvUrl === "YAHAN_APNA_PUBLISHED_CSV_LINK_PASTE_KARO" || !sheetCsvUrl) {
                 alert("Please add your Google Sheet CSV URL in the code!");
                 return;
             }
 
-            document.getElementById('uploadLabel').style.display = 'none';
             document.getElementById('resetBtn').style.display = 'flex';
             document.getElementById('pdfBtn').style.display = 'flex';
             document.getElementById('upload-icon').style.display = 'none';
@@ -534,7 +534,6 @@
                     console.error("Error Fetching Data: ", error);
                     document.getElementById('initial-text').innerHTML = '<b style="color:var(--red);">Error connecting to live server.<br>Check URL or try again.</b>';
                     document.getElementById('loading-spinner').style.display = 'none';
-                    document.getElementById('uploadLabel').style.display = 'flex';
                 });
         }
 
@@ -586,7 +585,7 @@
             window.abnAllRecords = data.filter(row => row['NO.'] && row['NO.'].trim() !== '').map(row => {
                 let rawPlan = row['Plan as per New Belt philosophy'] ? row['Plan as per New Belt philosophy'].replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').trim() : '';
                 let lowerPlan = rawPlan.toLowerCase();
-                if(lowerPlan.includes('replace')) row.plan = 'Replace'; else if(lowerPlan.includes('rejoint')) row.plan = 'Rejoint'; else if(lowerPlan.includes('piece')) row.plan = 'Piece Addition'; else if(lowerPlan.includes('operate under observation')) row.plan = 'Operate under Observation'; else if(lowerPlan === 'operate' || lowerPlan.includes('operate')) row.plan = 'Operate'; else row.plan = rawPlan;
+                if(lowerPlan.includes('replace')) row.plan = 'Replace'; else if(lowerPlan.includes('rejoint')) row.plan = 'Piece Addition'; else if(lowerPlan.includes('operate under observation')) row.plan = 'Operate under Observation'; else if(lowerPlan === 'operate' || lowerPlan.includes('operate')) row.plan = 'Operate'; else row.plan = rawPlan;
                 
                 row.status = row['Status'] ? row['Status'].trim() : ''; row.Dept = row['DEPT'] || row['Dept'] || 'Unknown';
                 let issueLower = (row['Major Abnormality'] || '').toLowerCase();
@@ -1093,6 +1092,7 @@
         
         function resetDashboard() {
             alert("Auto-sync is enabled. Refresh the page to reload data.");
+            location.reload();
         }
 
         // ================= CHATBOT LOGIC =================
