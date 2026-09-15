@@ -459,7 +459,7 @@
 
         // ================= AUTO FETCH LIVE DATA LOGIC =================
         function fetchLiveData() {
-            if(sheetCsvUrl === "YAHAN_APNA_PUBLISHED_CSV_LINK_PASTE_KARO" || !sheetCsvUrl) {
+            if(sheetCsvUrl === "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9FGXXTFb7_k0QCC1kAYkxj3xjh9nBQ0ceQ3Nu-xtWjWhbR01Tx8lmJCGCCtfXkPR7SW2Za7DLrcSE/pub?gid=0&single=true&output=csv" || !sheetCsvUrl) {
                 alert("Please add your Google Sheet CSV URL in the code!");
                 return;
             }
@@ -482,18 +482,24 @@
                         header: true, 
                         skipEmptyLines: true,
                         transformHeader: function(h) {
-                            h = h.trim();
+                            h = h ? h.trim() : '';
                             if (h === 'NO_x002e_') { h = 'NO.'; }
                             if (headerCounts[h]) { headerCounts[h]++; return h + '_' + headerCounts[h]; } 
                             else { headerCounts[h] = 1; return h; }
                         },
                         complete: function(results) {
                             headerCounts = {};
-                            const rawHeaders = results.meta.fields;
-                            const cleanHeaders = rawHeaders.slice(2); 
+                            const rawHeaders = results.meta.fields || [];
                             
-                            let gradeCol = cleanHeaders.find(h => h.trim().toLowerCase() === 'belt covergrade') || 'Belt CoverGrade';
-                            let secCol = cleanHeaders.find(h => h.trim().toLowerCase() === 'section') || 'Section';
+                            // Smart check: Agar pehla col @odata hai toh 2 col skip karo, warna 0 (sab rakho)
+                            let startIndex = 0;
+                            if (rawHeaders.length > 0 && String(rawHeaders[0]).includes('@odata')) {
+                                startIndex = 2;
+                            }
+                            const cleanHeaders = rawHeaders.slice(startIndex); 
+                            
+                            let gradeCol = cleanHeaders.find(h => h && h.trim().toLowerCase() === 'belt covergrade') || 'Belt CoverGrade';
+                            let secCol = cleanHeaders.find(h => h && h.trim().toLowerCase() === 'section') || 'Section';
                             
                             let cleanedData = [];
                             for (let i = 0; i < results.data.length; i++) {
@@ -514,8 +520,9 @@
                                 cleanedData.push(newRow);
                             }
                             
-                            let isAbn = cleanHeaders.some(h => h.includes('Major Abnormality') || h.includes('Belt philosophy'));
-                            let isThk = cleanHeaders.some(h => h.includes('Current Wear Rate') || h.includes('Thickness EDGE 1') || h.trim() === 'Conveyor');
+                            // Check rawHeaders directly to avoid slicing issues blocking format check
+                            let isAbn = rawHeaders.some(h => h && (h.includes('Major Abnormality') || h.includes('Belt philosophy')));
+                            let isThk = rawHeaders.some(h => h && (h.includes('Current Wear Rate') || h.includes('Thickness EDGE 1') || h.trim() === 'Conveyor' || h.includes('MIN THICKNESS')));
                             
                             if (isAbn) { 
                                 fileType = 'abn';
@@ -524,7 +531,7 @@
                                 fileType = 'thk';
                                 processThickness(cleanedData, cleanHeaders); 
                             } else { 
-                                alert("Unrecognized format.");
+                                alert("Unrecognized format. Please ensure CSV URL is correct and data matches template.");
                                 resetDashboard(); 
                             }
                         }
@@ -536,7 +543,6 @@
                     document.getElementById('loading-spinner').style.display = 'none';
                 });
         }
-
         // ================= DATE PARSER ENGINE =================
         function parseDateCustom(dateStr) {
             if(!dateStr) return null;
