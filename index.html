@@ -892,7 +892,7 @@ function logout() {
             let colCWear = headers.find(k => k && k.includes('Current Wear Rate')) || 'Current Wear Rate (mm/Month)';
             let colPWear = headers.find(k => k && k.includes('Planned Wear Rate')) || 'Planned Wear Rate (mm/Month)';
             let colCBMLife = headers.find(k => k && k === 'CBM life1') || 'CBM life1';
-            let colLastRep = headers.find(k => k && k === 'Last Belt Replacement') || 'Last Belt Replacement';
+            let colLastRep = headers.find(k => k && k.trim().toLowerCase() === 'last belt replacement') || 'Last Belt Replacement';
             let colNextCBM = headers.find(k => k && k.replace(/[\r\n]+/g, ' ').includes('Next Prediction (CBM)')) || 'Next Prediction (CBM)';
             let colPredLife = headers.find(k => k && k.includes('Predicted Life (in Months) (Actual)')) || 'Predicted Life (in Months) (Actual)';
             let colAgeAsOnDate = headers.find(k => k && k.includes('Age as on Date')) || 'Age as on Date (in Months)';
@@ -913,7 +913,8 @@ function logout() {
             let colWidth = headers.find(k => k && k.toLowerCase().includes('width')) || 'Width';
             let colSch1 = headers.find(k => k && (k.toLowerCase().includes('1st thickness schedule') || k === 'AH')) || '1st Thickness schedule';
             let colSch2 = headers.find(k => k && (k.toLowerCase().includes('next thickness schedule') || k === 'AI')) || 'next Thickness schedule';
-            let colLastThkDate = headers.find(k => k && k.trim() === 'Last Thickness Date') || 'Last Thickness Date';
+            // Case/whitespace-tolerant match: CSV header casing (e.g. "Last Thickness date") can vary run to run.
+            let colLastThkDate = headers.find(k => k && k.trim().toLowerCase() === 'last thickness date') || 'Last Thickness Date';
             
             let today = new Date(); 
             let currYear = today.getFullYear(); let currMonth = today.getMonth(); 
@@ -1245,6 +1246,74 @@ function renderOptionButtons(labels) {
     return labels.map(l => `[${l}](#)`).join(' &nbsp; ');
 }
 
+// =========================================================================
+// ✍️ SPELLING-MISTAKE TOLERANT MATCHING (typo hone par bhi sahi conveyor mile)
+// =========================================================================
+function levenshtein(a, b) {
+    if (a === b) return 0;
+    let al = a.length, bl = b.length;
+    if (al === 0) return bl;
+    if (bl === 0) return al;
+    let prev = new Array(bl + 1); let curr = new Array(bl + 1);
+    for (let j = 0; j <= bl; j++) prev[j] = j;
+    for (let i = 1; i <= al; i++) {
+        curr[0] = i;
+        for (let j = 1; j <= bl; j++) {
+            let cost = (a[i - 1] === b[j - 1]) ? 0 : 1;
+            curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+        }
+        [prev, curr] = [curr, prev];
+    }
+    return prev[bl];
+}
+// Chhote naam (jaise "C1") mein 1 typo allowed, lambe naam (jaise "BF1-C1") mein 2-3 tak allowed
+function fuzzyThreshold(len) { return len <= 4 ? 1 : (len <= 8 ? 2 : 3); }
+
+// Best fuzzy match ek candidate list (dept names ya conveyor names) mein se dhoondta hai
+function bestFuzzyMatch(rawInput, labelList) {
+    let cleanInput = cleanText(rawInput);
+    if (cleanInput.length < 2) return null;
+    let best = null, bestDist = Infinity;
+    labelList.forEach(label => {
+        let cl = cleanText(label);
+        if (!cl) return;
+        let dist = levenshtein(cleanInput, cl);
+        let th = fuzzyThreshold(Math.min(cleanInput.length, cl.length));
+        if (dist <= th && dist < bestDist) { best = label; bestDist = dist; }
+    });
+    return best;
+}
+
+// Poore dataset mein fuzzy conveyor match — jab exact/substring search (findConveyorMatches) khali ho
+function findFuzzyConveyorMatches(query, dataset) {
+    let cleanQ = cleanText(query);
+    if (cleanQ.length < 2) return [];
+    let tokens = (query.toUpperCase().match(/[A-Z0-9]+/g) || []).map(cleanText).filter(t => t.length >= 2);
+    let scored = new Map();
+    dataset.forEach(d => {
+        let name = getConvName(d);
+        if (!name) return;
+        let cleanName = cleanText(name);
+        if (!cleanName) return;
+        let bestDist = levenshtein(cleanQ, cleanName);
+        let bestTh = fuzzyThreshold(Math.min(cleanQ.length, cleanName.length));
+        let isMatch = bestDist <= bestTh;
+        // Agar poori query match nahi hui, to uske individual words try karo (typo + extra words dono ho sakte hain)
+        if (!isMatch) {
+            for (let t of tokens) {
+                let dist = levenshtein(t, cleanName);
+                let th = fuzzyThreshold(Math.min(t.length, cleanName.length));
+                if (dist <= th) { isMatch = true; bestDist = Math.min(bestDist, dist); }
+            }
+        }
+        if (isMatch) {
+            let key = name;
+            if (!scored.has(key) || scored.get(key).dist > bestDist) scored.set(key, { d, dist: bestDist });
+        }
+    });
+    return [...scored.values()].sort((a, b) => a.dist - b.dist).map(r => r.d);
+}
+
 // ---- FULL DETAIL CARDS (reused by smart search + offline fallback) ----
 function fullThkDetail(r) {
     return `⚡ **Full Details:**\nConveyor **${r.conv}** (${r.dept}):\n* Length: **${r.length || 'N/A'} meters**\n* Top Cover: **${r.topCover} mm**\n* Min Thickness: **${parseFloat(r.minThk).toFixed(2)} mm** _(${r.wearType})_\n* Wear Rate: **${parseFloat(r.cWear).toFixed(3)} mm/M**\n* Predicted Life: **${r.predLife ? parseFloat(r.predLife).toFixed(1) + ' Months' : '-'}**\n* Last Thickness Inspection: **${r.lastInspDisp || '-'}**\n* Last Belt Replacement: **${r.lastRep || '-'}**\n* Next Repl. Plan: **${r.nextCBM || '-'}**\n* Status: **${r.crit}**`;
@@ -1257,6 +1326,9 @@ function fullAbnDetail(r) {
 function generateDetailReply(record, queryText) {
     let q = cleanText(queryText);
     if (fileType === 'thk') {
+        if ((q.includes('thick') || q.includes('moti') || q.includes('mota')) && q.includes('date')) {
+            return `🗓️ **${record.conv}** Last Thickness Date: **${record.lastInspDisp || '-'}**`;
+        }
         if (q.includes('thick') || q.includes('moti') || q.includes('mota') || q.includes('cover')) {
             return `📏 **${record.conv}** Thickness:\n* Top Cover: **${record.topCover} mm**\n* Min Thickness: **${parseFloat(record.minThk).toFixed(2)} mm**\n* Wear Pattern: **${record.wearType}**`;
         }
@@ -1266,7 +1338,7 @@ function generateDetailReply(record, queryText) {
         if (q.includes('length') || q.includes('lamb') || q.includes('dimension')) {
             return `📐 **${record.conv}** Length: **${record.length || 'N/A'} meters**`;
         }
-        if (q.includes('replace') || q.includes('badal') || q.includes('repl')) {
+        if (q.includes('replace') || q.includes('badal') || (q.includes('repl') && !q.includes('thick'))) {
             return `🔧 **${record.conv}** Replacement:\n* Last Replacement: **${record.lastRep || '-'}**\n* Next CBM Plan: **${record.nextCBM || '-'}**`;
         }
         if (q.includes('life') || q.includes('zindagi') || q.includes('predict')) {
@@ -1311,7 +1383,7 @@ function presentDetailChoice(record) {
     window.chatState.lastRecord = record;
     let name = getConvName(record);
     let quickOpts = (fileType === 'thk')
-        ? ['Full Details', 'Thickness', 'Wear Rate', 'Replacement Date', 'Length', 'Predicted Life']
+        ? ['Full Details', 'Thickness', 'Last Thickness Date', 'Replacement Date', 'Wear Rate', 'Length', 'Predicted Life']
         : ['Full Details', 'Issue', 'Action Plan', 'Pending Since', 'Category'];
     appendMessage('bot', `✅ Conveyor **${name}** select ho gaya. Kya detail chahiye?\n\n${renderOptionButtons(quickOpts)}`);
     return true;
@@ -1345,10 +1417,12 @@ function smartConveyorSearch(rawText) {
     if (state.stage === 'awaiting_dept') {
         let cleanInput = cleanText(rawText);
         let matchedDept = state.deptOptions.find(dep => cleanText(dep) === cleanInput)
-                       || state.deptOptions.find(dep => cleanInput.includes(cleanText(dep)) || cleanText(dep).includes(cleanInput));
+                       || state.deptOptions.find(dep => cleanInput.includes(cleanText(dep)) || cleanText(dep).includes(cleanInput))
+                       || bestFuzzyMatch(rawText, state.deptOptions); // spelling mistake tolerant
         if (!matchedDept) {
             // Ho sakta hai user ne bilkul naya search type kar diya ho
             let fresh = findConveyorMatches(rawText, dataset);
+            if (fresh.length === 0) fresh = findFuzzyConveyorMatches(rawText, dataset);
             if (fresh.length > 0) { resetChatState(); return smartConveyorSearch(rawText); }
             appendMessage('bot', `❓ Yeh department list mein nahi mila. In mein se choose karein:\n\n${renderOptionButtons(state.deptOptions)}`);
             return true;
@@ -1360,12 +1434,16 @@ function smartConveyorSearch(rawText) {
     // ---- STAGE: awaiting conveyor selection ----
     if (state.stage === 'awaiting_conveyor') {
         let cleanInput = cleanText(rawText);
-        let matched = state.candidates.find(d => cleanText(getConvName(d)) === cleanInput)
-                   || state.candidates.find(d => cleanInput.includes(cleanText(getConvName(d))));
+        let candNames = [...new Set(state.candidates.map(getConvName))];
+        let matchedName = candNames.find(n => cleanText(n) === cleanInput)
+                        || candNames.find(n => cleanInput.includes(cleanText(n)))
+                        || bestFuzzyMatch(rawText, candNames); // spelling mistake tolerant
+        let matched = matchedName ? state.candidates.find(d => getConvName(d) === matchedName) : null;
         if (!matched) {
             let fresh = findConveyorMatches(rawText, dataset);
+            if (fresh.length === 0) fresh = findFuzzyConveyorMatches(rawText, dataset);
             if (fresh.length > 0) { resetChatState(); return smartConveyorSearch(rawText); }
-            appendMessage('bot', `❓ List mein match nahi mila. Neeche se select karein:\n\n${renderOptionButtons([...new Set(state.candidates.map(getConvName))])}`);
+            appendMessage('bot', `❓ List mein match nahi mila. Neeche se select karein:\n\n${renderOptionButtons(candNames)}`);
             return true;
         }
         return presentDetailChoice(matched);
@@ -1381,6 +1459,13 @@ function smartConveyorSearch(rawText) {
 
     // ---- STAGE: idle -> fresh search ----
     let matches = findConveyorMatches(rawText, dataset);
+    let isFuzzy = false;
+
+    if (matches.length === 0) {
+        // Exact/substring match nahi mila — ab typo-tolerant fuzzy search try karo
+        let fuzzy = findFuzzyConveyorMatches(rawText, dataset);
+        if (fuzzy.length > 0) { matches = fuzzy.slice(0, 20); isFuzzy = true; }
+    }
 
     if (matches.length === 0) {
         // Follow-up detail question about the last-discussed conveyor (e.g. "aur wear rate?")
@@ -1389,6 +1474,10 @@ function smartConveyorSearch(rawText) {
             return true;
         }
         return false; // no conveyor match -> let AI / offline engine handle general chat
+    }
+
+    if (isFuzzy) {
+        appendMessage('bot', `🔎 "${rawText}" ka exact match nahi mila (spelling check kar liya), lekin yeh sabse close naam mile:`);
     }
 
     let uniqueNames = [...new Set(matches.map(getConvName))];
@@ -1410,6 +1499,106 @@ function smartConveyorSearch(rawText) {
 }
 
 // =========================================================================
+// 📊 OFFLINE ANALYTICS ENGINE (aggregate/analysis sawaalon ke liye — bina AI ke)
+// "kitne critical hain", "6 mahine se pending list do", "top wear rate", etc.
+// Ab AI (OpenRouter) sirf tab lagti hai jab yeh bhi jawab na de paaye.
+// =========================================================================
+function anyKw(q, arr) { return arr.some(k => q.includes(k)); }
+
+function offlineAnalyticsEngine(rawText) {
+    let q = cleanText(rawText);
+    let isThk = (fileType === 'thk');
+
+    if (isThk && (!parsedData || parsedData.length === 0)) return false;
+    if (!isThk && (!window.openRecords || window.openRecords.length === 0)) return false;
+
+    let baseSet = isThk ? parsedData : window.openRecords;
+    let deptList = [...new Set(baseSet.map(d => isThk ? d.dept : d.Dept).filter(Boolean))];
+    let deptHit = deptList.find(dep => q.includes(cleanText(dep)));
+
+    const wantsCount    = anyKw(q, ['kitne', 'kitna', 'count', 'total', 'sankhya', 'howmany']);
+    const wantsList     = anyKw(q, ['list', 'dikha', 'show', 'kaunse', 'kaunsi', 'which', 'batao']);
+    const wantsCritical = anyKw(q, ['critical', 'critcal']);
+    const wantsTopWear  = q.includes('wear') && anyKw(q, ['top', 'highest', 'zyada', 'sabse', 'max']);
+    const wantsShortLife = anyKw(q, ['shortlife', 'prematur', 'jaldireplace', 'replacejaldi']) || (q.includes('short') && q.includes('life'));
+    const wantsClosed   = anyKw(q, ['closed', 'band']);
+    const wants6m       = anyKw(q, ['6month', '6mahine', '180din', '180days']) || (q.includes('6') && anyKw(q, ['month', 'mahine']));
+
+    if (isThk) {
+        let scope = deptHit ? parsedData.filter(d => d.dept === deptHit) : parsedData;
+
+        if (wantsCritical) {
+            let list = scope.filter(d => d.crit && d.crit.toLowerCase().includes('critical'));
+            if (wantsCount && !wantsList) { appendMessage('bot', `📊 ${deptHit ? '**' + deptHit + '** mein' : 'Total'} **${list.length}** critical conveyors hain.`); return true; }
+            if (list.length === 0) { appendMessage('bot', `✅ ${deptHit ? '**' + deptHit + '** mein ' : ''}koi critical conveyor nahi mila.`); return true; }
+            appendMessage('bot', `⚠️ **Critical Conveyors${deptHit ? ' - ' + deptHit : ''}** (${list.length}):\n\n${renderOptionButtons(list.map(d => d.conv).slice(0, 25))}`);
+            return true;
+        }
+        if (wantsTopWear) {
+            let sorted = [...scope].sort((a, b) => (b.cWear || 0) - (a.cWear || 0)).slice(0, 10);
+            let lines = sorted.map((d, i) => `${i + 1}. **${d.conv}** (${d.dept}) — ${parseFloat(d.cWear).toFixed(3)} mm/M`).join('\n');
+            appendMessage('bot', `📈 **Top Wear Rate Conveyors${deptHit ? ' - ' + deptHit : ''}:**\n${lines}`);
+            return true;
+        }
+        if (wantsShortLife) {
+            let list = scope.filter(d => d.lifeAnalysisText && d.lifeAnalysisText.includes('Short'));
+            if (list.length === 0) { appendMessage('bot', `✅ Koi bhi conveyor premature/short-life list mein nahi hai${deptHit ? ' ' + deptHit + ' mein' : ''}.`); return true; }
+            appendMessage('bot', `⚠️ **Premature/Short Life${deptHit ? ' - ' + deptHit : ''}** (${list.length}):\n\n${renderOptionButtons(list.map(d => d.conv).slice(0, 25))}`);
+            return true;
+        }
+        if (wantsCount) {
+            appendMessage('bot', `📊 ${deptHit ? '**' + deptHit + '** mein' : 'Total'} **${scope.length}** conveyors hain.`);
+            return true;
+        }
+        if (deptHit && wantsList) {
+            let names = [...new Set(scope.map(d => d.conv))].slice(0, 40);
+            appendMessage('bot', `📋 **${deptHit}** Department ke Conveyors (${names.length}):\n\n${renderOptionButtons(names)}`);
+            return true;
+        }
+        if (deptHit) {
+            return presentConveyorChoices(scope, deptHit);
+        }
+    } else {
+        let allRecords = window.abnAllRecords || [];
+        let scope = deptHit ? window.openRecords.filter(d => d.Dept === deptHit) : window.openRecords;
+
+        if (wantsClosed) {
+            let list = deptHit ? allRecords.filter(d => d.Dept === deptHit && d.status.toLowerCase() === 'closed') : allRecords.filter(d => d.status.toLowerCase() === 'closed');
+            appendMessage('bot', `📊 ${deptHit ? '**' + deptHit + '** mein' : 'Total'} **${list.length}** closed abnormalities hain.`);
+            return true;
+        }
+        if (wants6m) {
+            let list = scope.filter(d => d.ageDays > 180);
+            if (wantsCount && !wantsList) { appendMessage('bot', `📊 ${deptHit ? '**' + deptHit + '** mein' : ''} **${list.length}** abnormalities 6 mahine se zyada pending hain.`); return true; }
+            if (list.length === 0) { appendMessage('bot', `✅ ${deptHit ? '**' + deptHit + '** mein ' : ''}koi bhi abnormality 6 mahine se zyada pending nahi hai.`); return true; }
+            appendMessage('bot', `⏳ **6+ Months Pending${deptHit ? ' - ' + deptHit : ''}** (${list.length}):\n\n${renderOptionButtons(list.map(d => d['NO.']).slice(0, 25))}`);
+            return true;
+        }
+        if (wantsCritical) {
+            const criticalActions = ['Replace', 'Rejoint', 'Piece Addition', 'Operate under Observation'];
+            let list = scope.filter(d => criticalActions.includes(d.plan));
+            if (wantsCount && !wantsList) { appendMessage('bot', `📊 ${deptHit ? '**' + deptHit + '** mein' : ''} **${list.length}** critical open abnormalities hain.`); return true; }
+            if (list.length === 0) { appendMessage('bot', `✅ ${deptHit ? '**' + deptHit + '** mein ' : ''}koi critical open abnormality nahi hai.`); return true; }
+            appendMessage('bot', `⚠️ **Critical Open Abnormalities${deptHit ? ' - ' + deptHit : ''}** (${list.length}):\n\n${renderOptionButtons(list.map(d => d['NO.']).slice(0, 25))}`);
+            return true;
+        }
+        if (wantsCount) {
+            appendMessage('bot', `📊 ${deptHit ? '**' + deptHit + '** mein' : 'Total'} **${scope.length}** open abnormalities hain.`);
+            return true;
+        }
+        if (deptHit && wantsList) {
+            let names = [...new Set(scope.map(d => d['NO.']))].slice(0, 40);
+            appendMessage('bot', `📋 **${deptHit}** Department ki Open Abnormalities (${names.length}):\n\n${renderOptionButtons(names)}`);
+            return true;
+        }
+        if (deptHit) {
+            return presentConveyorChoices(scope, deptHit);
+        }
+    }
+    return false; // yeh query samajh nahi aayi -> ab AI try karega
+}
+
+// =========================================================================
 // 🤖 2. MAIN CHATBOT FUNCTION (Asli Dimaag)
 // =========================================================================
 async function handleChat() {
@@ -1428,6 +1617,12 @@ async function handleChat() {
     // 🔥 STEP A: LOCAL SMART SEARCH ENGINE (Department drill-down) — koi AI/network nahi lagti,
     // isiliye conveyor-specific sawaalon ka jawab turant aur bilkul accurate milta hai.
     if (smartConveyorSearch(text)) {
+        return;
+    }
+
+    // 🔥 STEP A2: OFFLINE ANALYTICS ENGINE — counts, lists, critical/wear/pending
+    // analysis bhi ab bina AI/OpenRouter ke, seedha data se milte hain.
+    if (offlineAnalyticsEngine(text)) {
         return;
     }
 
@@ -1471,8 +1666,12 @@ Your rules:
 5. Reply in a friendly Hinglish tone. Be concise and use Markdown.
 LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
 
-    // 🔥 STEP D: API CALL
+    // 🔥 STEP D: API CALL (8 second timeout — OpenRouter free-tier slow/limited hone par
+    // turant offline engine par switch ho jaye, user ko latak na na pade)
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: 'POST',
             headers: { 
@@ -1485,8 +1684,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                     { "role": "system", "content": sysPrompt },
                     { "role": "user", "content": text }
                 ]
-            })
+            }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         const apiData = await response.json();
         typing.style.display = 'none';
@@ -1519,12 +1720,20 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             } else {
                 matchedConv = activeSet.find(d => d['NO.'] && normalizedQuery.includes(cleanText(d['NO.'])));
             }
+            if (!matchedConv) {
+                // Typo-tolerant last resort
+                let fuzzy = findFuzzyConveyorMatches(query, activeSet);
+                if (fuzzy.length > 0) matchedConv = fuzzy[0];
+            }
 
             if(matchedConv) {
                 reply = (fileType === 'thk') ? fullThkDetail(matchedConv) : fullAbnDetail(matchedConv);
                 window.chatState.lastRecord = matchedConv;
             } else {
-                reply = "⚡ **Offline Mode Active:** Main abhi company network firewall ki wajah se cloud se disconnected hoon. Aap kisi specific **conveyor ka naam** likh kar uski detail check kar sakte hain!";
+                reply = "⚡ **Offline Mode Active:** Cloud AI abhi available nahi hai (rate limit / network), lekin main phir bhi kaam kar sakta hoon! Try karein:\n\n" +
+                        "* Kisi **conveyor ka naam** (jaise `BC14` ya `C1`)\n" +
+                        "* **\"kitne critical hain\"**, **\"6 mahine se pending list\"**, **\"top wear rate\"**\n" +
+                        "* Kisi **department ka naam** (jaise `BF1`) — poori list mil jayegi";
             }
             appendMessage('bot', reply);
         }
