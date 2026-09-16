@@ -261,6 +261,31 @@
         .chat-send:hover { filter: brightness(1.2); transform: scale(1.05); }
         
         @media (max-width: 768px) { .main-content { padding: 0 15px 15px 15px; } .header-title { font-size: 1.3rem; } }
+        /* LOGOUT BUTTON DESIGN */
+    .logout-btn {
+        background: rgba(255, 77, 77, 0.1);
+        color: #ff4d4d;
+        border: 1px solid #ff4d4d;
+        padding: 5px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-left: 15px;
+        font-size: 1rem;
+        transition: 0.3s;
+    }
+    .logout-btn:hover {
+        background: #ff4d4d;
+        color: white;
+    }
+
+    /* MOBILE VIEW OPTIMIZATION */
+    @media (max-width: 768px) {
+        .stat-card { padding: 15px; }
+        .stat-card h3 { font-size: 0.8rem; }
+        .stat-card .value { font-size: 1.5rem; }
+        .dashboard-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+        .chat-window { width: 95%; right: 2.5%; }
+    }
     </style>
 </head>
 <body>
@@ -307,6 +332,7 @@
             </div>
             <div style="text-align: center; margin-bottom: 25px;">
                 <span id="roleBadge" class="badge" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;"></span>
+                <button onclick="logout()" class="logout-btn" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
             </div>
             <div class="sidebar-menu">
                 <!-- Data is loaded from GitHub Action's local CSV file -->
@@ -615,7 +641,24 @@
                 else { alert("Authorization Rejected."); }
             } else { currentRole = 'user'; finalizeLogin('User Mode', 'linear-gradient(90deg, var(--blue), var(--purple))'); }
         }
+        // AUTO LOGIN BYPASS
+window.addEventListener('load', function() {
+    let savedRole = localStorage.getItem('rtg_role');
+    if (savedRole) {
+        currentRole = savedRole; 
+        finalizeLogin(localStorage.getItem('rtg_badgeText'), localStorage.getItem('rtg_badgeColor')); 
+    }
+});
+
+// LOGOUT FUNCTION
+function logout() {
+    localStorage.clear();
+    location.reload(); 
+}
         function finalizeLogin(roleText, badgeColor) {
+            localStorage.setItem('rtg_role', currentRole);
+            localStorage.setItem('rtg_badgeText', roleText);
+            localStorage.setItem('rtg_badgeColor', badgeColor);
             document.getElementById('loginScreen').style.display = 'none';
             let badge = document.getElementById('roleBadge');
             badge.innerText = roleText; badge.style.background = badgeColor; badge.style.color = '#fff'; badge.style.border = 'none';
@@ -1147,106 +1190,129 @@
         // NUCLEAR REGEX: Sirf alphabets aur numbers bachenge, baaki sab gayab!
         const cleanText = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-        async function handleChat() {
-            const part1 = "sk-or-v1-";
-            const part2 = "95c779c0eddc3fef5723871443e6c00ff75b99af9469ece4f0614451d8ee1f24"; // Apni key yahan daalein
-            const apiKey = part1 + part2;
-            
-            const inputEl = document.getElementById('chatInput'); 
-            const text = inputEl.value.trim(); 
-            if(!text) return; 
-            appendMessage('user', text); 
-            inputEl.value = '';
+        // =========================================================================
+// 🤖 1. CLICKABLE CHAT BUTTONS LOGIC (AI ke diye hue options par click karne ke liye)
+// =========================================================================
+document.addEventListener('click', function(e) {
+    if (e.target.tagName === 'A' && e.target.getAttribute('href') === '#') {
+        e.preventDefault(); // Page ko upar scroll hone se rokega
+        
+        let convName = e.target.innerText; // Click kiye hue button ka naam nikalega
+        
+        let inputEl = document.getElementById('chatInput');
+        if (inputEl) {
+            inputEl.value = convName + " ka full data batao";
+            handleChat(); // Auto-send kar dega
+        }
+    }
+});
 
-            const typing = document.getElementById('typingIndicator'); 
-            typing.style.display = 'block';
-            
-            // 🔥 SMART FUZZY SEARCH (AB FAIL NAHI HOGA) 🔥
-            let normalizedQuery = cleanText(text);
-            let activeSet = (fileType === 'thk') ? parsedData : window.openRecords;
-            
-            let matchedRecords = activeSet.filter(d => {
-                let convName = (fileType === 'thk') ? d.conv : d['NO.'];
-                if (!convName) return false;
-                return normalizedQuery.includes(cleanText(convName));
-            });
+// =========================================================================
+// 🤖 2. MAIN CHATBOT FUNCTION (Asli Dimaag)
+// =========================================================================
+async function handleChat() {
+    // 🔥 APNI API KEY YAHAN DAALNA MAT BHOOLNA 🔥
+    const part1 = "sk-or-v1-";
+    const part2 = "95c779c0eddc3fef5723871443e6c00ff75b99af9469ece4f0614451d8ee1f24"; 
+    const apiKey = part1 + part2;
+    
+    const inputEl = document.getElementById('chatInput'); 
+    const text = inputEl.value.trim(); 
+    if(!text) return; 
+    
+    appendMessage('user', text); 
+    inputEl.value = '';
 
-            let contextData = [];
-            
-            if (fileType === 'thk') {
-                // 👇 AI KO AB SAARE COLUMNS KA DATA MILEGA (TOP COVER, WEAR PATTERN ETC) 👇
-                let mapThk = d => ({ 
-                    Conveyor: d.conv, 
-                    Dept: d.dept, 
-                    TopCover: d.topCover + "mm",
-                    MinThk: parseFloat(d.minThk).toFixed(2) + "mm", 
-                    WearPattern: d.wearType,
-                    WearRate: parseFloat(d.cWear).toFixed(3) + "mm/M", 
-                    PredLife: parseFloat(d.predLife).toFixed(1) + "M", 
-                    LastRep: d.lastRep,
-                    NextCBM: d.nextCBM,
-                    Status: d.crit 
-                });
+    const typing = document.getElementById('typingIndicator'); 
+    typing.style.display = 'block';
+    
+    // 🔥 STEP A: SMART SEARCH (C1 likhne par BF1-C1 bhi dhoondega)
+    let searchTerms = text.toUpperCase().match(/[A-Z0-9]+/g) || [];
+    let cleanQ = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    
+    let activeSet = (fileType === 'thk') ? parsedData : window.openRecords;
+    
+    let matchedRecords = activeSet.filter(d => {
+        let convName = ((fileType === 'thk') ? d.conv : d['NO.']);
+        if (!convName) return false;
+        let cleanConv = convName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        
+        if (cleanQ.includes(cleanConv)) return true;
+        return searchTerms.some(term => term.length >= 2 && cleanConv.includes(term));
+    });
 
-                let matchedData = matchedRecords.map(mapThk);
-                let generalData = parsedData.map(mapThk);
-                
-                // Pehle matched belt, uske baad baaki ki 40 belts
-                contextData = [...new Set([...matchedData, ...generalData])].slice(0, 40);
-                
-            } else if(fileType === 'abn') {
-                let mapAbn = d => ({ 
-                    Conveyor: d['NO.'], 
-                    Dept: d.Dept, 
-                    Category: d.category,
-                    Issue: d['Major Abnormality'], 
-                    AgeDays: d.ageDays, 
-                    Plan: d.plan 
-                });
+    let contextData = [];
+    
+    // 🔥 STEP B: NAYA DATA JODNA (Length, Thickness Date aur Replacement Date)
+    if (fileType === 'thk') {
+        let mapThk = d => ({ 
+            Conveyor: d.conv, 
+            Dept: d.dept,
+            Length: (d.length || "N/A") + " meters", 
+            TopCover: d.topCover + "mm",
+            MinThk: parseFloat(d.minThk).toFixed(2) + "mm", 
+            WearPattern: d.wearType,
+            WearRate: parseFloat(d.cWear).toFixed(3) + "mm/M", 
+            PredLife: parseFloat(d.predLife).toFixed(1) + " Months", 
+            Last_Thickness_Inspection_Date: d.lastInspDisp, // Special Name
+            Belt_Replacement_Date: d.lastRep,               // Special Name
+            Status: d.crit 
+        });
 
-                let matchedData = matchedRecords.map(mapAbn);
-                let generalData = window.openRecords.map(mapAbn);
-                contextData = [...new Set([...matchedData, ...generalData])].slice(0, 40);
-            }
+        let matchedData = matchedRecords.map(mapThk);
+        let generalData = parsedData.map(mapThk);
+        contextData = [...new Set([...matchedData, ...generalData])].slice(0, 30);
+        
+    } else if(fileType === 'abn') {
+        let mapAbn = d => ({ 
+            Conveyor: d['NO.'], Dept: d.Dept, Category: d.category,
+            Issue: d['Major Abnormality'], AgeDays: d.ageDays, Plan: d.plan 
+        });
+        let matchedData = matchedRecords.map(mapAbn);
+        let generalData = window.openRecords.map(mapAbn);
+        contextData = [...new Set([...matchedData, ...generalData])].slice(0, 30);
+    }
 
-            const sysPrompt = `You are 'RTG-Bot', an expert Reliability & Maintenance AI Consultant at Tata Steel.
-Analyze the user's question based ONLY on the provided JSON live data below.
-IMPORTANT: Reply in Hinglish if asked in Hindi/Hinglish. Provide precise technical answers (like Top Cover, Min Thickness, Dates) from the JSON. Keep answers concise using Markdown.
+    // 🔥 STEP C: AI KO INSTRUCTIONS DENA (Prompt)
+    const sysPrompt = `You are 'RTG-Bot', an expert Reliability Engineer AI at Tata Steel.
+Your rules:
+1. Base answers ONLY on the JSON data below.
+2. Differentiate strictly between 'Last_Thickness_Inspection_Date' and 'Belt_Replacement_Date'.
+3. MULTIPLE MATCHES LOGIC: If there are MULTIPLE belts with similar names, DO NOT just give the answer for the first one. Instead, list the matched names and INTERACTIVELY ASK the user in Hinglish. You MUST format each conveyor option as a markdown link pointing to '#', like this: [BC14(IRON)](#) or [TT5C1](#).
+4. If a user asks for length or dimensions, provide the 'Length'.
+5. Reply in a friendly Hinglish tone. Be concise and use Markdown.
 LIVE DATA: ${JSON.stringify(contextData)}`;
 
-            try {
-                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                    method: 'POST',
-                    headers: { 
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json',
-                        'HTTP-Referer': window.location.href, 
-                        'X-Title': 'RTG Dashboard'
-                    },
-                    body: JSON.stringify({
-                        "model": "openrouter/free", 
-                        "messages": [
-                            { "role": "system", "content": sysPrompt },
-                            { "role": "user", "content": text }
-                        ]
-                    })
-                });
+    // 🔥 STEP D: API CALL
+    try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                "model": "openrouter/free", 
+                "messages": [
+                    { "role": "system", "content": sysPrompt },
+                    { "role": "user", "content": text }
+                ]
+            })
+        });
 
-                const apiData = await response.json();
-                typing.style.display = 'none';
+        const apiData = await response.json();
+        typing.style.display = 'none';
 
-                if (apiData.error) {
-                    fallbackLocalEngine(text); 
-                } else if (apiData.choices && apiData.choices.length > 0) {
-                    appendMessage('bot', apiData.choices[0].message.content);
-                } else {
-                    fallbackLocalEngine(text);
-                }
-            } catch(e) {
-                typing.style.display = 'none';
-                fallbackLocalEngine(text);
-            }
+        if (apiData.choices) {
+            appendMessage('bot', apiData.choices[0].message.content);
+        } else {
+            fallbackLocalEngine(text); 
         }
+    } catch(e) {
+        typing.style.display = 'none';
+        fallbackLocalEngine(text);
+    }
+}
 
         // ================= OFFLINE ENGINE (ULTRA-MAX DETAILS + PRO FUZZY MATCH) =================
         function fallbackLocalEngine(query) {
