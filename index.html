@@ -1117,20 +1117,20 @@
         function closeDropdownEvent(e) { if (!e.target.closest('.ms-container')) { document.querySelectorAll('.ms-dropdown').forEach(d => d.classList.remove('show')); } } document.addEventListener('click', closeDropdownEvent); document.addEventListener('touchstart', closeDropdownEvent);
         function resetDashboard() { alert("Auto-sync is enabled. Refresh the page to reload data."); location.reload(); }
 
-         // ================= BULLETPROOF AI ENGINE & OFFLINE FALLBACK =================
+         // ================= BULLETPROOF AI ENGINE & OFFLINE ENGINE =================
         function toggleChat() { 
             const cw = document.getElementById('chatWindow'); 
             if(cw.style.display === 'flex') {
                 cw.style.display = 'none';
             } else {
                 cw.style.display = 'flex';
-                clearChat(); // Window kholte hi chat automatically fresh ho jayegi!
+                clearChat();
             }
         }
         
         function clearChat() {
             const body = document.getElementById('chatBody');
-            body.innerHTML = '<div class="msg msg-bot">Systems Online. Ready to assist. Ask me anything!</div>';
+            body.innerHTML = '<div class="msg msg-bot">Systems Online. Connected via <b>OpenRouter</b>. Ready to assist!</div>';
         }
 
         function appendMessage(sender, text) { 
@@ -1141,10 +1141,13 @@
             body.appendChild(msgDiv); 
             body.scrollTop = body.scrollHeight; 
         }
+        
+        // NUCLEAR REGEX: Sirf alphabets aur numbers bachenge, baaki sab gayab!
+        const cleanText = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+
         async function handleChat() {
-            // API Key Splitting (Taki GitHub scanner detect na kar paye)
             const part1 = "sk-or-v1-";
-            const part2 = "95c779c0eddc3fef5723871443e6c00ff75b99af9469ece4f0614451d8ee1f24"; // Apni bachi hui key yahan paste karein
+            const part2 = "95c779c0eddc3fef5723871443e6c00ff75b99af9469ece4f0614451d8ee1f24"; // Apni key yahan daalein
             const apiKey = part1 + part2;
             
             const inputEl = document.getElementById('chatInput'); 
@@ -1156,35 +1159,57 @@
             const typing = document.getElementById('typingIndicator'); 
             typing.style.display = 'block';
             
-            // 🔥 SMART FUZZY SEARCH (AI KO BHEJNE SE PEHLE DATA FILTER KAREGA) 🔥
-            let normalizedQuery = text.toLowerCase().replace(/[\s\-_]/g, '');
+            // 🔥 SMART FUZZY SEARCH (AB FAIL NAHI HOGA) 🔥
+            let normalizedQuery = cleanText(text);
             let activeSet = (fileType === 'thk') ? parsedData : window.openRecords;
             
-            // User ki query ko poore dataset mein match karo
             let matchedRecords = activeSet.filter(d => {
                 let convName = (fileType === 'thk') ? d.conv : d['NO.'];
                 if (!convName) return false;
-                return normalizedQuery.includes(convName.toLowerCase().replace(/[\s\-_]/g, ''));
+                return normalizedQuery.includes(cleanText(convName));
             });
 
             let contextData = [];
             
-            // Jo match mila hai usko data ke sabse upar rakho, baaki ko niche (max 40 items)
             if (fileType === 'thk') {
-                let matchedData = matchedRecords.map(d => ({ Conveyor: d.conv, Dept: d.dept, MinThk: parseFloat(d.minThk).toFixed(2), WearRate: parseFloat(d.cWear).toFixed(3), PredLife: parseFloat(d.predLife).toFixed(1), Status: d.crit, LastRep: d.lastRep }));
-                let generalData = parsedData.map(d => ({ Conveyor: d.conv, Dept: d.dept, MinThk: parseFloat(d.minThk).toFixed(2), WearRate: parseFloat(d.cWear).toFixed(3), PredLife: parseFloat(d.predLife).toFixed(1), Status: d.crit }));
+                // 👇 AI KO AB SAARE COLUMNS KA DATA MILEGA (TOP COVER, WEAR PATTERN ETC) 👇
+                let mapThk = d => ({ 
+                    Conveyor: d.conv, 
+                    Dept: d.dept, 
+                    TopCover: d.topCover + "mm",
+                    MinThk: parseFloat(d.minThk).toFixed(2) + "mm", 
+                    WearPattern: d.wearType,
+                    WearRate: parseFloat(d.cWear).toFixed(3) + "mm/M", 
+                    PredLife: parseFloat(d.predLife).toFixed(1) + "M", 
+                    LastRep: d.lastRep,
+                    NextCBM: d.nextCBM,
+                    Status: d.crit 
+                });
+
+                let matchedData = matchedRecords.map(mapThk);
+                let generalData = parsedData.map(mapThk);
                 
-                contextData = [...matchedData, ...generalData].slice(0, 40);
+                // Pehle matched belt, uske baad baaki ki 40 belts
+                contextData = [...new Set([...matchedData, ...generalData])].slice(0, 40);
+                
             } else if(fileType === 'abn') {
-                let matchedData = matchedRecords.map(d => ({ Conveyor: d['NO.'], Dept: d.Dept, Issue: d['Major Abnormality'], AgeDays: d.ageDays, Plan: d.plan }));
-                let generalData = window.openRecords.map(d => ({ Conveyor: d['NO.'], Dept: d.Dept, Issue: d['Major Abnormality'], AgeDays: d.ageDays, Plan: d.plan }));
-                
-                contextData = [...matchedData, ...generalData].slice(0, 40);
+                let mapAbn = d => ({ 
+                    Conveyor: d['NO.'], 
+                    Dept: d.Dept, 
+                    Category: d.category,
+                    Issue: d['Major Abnormality'], 
+                    AgeDays: d.ageDays, 
+                    Plan: d.plan 
+                });
+
+                let matchedData = matchedRecords.map(mapAbn);
+                let generalData = window.openRecords.map(mapAbn);
+                contextData = [...new Set([...matchedData, ...generalData])].slice(0, 40);
             }
 
             const sysPrompt = `You are 'RTG-Bot', an expert Reliability & Maintenance AI Consultant at Tata Steel.
-Analyze the user's question based ONLY on the provided JSON live data below and give technical advice.
-IMPORTANT: Reply in Hinglish if asked in Hindi/Hinglish. Keep answers concise using Markdown.
+Analyze the user's question based ONLY on the provided JSON live data below.
+IMPORTANT: Reply in Hinglish if asked in Hindi/Hinglish. Provide precise technical answers (like Top Cover, Min Thickness, Dates) from the JSON. Keep answers concise using Markdown.
 LIVE DATA: ${JSON.stringify(contextData)}`;
 
             try {
@@ -1209,24 +1234,21 @@ LIVE DATA: ${JSON.stringify(contextData)}`;
                 typing.style.display = 'none';
 
                 if (apiData.error) {
-                    fallbackLocalEngine(text); // API Error aaye toh Offline Engine chalao
+                    fallbackLocalEngine(text); 
                 } else if (apiData.choices && apiData.choices.length > 0) {
                     appendMessage('bot', apiData.choices[0].message.content);
                 } else {
                     fallbackLocalEngine(text);
                 }
-                
             } catch(e) {
-                // 🔥 JAB OFFICE FIREWALL API BLOCK KAREGA TOH YAHAN AAYEGA 🔥
                 typing.style.display = 'none';
                 fallbackLocalEngine(text);
             }
         }
 
-        // ================= OFFLINE ENGINE (ULTRA-MAX DETAILS + FUZZY MATCH) =================
+        // ================= OFFLINE ENGINE (ULTRA-MAX DETAILS + PRO FUZZY MATCH) =================
         function fallbackLocalEngine(query) {
-            // Step 1: User ke query se saare spaces, hyphens aur underscores hata kar lowercase kar do
-            let normalizedQuery = query.toLowerCase().replace(/[\s\-_]/g, '');
+            let normalizedQuery = cleanText(query);
             let reply = "";
             let activeSet = (fileType === 'thk') ? parsedData : window.openRecords;
             
@@ -1237,23 +1259,14 @@ LIVE DATA: ${JSON.stringify(contextData)}`;
 
             let matchedConv = null;
             if(fileType === 'thk') {
-                // Step 2: Excel ke conveyor naam ko bhi normalize karke check karo
-                matchedConv = activeSet.find(d => {
-                    if (!d.conv) return false;
-                    let normConv = d.conv.toLowerCase().replace(/[\s\-_]/g, '');
-                    return normalizedQuery.includes(normConv);
-                });
+                matchedConv = activeSet.find(d => d.conv && normalizedQuery.includes(cleanText(d.conv)));
             } else {
-                matchedConv = activeSet.find(d => {
-                    if (!d['NO.']) return false;
-                    let normConv = d['NO.'].toLowerCase().replace(/[\s\-_]/g, '');
-                    return normalizedQuery.includes(normConv);
-                });
+                matchedConv = activeSet.find(d => d['NO.'] && normalizedQuery.includes(cleanText(d['NO.'])));
             }
 
             if(matchedConv) {
                 if(fileType === 'thk') {
-                    reply = `⚡ **Offline Auto-Reply:**\nConveyor **${matchedConv.conv}** (${matchedConv.dept}):\n* Min Thickness: **${parseFloat(matchedConv.minThk).toFixed(2)} mm** _(${matchedConv.wearType})_\n* Wear Rate: **${parseFloat(matchedConv.cWear).toFixed(3)} mm/M**\n* Predicted Life: **${matchedConv.predLife !== 0 ? matchedConv.predLife.toFixed(1) + ' Months' : '-'}**\n* Last Replacement: **${matchedConv.lastRep || '-'}**\n* Last Checked: **${matchedConv.lastInspDisp || '-'}**\n* Next Repl. Plan: **${matchedConv.nextCBM || '-'}**\n* Status: **${matchedConv.crit}**`;
+                    reply = `⚡ **Offline Auto-Reply:**\nConveyor **${matchedConv.conv}** (${matchedConv.dept}):\n* Top Cover: **${matchedConv.topCover} mm**\n* Min Thickness: **${parseFloat(matchedConv.minThk).toFixed(2)} mm** _(${matchedConv.wearType})_\n* Wear Rate: **${parseFloat(matchedConv.cWear).toFixed(3)} mm/M**\n* Predicted Life: **${matchedConv.predLife !== 0 ? matchedConv.predLife.toFixed(1) + ' Months' : '-'}**\n* Last Replacement: **${matchedConv.lastRep || '-'}**\n* Next Repl. Plan: **${matchedConv.nextCBM || '-'}**\n* Status: **${matchedConv.crit}**`;
                 } else {
                     reply = `⚡ **Offline Auto-Reply:**\nConveyor **${matchedConv['NO.']}** (${matchedConv.Dept}):\n* Issue: **"${matchedConv['Major Abnormality']}"**\n* Category: **${matchedConv.category}**\n* Reported On: **${matchedConv['Abnormality Date']}**\n* Pending Since: **${matchedConv.ageDays} din**\n* Action Plan: **${matchedConv.plan}**`;
                 }
@@ -1262,6 +1275,7 @@ LIVE DATA: ${JSON.stringify(contextData)}`;
             }
             appendMessage('bot', reply);
         }
+
 
     </script>
 </body>
