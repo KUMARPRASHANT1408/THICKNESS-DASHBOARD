@@ -1205,7 +1205,7 @@ LIVE DATA: ${JSON.stringify(contextData)}`;
             }
         }
 
-        // ================= OFFLINE ENGINE (FIREWALL BYPASS) =================
+                // ================= OFFLINE ENGINE (ULTRA-MAX DETAILS) =================
         function fallbackLocalEngine(query) {
             let q = query.toLowerCase();
             let reply = "";
@@ -1225,15 +1225,18 @@ LIVE DATA: ${JSON.stringify(contextData)}`;
 
             if(matchedConv) {
                 if(fileType === 'thk') {
-                    reply = `⚡ **Offline Auto-Reply:**\nConveyor **${matchedConv.conv}** (${matchedConv.dept}):\n* Min Thickness: **${parseFloat(matchedConv.minThk).toFixed(2)} mm**\n* Wear Rate: **${parseFloat(matchedConv.cWear).toFixed(3)} mm/M**\n* Status: ${matchedConv.crit}`;
+                    // Yahan Life, Wear Pattern, aur Next CBM Plan add kar diya gaya hai
+                    reply = `⚡ **Offline Auto-Reply:**\nConveyor **${matchedConv.conv}** (${matchedConv.dept}):\n* Min Thickness: **${parseFloat(matchedConv.minThk).toFixed(2)} mm** _(${matchedConv.wearType})_\n* Wear Rate: **${parseFloat(matchedConv.cWear).toFixed(3)} mm/M**\n* Predicted Life: **${matchedConv.predLife !== 0 ? matchedConv.predLife.toFixed(1) + ' Months' : '-'}**\n* Last Replacement: **${matchedConv.lastRep || '-'}**\n* Last Checked: **${matchedConv.lastInspDisp || '-'}**\n* Next Repl. Plan: **${matchedConv.nextCBM || '-'}**\n* Status: **${matchedConv.crit}**`;
                 } else {
-                    reply = `⚡ **Offline Auto-Reply:**\nConveyor **${matchedConv['NO.']}** (${matchedConv.Dept}):\n* Issue: "${matchedConv['Major Abnormality']}"\n* Pending Since: **${matchedConv.ageDays} din**\n* Plan: **${matchedConv.plan}**`;
+                    // Yahan Abnormality Category aur Date add kar di gayi hai
+                    reply = `⚡ **Offline Auto-Reply:**\nConveyor **${matchedConv['NO.']}** (${matchedConv.Dept}):\n* Issue: **"${matchedConv['Major Abnormality']}"**\n* Category: **${matchedConv.category}**\n* Reported On: **${matchedConv['Abnormality Date']}**\n* Pending Since: **${matchedConv.ageDays} din**\n* Action Plan: **${matchedConv.plan}**`;
                 }
             } else {
                 reply = "⚡ **Offline Mode Active:** Main abhi company network firewall ki wajah se cloud se disconnected hoon. Aap kisi specific **conveyor ka naam** likh kar uski detail check kar sakte hain!";
             }
             appendMessage('bot', reply);
         }
+
     </script>
 </body>
 </html>
