@@ -1,0 +1,24 @@
+name: Sync Google Sheet Data
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Har 6 ghante mein automatically sync karega
+  workflow_dispatch: # Tumhe GitHub se manually 'Run workflow' karne ka button dega
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download latest CSV from Google Sheet
+        run: |
+          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9FGXXTFb7_k0QCC1kAYkxj3xjh9nBQ0ceQ3Nu-xtWjWhbR01Tx8lmJCGCCtfXkPR7SW2Za7DLrcSE/pub?gid=0&single=true&output=csv" -o data.csv
+
+      - name: Commit and push if data changed
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions@github.com'
+          git add data.csv
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-sync latest CSV data from Google Sheet" && git push)
