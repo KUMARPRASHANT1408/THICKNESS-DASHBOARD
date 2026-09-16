@@ -2,15 +2,18 @@ name: Sync Google Sheet Data
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Har 6 ghante mein automatically sync karega
-  workflow_dispatch: # Tumhe GitHub se manually 'Run workflow' karne ka button dega
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write # Yeh line git push permission allow karegi
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download latest CSV from Google Sheet
         run: |
