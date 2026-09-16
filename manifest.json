@@ -1,6 +1,6 @@
 {
   "name": "RTG Master Control",
-  "short_name": "RTG App",
+  "short_name": "RTG-Belt Monitoring",
   "description": "SCADA Analytics & Maintenance System for Tata Steel",
   "start_url": "./index.html",
   "display": "standalone",
