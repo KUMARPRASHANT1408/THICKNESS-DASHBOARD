@@ -1,6 +1,6 @@
 // Version bump karo (v2, v3, v4...) sirf tab jab STATIC_ASSETS list badle -
 // baaki HTML/data updates ab automatically pick ho jayenge, cache-bump ki zaroorat nahi.
-const CACHE_NAME = 'rtg-app-v2';
+const CACHE_NAME = 'rtg-app-v3';
 
 // Sirf woh files jo shayad hi kabhi badlein - inhe cache-first rakha hai (fast load)
 const STATIC_ASSETS = [
