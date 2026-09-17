@@ -728,7 +728,7 @@ function logout() {
             document.getElementById('thkTab').classList.remove('active');
             document.getElementById('abnTab').classList.remove('active');
 
-            fetch(sheetCsvUrl)
+            fetch(sheetCsvUrl + '?t=' + Date.now(), { cache: 'no-store' })
                 .then(response => { if (!response.ok) throw new Error("Network response was not ok"); return response.text(); })
                 .then(csvText => {
                     let headerCounts = {};
