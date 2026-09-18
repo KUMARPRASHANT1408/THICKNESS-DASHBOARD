@@ -288,9 +288,6 @@
         .stat-card h3 { font-size: 0.8rem; }
         .stat-card .value { font-size: 1.5rem; }
         .dashboard-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
-        /* FIX: chat-window ka parent (.chat-widget) sirf button jitna hi "wide" hai (~65px),
-           isliye 'width: 95%' galat tha (95% of 65px = razor-thin strip). Ab 'position: fixed'
-           + left/right se seedha real viewport width use hoti hai. */
         .chat-window { position: fixed; left: 15px; right: 15px; width: auto; bottom: 100px; max-height: 65vh; }
     }
     </style>
@@ -342,7 +339,6 @@
                 <button onclick="logout()" class="logout-btn" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
             </div>
             <div class="sidebar-menu">
-                <!-- Data is loaded from GitHub Action's local CSV file -->
                 <button class="sidebar-btn" id="syncBtn" onclick="fetchLiveData()"><i class="fas fa-sync-alt text-teal"></i> Sync Local Data</button>
                 <button class="sidebar-btn" onclick="toggleTheme()"><i class="fas fa-adjust" id="themeIcon"></i> Toggle Theme</button>
                 <button id="resetBtn" class="sidebar-btn sidebar-btn-red" style="display: none;" onclick="resetDashboard()"><i class="fas fa-trash-restore"></i> Reset System</button>
@@ -450,7 +446,6 @@
                         <div class="kpi-card glass-panel" id="kpi-card-next6m" onclick="filterThkTable('Next6M')" style="border-bottom: 3px solid var(--pink); background: rgba(236, 72, 153, 0.05); display: none;"><div class="kpi-title" style="color: var(--pink);"><i class="fas fa-calendar-alt"></i> Next 6M Repl.</div><div class="kpi-val" id="t-k-next6m" style="color:var(--pink);">0</div></div>
                         <div class="kpi-card glass-panel" id="kpi-card-thk-backlog" onclick="filterThkTable('Backlog')" style="border-bottom: 3px solid var(--red); background: rgba(244, 63, 94, 0.05); display: none;"><div class="kpi-title" style="color: var(--red);"><i class="fas fa-exclamation-circle"></i> Overdue Backlog</div><div class="kpi-val" id="t-k-backlog" style="color:var(--red);">0</div></div>
                         
-                        <!-- ADMIN KPI CARD FOR SCHEDULE PAGE -->
                         <div class="kpi-card admin-kpi glass-panel" id="admin-schedule-kpi" onclick="openAdminThkPage()" style="display: none;"><div class="kpi-title" style="color: var(--text-main); font-weight:800;"><i class="fas fa-clipboard-list"></i> Admin Master</div><div class="kpi-val" style="font-size: 1.1rem; color: var(--teal); margin-top: 10px;">Thickness Schedules <i class="fas fa-arrow-right" style="font-size: 0.9rem;"></i></div></div>
                     </div>
                 </div>
@@ -648,20 +643,20 @@
                 else { alert("Authorization Rejected."); }
             } else { currentRole = 'user'; finalizeLogin('User Mode', 'linear-gradient(90deg, var(--blue), var(--purple))'); }
         }
-        // AUTO LOGIN BYPASS
-window.addEventListener('load', function() {
-    let savedRole = localStorage.getItem('rtg_role');
-    if (savedRole) {
-        currentRole = savedRole; 
-        finalizeLogin(localStorage.getItem('rtg_badgeText'), localStorage.getItem('rtg_badgeColor')); 
-    }
-});
+        
+        window.addEventListener('load', function() {
+            let savedRole = localStorage.getItem('rtg_role');
+            if (savedRole) {
+                currentRole = savedRole; 
+                finalizeLogin(localStorage.getItem('rtg_badgeText'), localStorage.getItem('rtg_badgeColor')); 
+            }
+        });
 
-// LOGOUT FUNCTION
-function logout() {
-    localStorage.clear();
-    location.reload(); 
-}
+        function logout() {
+            localStorage.clear();
+            location.reload(); 
+        }
+        
         function finalizeLogin(roleText, badgeColor) {
             localStorage.setItem('rtg_role', currentRole);
             localStorage.setItem('rtg_badgeText', roleText);
@@ -680,7 +675,6 @@ function logout() {
             fetchLiveData();
         }
 
-        // DATE LOGIC
         function parseDateCustom(dateStr) {
             if(!dateStr) return null;
             let valStr = String(dateStr).trim();
@@ -916,7 +910,6 @@ function logout() {
             let colWidth = headers.find(k => k && k.toLowerCase().includes('width')) || 'Width';
             let colSch1 = headers.find(k => k && (k.toLowerCase().includes('1st thickness schedule') || k === 'AH')) || '1st Thickness schedule';
             let colSch2 = headers.find(k => k && (k.toLowerCase().includes('next thickness schedule') || k === 'AI')) || 'next Thickness schedule';
-            // Case/whitespace-tolerant match: CSV header casing (e.g. "Last Thickness date") can vary run to run.
             let colLastThkDate = headers.find(k => k && k.trim().toLowerCase() === 'last thickness date') || 'Last Thickness Date';
             
             let today = new Date(); 
@@ -931,7 +924,7 @@ function logout() {
             parsedData = data.filter(row => row[colNo] && row[colNo].trim() !== '' && !row[colNo].includes('#REF!')).map(row => {
                 row.dept = row[colDept] || 'Unknown'; row.section = row[colSec] || row.dept; row.conv = row[colNo] || '-';
                 row.minThk = parseFloat(row[colMinThk]) || 0; row.crit = row[colCrit] ? row[colCrit].trim() : 'Unknown';
-                row.beltCategory = row[colBeltCategory] ? row[colBeltCategory].trim() : 'Unknown'; // A+ / A / B / C
+                row.beltCategory = row[colBeltCategory] ? row[colBeltCategory].trim() : 'Unknown'; 
                 row.cWear = parseFloat(row[colCWear]) || 0; row.pWear = parseFloat(row[colPWear]) || 0;
                 
                 let cbmStr = row[colCBMLife] ? String(row[colCBMLife]).trim() : '';
@@ -1201,27 +1194,50 @@ function logout() {
         const cleanText = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
         // =========================================================================
-// 🤖 1. CLICKABLE CHAT BUTTONS LOGIC (Department / Conveyor / Detail options par click karne ke liye)
+        // 🌐 TRANSLATE HINGLISH TO PROFESSIONAL ENGLISH FOR EMAIL
+        // =========================================================================
+        async function translateToEnglish(text) {
+            const part1 = "sk-or-v1-";
+            const part2 = "95c779c0eddc3fef5723871443e6c00ff75b99af9469ece4f0614451d8ee1f24"; 
+            const apiKey = part1 + part2;
+            const sysPrompt = "You are a Tata Steel technical translator. Translate the user's maintenance abnormality text (which might be in Hindi, Hinglish or broken English) into a single, concise, professional English sentence for an official email. Do not add any conversational text, just output the translation.";
+            try {
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        "model": "openrouter/free", 
+                        "messages": [
+                            { "role": "system", "content": sysPrompt },
+                            { "role": "user", "content": text }
+                        ]
+                    })
+                });
+                const apiData = await response.json();
+                if (apiData.choices && apiData.choices.length > 0) {
+                    return apiData.choices[0].message.content.trim().replace(/^"|"$/g, '');
+                }
+            } catch(e) { console.error(e); }
+            return text; // API fail hone par original text use karega
+        }
+
+// =========================================================================
+// 🤖 1. CLICKABLE CHAT BUTTONS LOGIC
 // =========================================================================
 document.addEventListener('click', function(e) {
     if (e.target.tagName === 'A' && e.target.getAttribute('href') === '#') {
-        e.preventDefault(); // Page ko upar scroll hone se rokega
-
-        let clickedVal = e.target.innerText; // Click kiye hue button ka text nikalega
-
+        e.preventDefault(); 
+        let clickedVal = e.target.innerText; 
         let inputEl = document.getElementById('chatInput');
         if (inputEl) {
             inputEl.value = clickedVal;
-            handleChat(); // Auto-send kar dega
+            handleChat(); 
         }
     }
 });
 
 // =========================================================================
-// 🧠 SMART CONVEYOR SEARCH ENGINE (Multi-level drill-down, 100% local/offline)
-// Flow: naam type karo -> agar multiple conveyors milein & alag alag Dept ho
-//       to pehle Dept puchega -> Dept select karne par us Dept ki conveyor
-//       list dega -> conveyor select karne par konsi detail chahiye puchega.
+// 🧠 SMART CONVEYOR SEARCH ENGINE
 // =========================================================================
 window.chatState = { stage: 'idle', candidates: [], deptOptions: [], selectedRecord: null, lastRecord: null, diag: null };
 
@@ -1232,7 +1248,6 @@ function resetChatState() {
 function getConvName(d) { return (fileType === 'thk') ? d.conv : d['NO.']; }
 function getConvDept(d) { return (fileType === 'thk') ? d.dept : d.Dept; }
 
-// Same fuzzy logic jo pehle handleChat ke andar thi (C1 likhne par BF1-C1 bhi milega)
 function findConveyorMatches(query, dataset) {
     let searchTerms = query.toUpperCase().match(/[A-Z0-9]+/g) || [];
     let cleanQ = query.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -1251,7 +1266,7 @@ function renderOptionButtons(labels) {
 }
 
 // =========================================================================
-// ✍️ SPELLING-MISTAKE TOLERANT MATCHING (typo hone par bhi sahi conveyor mile)
+// ✍️ SPELLING-MISTAKE TOLERANT MATCHING
 // =========================================================================
 function levenshtein(a, b) {
     if (a === b) return 0;
@@ -1270,10 +1285,9 @@ function levenshtein(a, b) {
     }
     return prev[bl];
 }
-// Chhote naam (jaise "C1") mein 1 typo allowed, lambe naam (jaise "BF1-C1") mein 2-3 tak allowed
+
 function fuzzyThreshold(len) { return len <= 4 ? 1 : (len <= 8 ? 2 : 3); }
 
-// Best fuzzy match ek candidate list (dept names ya conveyor names) mein se dhoondta hai
 function bestFuzzyMatch(rawInput, labelList) {
     let cleanInput = cleanText(rawInput);
     if (cleanInput.length < 2) return null;
@@ -1288,7 +1302,6 @@ function bestFuzzyMatch(rawInput, labelList) {
     return best;
 }
 
-// Poore dataset mein fuzzy conveyor match — jab exact/substring search (findConveyorMatches) khali ho
 function findFuzzyConveyorMatches(query, dataset) {
     let cleanQ = cleanText(query);
     if (cleanQ.length < 2) return [];
@@ -1302,7 +1315,6 @@ function findFuzzyConveyorMatches(query, dataset) {
         let bestDist = levenshtein(cleanQ, cleanName);
         let bestTh = fuzzyThreshold(Math.min(cleanQ.length, cleanName.length));
         let isMatch = bestDist <= bestTh;
-        // Agar poori query match nahi hui, to uske individual words try karo (typo + extra words dono ho sakte hain)
         if (!isMatch) {
             for (let t of tokens) {
                 let dist = levenshtein(t, cleanName);
@@ -1318,9 +1330,8 @@ function findFuzzyConveyorMatches(query, dataset) {
     return [...scored.values()].sort((a, b) => a.dist - b.dist).map(r => r.d);
 }
 
-// ---- Abnormality cross-reference (works once Abnormality data is also loaded — see note below) ----
 function getAbnormalityStatusText(convName) {
-    if (!window.abnAllRecords || window.abnAllRecords.length === 0) return ''; // Abnormality data abhi load nahi hui
+    if (!window.abnAllRecords || window.abnAllRecords.length === 0) return ''; 
     let records = window.abnAllRecords.filter(d => d['NO.'] === convName);
     let openOnes = records.filter(d => d.status && d.status.toLowerCase() === 'open');
     if (openOnes.length === 0) return `\n* Abnormality: **✅ Currently koi Abnormality nahi hai**`;
@@ -1328,7 +1339,6 @@ function getAbnormalityStatusText(convName) {
     return `\n* Abnormality: **⚠️ Open hai**\n${lines.join('\n')}`;
 }
 
-// ---- FULL DETAIL CARDS (reused by smart search + offline fallback) ----
 function fullThkDetail(r) {
     return `⚡ **Full Details:**\nConveyor **${r.conv}** (${r.dept}):\n* Length: **${r.length || 'N/A'} meters**\n* Top Cover: **${r.topCover} mm**\n* Min Thickness: **${parseFloat(r.minThk).toFixed(2)} mm** _(${r.wearType})_\n* Wear Rate: **${parseFloat(r.cWear).toFixed(3)} mm/M**\n* Predicted Life: **${r.predLife ? parseFloat(r.predLife).toFixed(1) + ' Months' : '-'}**\n* Last Thickness Inspection: **${r.lastInspDisp || '-'}**\n* Last Belt Replacement: **${r.lastRep || '-'}**\n* Next Repl. Plan: **${r.nextCBM || '-'}**\n* Status: **${r.crit}**${getAbnormalityStatusText(r.conv)}`;
 }
@@ -1336,7 +1346,6 @@ function fullAbnDetail(r) {
     return `⚡ **Full Details:**\nConveyor **${r['NO.']}** (${r.Dept}):\n* Issue: **"${r['Major Abnormality']}"**\n* Category: **${r.category}**\n* Reported On: **${r['Abnormality Date']}**\n* Pending Since: **${r.ageDays} din**\n* Action Plan: **${r.plan}**`;
 }
 
-// ---- Specific-detail Q&A once a conveyor is locked in ----
 function generateDetailReply(record, queryText) {
     let q = cleanText(queryText);
     if (fileType === 'thk') {
@@ -1420,18 +1429,17 @@ function presentConveyorChoices(list, deptLabel) {
     return true;
 }
 
-// Returns true if the query was fully handled locally (so AI call skip ho jaye)
 function smartConveyorSearch(rawText) {
     let dataset = (fileType === 'thk') ? parsedData : window.openRecords;
-    if (!dataset || dataset.length === 0) return false; // let normal flow show "data not synced" msg
+    if (!dataset || dataset.length === 0) return false; 
 
     const state = window.chatState;
-    let q = cleanText(rawText); // User input ko lowercase aur clean kar raha hai
+    let q = cleanText(rawText); 
 
-    // ---- 🔥 NAYA STAGE: Detail dene ke baad khud puchega Wizard start karna hai ya nahi ----
+    // ---- 🔥 STAGE: Detail dene ke baad khud puchega Wizard start karna hai ya nahi ----
     if (state.stage === 'ask_start_wizard') {
         if (q.includes('haan') || q.includes('yes') || q.includes('start')) {
-            return startWearDiagnosis(state.lastRecord); // Seedha wizard shuru
+            return startWearDiagnosis(state.lastRecord); 
         } else {
             appendMessage('bot', '👍 Theek hai. Kisi aur conveyor ki detail chahiye toh uska naam type karein.');
             resetChatState();
@@ -1439,12 +1447,11 @@ function smartConveyorSearch(rawText) {
         }
     }
 
-    // ---- STAGE: awaiting department selection ----
     if (state.stage === 'awaiting_dept') {
         let cleanInput = cleanText(rawText);
         let matchedDept = state.deptOptions.find(dep => cleanText(dep) === cleanInput)
                        || state.deptOptions.find(dep => cleanInput.includes(cleanText(dep)) || cleanText(dep).includes(cleanInput))
-                       || bestFuzzyMatch(rawText, state.deptOptions); // spelling mistake tolerant
+                       || bestFuzzyMatch(rawText, state.deptOptions); 
         if (!matchedDept) {
             let fresh = findConveyorMatches(rawText, dataset);
             if (fresh.length === 0) fresh = findFuzzyConveyorMatches(rawText, dataset);
@@ -1456,13 +1463,12 @@ function smartConveyorSearch(rawText) {
         return presentConveyorChoices(filtered, matchedDept);
     }
 
-    // ---- STAGE: awaiting conveyor selection ----
     if (state.stage === 'awaiting_conveyor') {
         let cleanInput = cleanText(rawText);
         let candNames = [...new Set(state.candidates.map(getConvName))];
         let matchedName = candNames.find(n => cleanText(n) === cleanInput)
                         || candNames.find(n => cleanInput.includes(cleanText(n)))
-                        || bestFuzzyMatch(rawText, candNames); // spelling mistake tolerant
+                        || bestFuzzyMatch(rawText, candNames); 
         let matched = matchedName ? state.candidates.find(d => getConvName(d) === matchedName) : null;
         if (!matched) {
             let fresh = findConveyorMatches(rawText, dataset);
@@ -1474,93 +1480,42 @@ function smartConveyorSearch(rawText) {
         return presentDetailChoice(matched);
     }
 
-    // ---- STAGE: awaiting detail type (conveyor already locked in) ----
     if (state.stage === 'awaiting_detail') {
         let reply = generateDetailReply(state.selectedRecord, rawText);
         appendMessage('bot', reply);
         
-        // 🔥 NAYA LOGIC: Detail print karne ke turant baad bot khud puchega 🔥
         if (fileType === 'thk') {
             window.chatState.stage = 'ask_start_wizard';
-            appendMessage('bot', `🔍 Kya aapko is conveyor mein inspection ke dauran koi **Abnormality** mili, ya wear rate se related **Recommendation** chahiye?\n\n${renderOptionButtons(['Haan (Start Diagnosis)', 'Nahi (Sab Theek Hai)'])}`);
+            setTimeout(() => {
+                appendMessage('bot', `🔍 Kya aapko is conveyor mein inspection ke dauran koi **Abnormality** mili, ya wear rate se related **Recommendation** chahiye?\n\n${renderOptionButtons(['Haan (Start Diagnosis)', 'Nahi (Sab Theek Hai)'])}`);
+            }, 500);
         } else {
             resetChatState();
         }
         return true;
     }
 
-    // ---- STAGE: idle -> fresh search ----
     let matches = findConveyorMatches(rawText, dataset);
     let isFuzzy = false;
 
     if (matches.length === 0) {
-        // Exact/substring match nahi mila — ab typo-tolerant fuzzy search try karo
         let fuzzy = findFuzzyConveyorMatches(rawText, dataset);
         if (fuzzy.length > 0) { matches = fuzzy.slice(0, 20); isFuzzy = true; }
     }
 
     if (matches.length === 0) {
-        // Follow-up detail question about the last-discussed conveyor (e.g. "aur wear rate?")
         if (state.lastRecord && isDetailKeyword(rawText)) {
             appendMessage('bot', generateDetailReply(state.lastRecord, rawText));
             
-            // Follow up ke baad bhi wizard ka trigger de dete hain
             if (fileType === 'thk') {
                 window.chatState.stage = 'ask_start_wizard';
-                appendMessage('bot', `🔍 Kya aapko koi **Abnormality** mili ya **Recommendation** chahiye?\n\n${renderOptionButtons(['Haan (Start Diagnosis)', 'Nahi (Sab Theek Hai)'])}`);
+                setTimeout(() => {
+                    appendMessage('bot', `🔍 Kya aapko koi **Abnormality** mili ya **Recommendation** chahiye?\n\n${renderOptionButtons(['Haan (Start Diagnosis)', 'Nahi (Sab Theek Hai)'])}`);
+                }, 500);
             }
             return true;
         }
-        return false; // no conveyor match -> let AI / offline engine handle general chat
-    }
-
-    if (isFuzzy) {
-        appendMessage('bot', `🔎 "${rawText}" ka exact match nahi mila (spelling check kar liya), lekin yeh sabse close naam mile:`);
-    }
-
-    let uniqueNames = [...new Set(matches.map(getConvName))];
-    if (uniqueNames.length === 1) {
-        let record = matches.find(d => getConvName(d) === uniqueNames[0]);
-        return presentDetailChoice(record);
-    }
-
-    let uniqueDepts = [...new Set(matches.map(getConvDept))];
-    if (uniqueDepts.length > 1) {
-        state.stage = 'awaiting_dept';
-        state.candidates = matches;
-        state.deptOptions = uniqueDepts;
-        appendMessage('bot', `🔍 "${rawText}" se milte julte **${uniqueNames.length} conveyors** mile, ${uniqueDepts.length} alag departments mein. Pehle Department batayein:\n\n${renderOptionButtons(uniqueDepts)}`);
-        return true;
-    }
-
-    return presentConveyorChoices(matches, uniqueDepts[0]);
-}
-
-    // ---- STAGE: awaiting detail type (conveyor already locked in) ----
-    if (state.stage === 'awaiting_detail') {
-        let reply = generateDetailReply(state.selectedRecord, rawText);
-        appendMessage('bot', reply);
-        resetChatState();
-        return true;
-    }
-
-    // ---- STAGE: idle -> fresh search ----
-    let matches = findConveyorMatches(rawText, dataset);
-    let isFuzzy = false;
-
-    if (matches.length === 0) {
-        // Exact/substring match nahi mila — ab typo-tolerant fuzzy search try karo
-        let fuzzy = findFuzzyConveyorMatches(rawText, dataset);
-        if (fuzzy.length > 0) { matches = fuzzy.slice(0, 20); isFuzzy = true; }
-    }
-
-    if (matches.length === 0) {
-        // Follow-up detail question about the last-discussed conveyor (e.g. "aur wear rate?")
-        if (state.lastRecord && isDetailKeyword(rawText)) {
-            appendMessage('bot', generateDetailReply(state.lastRecord, rawText));
-            return true;
-        }
-        return false; // no conveyor match -> let AI / offline engine handle general chat
+        return false; 
     }
 
     if (isFuzzy) {
@@ -1587,10 +1542,6 @@ function smartConveyorSearch(rawText) {
 
 // =========================================================================
 // 🛠️ WEAR-RATE / MAINTENANCE RECOMMENDATION WIZARD
-// Jab user "wear rate kam karne ke liye kya recommend karoge" jaisa sawaal
-// poochta hai, bot ek guided (button-based) diagnostic chalata hai — bilkul
-// waise jaise ek field engineer manually check karta hai (skirt/spillage ->
-// category+date -> rubbing/wear-rate ya ply -> crack -> take-up clearance).
 // =========================================================================
 function isRecommendationTrigger(text) {
     let q = cleanText(text);
@@ -1599,7 +1550,7 @@ function isRecommendationTrigger(text) {
 }
 
 function isHighBeltCategory(cat) {
-    return (cat || '').trim().toUpperCase().startsWith('A'); // A, A+, A+ (Sup.Critical)
+    return (cat || '').trim().toUpperCase().startsWith('A'); 
 }
 
 function pushSummary(diag, hi, en) { diag.summary.push(hi); diag.summaryEn.push(en); }
@@ -1691,7 +1642,6 @@ function diagCrackVerdict(choice) {
     else { pushSummary(diag, 'Crack: Koi crack nahi', 'Crack: None observed'); finishDiagnosis(`✅ Koi major crack nahi mila. Regular monitoring jaari rakho.`, `No significant crack found. Continue regular monitoring.`); }
 }
 
-// ---- Wizard khatam hone ke baad: Abnormality-sheet check + Yes/No loop + final mail-ready summary ----
 function finishDiagnosis(verdictText, verdictTextEn) {
     const diag = window.chatState.diag;
     diag.verdict = verdictText;
@@ -1699,38 +1649,12 @@ function finishDiagnosis(verdictText, verdictTextEn) {
     appendMessage('bot', verdictText);
     checkExistingAbnormalityAndAsk();
 }
-// =========================================================================
-// 🌐 TRANSLATE HINGLISH TO PROFESSIONAL ENGLISH FOR EMAIL
-// =========================================================================
-async function translateToEnglish(text) {
-    const part1 = "sk-or-v1-";
-    const part2 = "95c779c0eddc3fef5723871443e6c00ff75b99af9469ece4f0614451d8ee1f24"; 
-    const apiKey = part1 + part2;
-    const sysPrompt = "You are a Tata Steel technical translator. Translate the user's maintenance abnormality text (which might be in Hindi, Hinglish or broken English) into a single, concise, professional English sentence for an official email. Do not add any conversational text, just output the translation.";
-    try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                "model": "openrouter/free", 
-                "messages": [
-                    { "role": "system", "content": sysPrompt },
-                    { "role": "user", "content": text }
-                ]
-            })
-        });
-        const apiData = await response.json();
-        if (apiData.choices && apiData.choices.length > 0) {
-            return apiData.choices[0].message.content.trim().replace(/^"|"$/g, '');
-        }
-    } catch(e) { console.error(e); }
-    return text; // API fail hone par original text use karega
-}
+
 function checkExistingAbnormalityAndAsk() {
     const diag = window.chatState.diag; const r = diag.record;
     let existing = (window.abnAllRecords || []).filter(d => d['NO.'] === r.conv && d.status && d.status.toLowerCase() === 'open');
     if (existing.length === 0) {
-        diag.existingAbnText = null; // Abnormality sheet mein kuch nahi darj
+        diag.existingAbnText = null; 
         diag.step = 'abnAskFound';
         appendMessage('bot', `🔍 Abnormality sheet mein iss conveyor ke liye kuch darj nahi hai. Inspection ke dauran tumhe koi Abnormality mili?\n\n${renderOptionButtons(['Yes', 'No'])}`);
         return;
@@ -1742,7 +1666,7 @@ function checkExistingAbnormalityAndAsk() {
 
 function presentFinalSummary() {
     const diag = window.chatState.diag; const r = diag.record;
-    // Chat mein dikhane ke liye Hinglish (Hi), EMAIL ke liye clean English (En)
+    
     let abnormalityTextHi = diag.addedTextHi
         ? (diag.existingAbnText ? `${diag.existingAbnText}; ${diag.addedTextHi}` : diag.addedTextHi)
         : (diag.existingAbnText || diag.summary.join('; '));
@@ -1763,7 +1687,6 @@ function wearDiagnosisEngine(rawText) {
     const diag = window.chatState.diag;
     let q = cleanText(rawText);
 
-    // ---- Wizard already chal raha hai: current step ka jawab process karo ----
     if (diag) {
         const step = diag.step;
 
@@ -1782,6 +1705,7 @@ function wearDiagnosisEngine(rawText) {
             else pushSummary(diag, 'Spillage: Normal', 'Spillage: Normal, no issue');
             diagAskCategoryDateStep(); return true;
         }
+        
         if (step === 'rub') {
             if (q.includes('haan') || (q.includes('rub') && !q.includes('nahi'))) { 
                 pushSummary(diag, 'Rubbing: Haan, kisi cheez se rub ho raha hai', 'Rubbing: Yes, belt rubbing against an object'); 
@@ -1789,13 +1713,11 @@ function wearDiagnosisEngine(rawText) {
             } else { 
                 pushSummary(diag, 'Rubbing: Nahi', 'Rubbing: No'); 
             }
-            // Agla sawal Skirt Ply ka aayega
             diag.step = 'plySkirtAsk'; 
             appendMessage('bot', `Ab agla check:\n\n**Skirt area** mein Ply visible hai kya?\n\n${renderOptionButtons(['Haan (Yes)', 'Nahi (No)'])}`);
             return true;
         }
 
-        // 1. Skirt Area Ply Pucho
         if (step === 'plySkirtAsk') {
             if (q.includes('haan') || q.includes('yes')) {
                 diag.step = 'plySkirtLevel';
@@ -1809,7 +1731,6 @@ function wearDiagnosisEngine(rawText) {
             return true;
         }
 
-        // 2. Skirt Area Ply Save Karo aur Center ke baare mein pucho
         if (step === 'plySkirtLevel') {
             if (q.includes('1st') || q.includes('first')) diag.skirtPly = '1st Ply';
             else if (q.includes('2nd') || q.includes('second')) diag.skirtPly = '2nd Ply';
@@ -1823,7 +1744,6 @@ function wearDiagnosisEngine(rawText) {
             return true;
         }
 
-        // 3. Center Area Ply Pucho
         if (step === 'plyCenterAsk') {
             if (q.includes('haan') || q.includes('yes')) {
                 diag.step = 'plyCenterLevel';
@@ -1831,12 +1751,11 @@ function wearDiagnosisEngine(rawText) {
             } else {
                 diag.centerPly = 'Nahi';
                 pushSummary(diag, 'Center Area Ply: Nahi', 'Center Area Ply: Not visible');
-                processCombinedPlyVerdict(diag); // Data save karke Crack par le jayega
+                processCombinedPlyVerdict(diag);
             }
             return true;
         }
 
-        // 4. Center Area Ply Save Karo aur Crack par aage badho
         if (step === 'plyCenterLevel') {
             if (q.includes('1st') || q.includes('first')) diag.centerPly = '1st Ply';
             else if (q.includes('2nd') || q.includes('second')) diag.centerPly = '2nd Ply';
@@ -1844,15 +1763,18 @@ function wearDiagnosisEngine(rawText) {
             else diag.centerPly = 'Visible (Unknown Level)';
 
             pushSummary(diag, `Center Area Ply: ${diag.centerPly}`, `Center Area Ply: ${diag.centerPly}`);
-            processCombinedPlyVerdict(diag); // Data save karke Crack par le jayega
+            processCombinedPlyVerdict(diag);
             return true;
         }
+
         if (step === 'crack') { diagCrackVerdict(q.includes('internal') ? 'internal' : q.includes('channel') ? 'channel' : q.includes('step') ? 'step' : 'none'); return true; }
+        
         if (step === 'takeup') {
             if (q.includes('haan') || q.includes('clearancehai')) { pushSummary(diag, 'Take-up Clearance: Haan', 'Take-up Clearance: Available'); finishDiagnosis(`🔧 **Recommendation:** Take-up clearance available hai — **Rejoint** karo.`, `Recommendation: Take-up clearance is available — proceed with Rejoint.`); }
             else { pushSummary(diag, 'Take-up Clearance: Nahi', 'Take-up Clearance: Not available'); finishDiagnosis(`🔧 **Recommendation:** Take-up clearance nahi hai — **Piece Addition** karo.`, `Recommendation: Take-up clearance is not available — proceed with Piece Addition.`); }
             return true;
         }
+        
         if (step === 'abnAskAdd') {
             if (q === 'yes' || q.includes('yes') || q.includes('haan')) { diag.step = 'abnAddText'; appendMessage('bot', `✍️ Theek hai, likho kya add karna hai (apni bhasha mein likh sakte ho):`); }
             else presentFinalSummary();
@@ -1863,18 +1785,17 @@ function wearDiagnosisEngine(rawText) {
             else { appendMessage('bot', `👍 Theek hai, koi Abnormality nahi.`); presentFinalSummary(); }
             return true;
         }
+        
         if (step === 'abnAddText') {
             let cleaned = rawText.trim();
             if (cleaned.length > 0) cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
             
-            // Dono variables set kar rahe hain
             diag.addedTextHi = cleaned;
-            diag.addedTextEn = cleaned; // Default fallback
+            diag.addedTextEn = cleaned; 
             
             const typingIndicator = document.getElementById('typingIndicator');
             if (typingIndicator) typingIndicator.style.display = 'block';
 
-            // Pehle English mein translate hoga, phir mail aur chat ka button generate hoga
             translateToEnglish(cleaned).then(translatedText => {
                 if (typingIndicator) typingIndicator.style.display = 'none';
                 diag.addedTextEn = translatedText;
@@ -1884,7 +1805,6 @@ function wearDiagnosisEngine(rawText) {
         }
     }
 
-    // ---- Naya recommendation trigger (sirf Thickness dataset ke liye) ----
     if (fileType === 'thk' && isRecommendationTrigger(rawText)) {
         let record = window.chatState.lastRecord;
         if (!record) {
@@ -1901,9 +1821,7 @@ function wearDiagnosisEngine(rawText) {
 }
 
 // =========================================================================
-// 📊 OFFLINE ANALYTICS ENGINE (aggregate/analysis sawaalon ke liye — bina AI ke)
-// "kitne critical hain", "6 mahine se pending list do", "top wear rate", etc.
-// Ab AI (OpenRouter) sirf tab lagti hai jab yeh bhi jawab na de paaye.
+// 📊 OFFLINE ANALYTICS ENGINE
 // =========================================================================
 function anyKw(q, arr) { return arr.some(k => q.includes(k)); }
 
@@ -1997,14 +1915,13 @@ function offlineAnalyticsEngine(rawText) {
             return presentConveyorChoices(scope, deptHit);
         }
     }
-    return false; // yeh query samajh nahi aayi -> ab AI try karega
+    return false;
 }
 
 // =========================================================================
-// 🤖 2. MAIN CHATBOT FUNCTION (Asli Dimaag)
+// 🤖 2. MAIN CHATBOT FUNCTION
 // =========================================================================
 async function handleChat() {
-    // 🔥 APNI API KEY YAHAN DAALNA MAT BHOOLNA 🔥
     const part1 = "sk-or-v1-";
     const part2 = "95c779c0eddc3fef5723871443e6c00ff75b99af9469ece4f0614451d8ee1f24"; 
     const apiKey = part1 + part2;
@@ -2016,21 +1933,14 @@ async function handleChat() {
     appendMessage('user', text); 
     inputEl.value = '';
 
-    // 🛠️ STEP A0: WEAR-RATE RECOMMENDATION WIZARD — agar wizard chal raha hai ya
-    // user recommendation maang raha hai, ISE SABSE PEHLE handle karo (warna
-    // niche wala fresh-search follow-up ko galti se conveyor-naam samajh sakta hai).
     if (wearDiagnosisEngine(text)) {
         return;
     }
 
-    // 🔥 STEP A: LOCAL SMART SEARCH ENGINE (Department drill-down) — koi AI/network nahi lagti,
-    // isiliye conveyor-specific sawaalon ka jawab turant aur bilkul accurate milta hai.
     if (smartConveyorSearch(text)) {
         return;
     }
 
-    // 🔥 STEP A2: OFFLINE ANALYTICS ENGINE — counts, lists, critical/wear/pending
-    // analysis bhi ab bina AI/OpenRouter ke, seedha data se milte hain.
     if (offlineAnalyticsEngine(text)) {
         return;
     }
@@ -2038,8 +1948,6 @@ async function handleChat() {
     const typing = document.getElementById('typingIndicator'); 
     typing.style.display = 'block';
 
-    // 🔥 STEP B: Koi specific conveyor match nahi hua -> general chat ke liye AI ko
-    // thoda sa sample data context ke saath bhejo.
     let contextData = [];
     if (fileType === 'thk') {
         let mapThk = d => ({ 
@@ -2051,8 +1959,8 @@ async function handleChat() {
             WearPattern: d.wearType,
             WearRate: parseFloat(d.cWear).toFixed(3) + "mm/M", 
             PredLife: parseFloat(d.predLife).toFixed(1) + " Months", 
-            Last_Thickness_Inspection_Date: d.lastInspDisp, // Special Name
-            Belt_Replacement_Date: d.lastRep,               // Special Name
+            Last_Thickness_Inspection_Date: d.lastInspDisp, 
+            Belt_Replacement_Date: d.lastRep,               
             Status: d.crit 
         });
         contextData = parsedData.map(mapThk).slice(0, 30);
@@ -2065,7 +1973,6 @@ async function handleChat() {
         contextData = window.openRecords.map(mapAbn).slice(0, 30);
     }
 
-    // 🔥 STEP C: AI KO INSTRUCTIONS DENA (Prompt)
     const sysPrompt = `You are 'RTG-Bot', an expert Reliability Engineer AI at Tata Steel.
 Your rules:
 1. This is a GENERAL question — a local search engine has already checked and found NO specific matching conveyor name in the query, so answer generally using the sample JSON data below (trends, counts, comparisons, explanations, etc.).
@@ -2075,8 +1982,6 @@ Your rules:
 5. Reply in a friendly Hinglish tone. Be concise and use Markdown.
 LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
 
-    // 🔥 STEP D: API CALL (8 second timeout — OpenRouter free-tier slow/limited hone par
-    // turant offline engine par switch ho jaye, user ko latak na na pade)
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
@@ -2112,7 +2017,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     }
 }
 
-        // ================= OFFLINE ENGINE (ULTRA-MAX DETAILS + PRO FUZZY MATCH) =================
+        // ================= OFFLINE ENGINE =================
         function fallbackLocalEngine(query) {
             let normalizedQuery = cleanText(query);
             let reply = "";
@@ -2130,7 +2035,6 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 matchedConv = activeSet.find(d => d['NO.'] && normalizedQuery.includes(cleanText(d['NO.'])));
             }
             if (!matchedConv) {
-                // Typo-tolerant last resort
                 let fuzzy = findFuzzyConveyorMatches(query, activeSet);
                 if (fuzzy.length > 0) matchedConv = fuzzy[0];
             }
@@ -2146,7 +2050,6 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             }
             appendMessage('bot', reply);
         }
-
 
     </script>
     <script>
