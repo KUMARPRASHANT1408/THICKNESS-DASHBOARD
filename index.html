@@ -910,6 +910,7 @@ function logout() {
             let colRecEdge2 = headers.find(k => k && k === 'Thickness EDGE 2') || 'Thickness EDGE 2';
             let colMinThk = headers.find(k => k && k === 'MIN THICKNESS') || 'MIN THICKNESS';
             let colCrit = headers.find(k => k && k === 'Criticality') || 'Criticality';
+            let colBeltCategory = headers.find(k => k && k.trim().toUpperCase() === 'CATEGORY') || 'CATEGORY';
             
             let colLength = headers.find(k => k && k.toLowerCase().includes('length')) || 'Length';
             let colWidth = headers.find(k => k && k.toLowerCase().includes('width')) || 'Width';
@@ -930,6 +931,7 @@ function logout() {
             parsedData = data.filter(row => row[colNo] && row[colNo].trim() !== '' && !row[colNo].includes('#REF!')).map(row => {
                 row.dept = row[colDept] || 'Unknown'; row.section = row[colSec] || row.dept; row.conv = row[colNo] || '-';
                 row.minThk = parseFloat(row[colMinThk]) || 0; row.crit = row[colCrit] ? row[colCrit].trim() : 'Unknown';
+                row.beltCategory = row[colBeltCategory] ? row[colBeltCategory].trim() : 'Unknown'; // A+ / A / B / C
                 row.cWear = parseFloat(row[colCWear]) || 0; row.pWear = parseFloat(row[colPWear]) || 0;
                 
                 let cbmStr = row[colCBMLife] ? String(row[colCBMLife]).trim() : '';
@@ -1221,10 +1223,10 @@ document.addEventListener('click', function(e) {
 //       to pehle Dept puchega -> Dept select karne par us Dept ki conveyor
 //       list dega -> conveyor select karne par konsi detail chahiye puchega.
 // =========================================================================
-window.chatState = { stage: 'idle', candidates: [], deptOptions: [], selectedRecord: null, lastRecord: null };
+window.chatState = { stage: 'idle', candidates: [], deptOptions: [], selectedRecord: null, lastRecord: null, diag: null };
 
 function resetChatState() {
-    window.chatState = { stage: 'idle', candidates: [], deptOptions: [], selectedRecord: null, lastRecord: window.chatState ? window.chatState.lastRecord : null };
+    window.chatState = { stage: 'idle', candidates: [], deptOptions: [], selectedRecord: null, lastRecord: window.chatState ? window.chatState.lastRecord : null, diag: null };
 }
 
 function getConvName(d) { return (fileType === 'thk') ? d.conv : d['NO.']; }
@@ -1316,9 +1318,19 @@ function findFuzzyConveyorMatches(query, dataset) {
     return [...scored.values()].sort((a, b) => a.dist - b.dist).map(r => r.d);
 }
 
+// ---- Abnormality cross-reference (works once Abnormality data is also loaded — see note below) ----
+function getAbnormalityStatusText(convName) {
+    if (!window.abnAllRecords || window.abnAllRecords.length === 0) return ''; // Abnormality data abhi load nahi hui
+    let records = window.abnAllRecords.filter(d => d['NO.'] === convName);
+    let openOnes = records.filter(d => d.status && d.status.toLowerCase() === 'open');
+    if (openOnes.length === 0) return `\n* Abnormality: **✅ Currently koi Abnormality nahi hai**`;
+    let lines = openOnes.map(d => `  - "${d['Major Abnormality']}" — **${d['Abnormality Date']}** se open (${d.ageDays} din)`);
+    return `\n* Abnormality: **⚠️ Open hai**\n${lines.join('\n')}`;
+}
+
 // ---- FULL DETAIL CARDS (reused by smart search + offline fallback) ----
 function fullThkDetail(r) {
-    return `⚡ **Full Details:**\nConveyor **${r.conv}** (${r.dept}):\n* Length: **${r.length || 'N/A'} meters**\n* Top Cover: **${r.topCover} mm**\n* Min Thickness: **${parseFloat(r.minThk).toFixed(2)} mm** _(${r.wearType})_\n* Wear Rate: **${parseFloat(r.cWear).toFixed(3)} mm/M**\n* Predicted Life: **${r.predLife ? parseFloat(r.predLife).toFixed(1) + ' Months' : '-'}**\n* Last Thickness Inspection: **${r.lastInspDisp || '-'}**\n* Last Belt Replacement: **${r.lastRep || '-'}**\n* Next Repl. Plan: **${r.nextCBM || '-'}**\n* Status: **${r.crit}**`;
+    return `⚡ **Full Details:**\nConveyor **${r.conv}** (${r.dept}):\n* Length: **${r.length || 'N/A'} meters**\n* Top Cover: **${r.topCover} mm**\n* Min Thickness: **${parseFloat(r.minThk).toFixed(2)} mm** _(${r.wearType})_\n* Wear Rate: **${parseFloat(r.cWear).toFixed(3)} mm/M**\n* Predicted Life: **${r.predLife ? parseFloat(r.predLife).toFixed(1) + ' Months' : '-'}**\n* Last Thickness Inspection: **${r.lastInspDisp || '-'}**\n* Last Belt Replacement: **${r.lastRep || '-'}**\n* Next Repl. Plan: **${r.nextCBM || '-'}**\n* Status: **${r.crit}**${getAbnormalityStatusText(r.conv)}`;
 }
 function fullAbnDetail(r) {
     return `⚡ **Full Details:**\nConveyor **${r['NO.']}** (${r.Dept}):\n* Issue: **"${r['Major Abnormality']}"**\n* Category: **${r.category}**\n* Reported On: **${r['Abnormality Date']}**\n* Pending Since: **${r.ageDays} din**\n* Action Plan: **${r.plan}**`;
@@ -1501,6 +1513,193 @@ function smartConveyorSearch(rawText) {
 }
 
 // =========================================================================
+// 🛠️ WEAR-RATE / MAINTENANCE RECOMMENDATION WIZARD
+// Jab user "wear rate kam karne ke liye kya recommend karoge" jaisa sawaal
+// poochta hai, bot ek guided (button-based) diagnostic chalata hai — bilkul
+// waise jaise ek field engineer manually check karta hai (skirt/spillage ->
+// category+date -> rubbing/wear-rate ya ply -> crack -> take-up clearance).
+// =========================================================================
+function isRecommendationTrigger(text) {
+    let q = cleanText(text);
+    const kws = ['recommend', 'suggest', 'kyakar', 'reduce', 'kamkaise', 'kamkarne', 'solution', 'upay', 'actionlena', 'actionplan', 'sudhar', 'fixkaise', 'maintenance', 'whattodo', 'howtoreduce', 'howtofix'];
+    return anyKw(q, kws);
+}
+
+function isHighBeltCategory(cat) {
+    return (cat || '').trim().toUpperCase().startsWith('A'); // A, A+, A+ (Sup.Critical)
+}
+
+function startWearDiagnosis(record) {
+    let side = null;
+    if (record.wearType && record.wearType.includes('Edge')) side = 'edge';
+    else if (record.wearType === 'Center Wear') side = 'center';
+
+    window.chatState.diag = { record, side, step: null, summary: [] };
+    window.chatState.lastRecord = record;
+
+    if (side === 'edge') {
+        window.chatState.diag.step = 'skirt';
+        window.chatState.diag.summary.push('Wear Side: Edge');
+        appendMessage('bot', `🔍 **${record.conv}** mein **Edge wear** dikh raha hai. Pehle Skirt Board check karo:\n\nSkirt rubber standard size/material ka laga hai, ya kahin belt-piece laga hua hai?\n\n${renderOptionButtons(['Skirt Rubber Standard Hai', 'Belt Piece Laga Hai'])}`);
+    } else if (side === 'center') {
+        window.chatState.diag.step = 'spillage';
+        window.chatState.diag.summary.push('Wear Side: Center');
+        appendMessage('bot', `🔍 **${record.conv}** mein **Center wear** dikh raha hai. Pehle Spillage check karo:\n\nBelt ke around spillage material zyada accumulate to nahi hua?\n\n${renderOptionButtons(['Spillage Zyada Hai', 'Spillage Normal Hai'])}`);
+    } else {
+        window.chatState.diag.step = 'askSide';
+        appendMessage('bot', `🔍 **${record.conv}** ke liye recommendation dene se pehle batao — wear kahan zyada hai?\n\n${renderOptionButtons(['Edge Par', 'Center Par'])}`);
+    }
+    return true;
+}
+
+function diagAskCategoryDateStep() {
+    const diag = window.chatState.diag; const r = diag.record;
+    if (r.isInspectedThisMonth) {
+        diag.step = 'rub';
+        appendMessage('bot', `📅 Last thickness reading **is mahine hi** li gayi thi. Ek aur cheez check karo:\n\nBelt kisi **damaged idler ya kisi aur cheez se rub** to nahi ho rahi?\n\n${renderOptionButtons(['Haan, Rub Ho Rahi Hai', 'Nahi, Rubbing Nahi Hai'])}`);
+    } else {
+        diag.step = 'ply';
+        appendMessage('bot', `📅 Last thickness reading **is mahine ki nahi** hai. Ab yeh batao:\n\nCenter ya Skirt area mein **Ply visible** hai kya?\n\n${renderOptionButtons(['Ply Visible Nahi Hai', '1st Ply Visible Hai', '2nd Ply Visible Hai'])}`);
+    }
+}
+
+function diagWearRateVerdict() {
+    const diag = window.chatState.diag; const r = diag.record;
+    let rapid = (r.pWear > 0) ? (r.cWear > r.pWear * 1.25) : (r.cWear > 0.3);
+    diag.summary.push(`Wear Rate: ${rapid ? 'Rapid (above planned)' : 'Normal'}`);
+    if (rapid) finishDiagnosis(`⚠️ **Recommendation:** Current wear rate (**${r.cWear.toFixed(3)} mm/M**) planned se (**${r.pWear.toFixed(3)} mm/M**) zyada tez hai — isey **Under Observation** rakho aur agli inspection jaldi karo.`);
+    else finishDiagnosis(`✅ **Recommendation:** Wear rate normal range mein hai (**${r.cWear.toFixed(3)} mm/M**). Filhaal koi extra action nahi chahiye — bas spillage/rubbing clear rakho.`);
+}
+
+function diagPlyVerdict(plyArea) {
+    const diag = window.chatState.diag; const r = diag.record;
+    diag.summary.push(`Ply Area: ${plyArea === 'throughout' ? 'Poori length' : 'Kuch portion'}`);
+    const highCat = isHighBeltCategory(r.beltCategory);
+    const lenNum = parseFloat(r.length);
+    if (highCat) {
+        if (plyArea === 'throughout') finishDiagnosis(`🔴 **Recommendation:** Category **${r.beltCategory}** hai aur 1st ply **poori length** mein visible hai — **turant Belt Replacement** chahiye.`);
+        else finishDiagnosis(`🟡 **Recommendation:** Category **${r.beltCategory}** hai, 1st ply sirf **kuch portion** mein visible hai — abhi **Under Observation** rakho.`);
+    } else {
+        if (!isNaN(lenNum) && lenNum > 90) finishDiagnosis(`🟡 **Recommendation:** Category **${r.beltCategory}** hai (Belt Length ${lenNum}m > 90m) — **Under Observation** rakho, **next shutdown mein replace** karo.`);
+        else finishDiagnosis(`🔴 **Recommendation:** Category **${r.beltCategory}** hai aur Belt Length 90m se kam/unknown hai — **turant Belt Replacement** chahiye.`);
+    }
+}
+
+function diagCrackVerdict(choice) {
+    const diag = window.chatState.diag;
+    if (choice === 'internal') { diag.summary.push('Crack: Internal, poori length'); finishDiagnosis(`⚠️ **Analysis:** Belt mein poori length mein internal cracks ka matlab hai **hardness badh gaya hai**. Hardness check karwao aur replacement plan consider karo.`); }
+    else if (choice === 'channel') { diag.summary.push('Crack: Channel'); finishDiagnosis(`🔧 **Recommendation:** Channel mein crack hai — **Repair** karwao.`); }
+    else if (choice === 'step') { diag.summary.push('Crack: Step crack'); diag.step = 'takeup'; appendMessage('bot', `🔍 Step crack hai. Ek aur cheez check karo:\n\nBelt mein **Take-up clearance** available hai kya?\n\n${renderOptionButtons(['Haan, Clearance Hai', 'Nahi, Clearance Nahi Hai'])}`); }
+    else { diag.summary.push('Crack: Koi crack nahi'); finishDiagnosis(`✅ Koi major crack nahi mila. Regular monitoring jaari rakho.`); }
+}
+
+// ---- Wizard khatam hone ke baad: Abnormality-sheet check + Yes/No loop + final mail-ready summary ----
+function finishDiagnosis(verdictText) {
+    const diag = window.chatState.diag;
+    diag.verdict = verdictText;
+    appendMessage('bot', verdictText);
+    checkExistingAbnormalityAndAsk();
+}
+
+function checkExistingAbnormalityAndAsk() {
+    const diag = window.chatState.diag; const r = diag.record;
+    let existing = (window.abnAllRecords || []).filter(d => d['NO.'] === r.conv && d.status && d.status.toLowerCase() === 'open');
+    if (existing.length === 0) {
+        diag.existingAbnText = null; // Abnormality sheet mein kuch nahi — hamare diagnostic answers hi summary ban jayenge
+        presentFinalSummary();
+        return;
+    }
+    diag.existingAbnText = existing.map(d => `"${d['Major Abnormality']}" (${d['Abnormality Date']} se open, ${d.ageDays} din)`).join('; ');
+    diag.step = 'abnAskAdd';
+    appendMessage('bot', `📋 Iss conveyor ki pehle se yeh **Abnormality darj** hai:\n"${diag.existingAbnText}"\n\nIsme kuch add karna hai?\n\n${renderOptionButtons(['Yes', 'No'])}`);
+}
+
+function presentFinalSummary() {
+    const diag = window.chatState.diag; const r = diag.record;
+    let abnormalityText = diag.addedText
+        ? (diag.existingAbnText ? `${diag.existingAbnText}; ${diag.addedText}` : diag.addedText)
+        : (diag.existingAbnText || diag.summary.join('; '));
+
+    let mailSubject = encodeURIComponent(`Maintenance Recommendation - ${r.conv}`);
+    let mailBody = encodeURIComponent(`Conveyor: ${r.conv} (${r.dept})\n\nObservation: ${diag.summary.join(' | ')}\n\nAbnormality: ${abnormalityText}\n\n${diag.verdict.replace(/\*\*/g, '').replace(/^[^\w]+/, '')}\n\nRegards,\nMaintenance Planning`);
+
+    appendMessage('bot', `📄 **Summary for ${r.conv}:**\n* Observation: ${diag.summary.join(', ')}\n* Abnormality: ${abnormalityText}\n\n[📧 Mail to Department](mailto:?subject=${mailSubject}&body=${mailBody})`);
+    window.chatState.diag = null;
+}
+
+function wearDiagnosisEngine(rawText) {
+
+    const diag = window.chatState.diag;
+    let q = cleanText(rawText);
+
+    // ---- Wizard already chal raha hai: current step ka jawab process karo ----
+    if (diag) {
+        const step = diag.step;
+
+        if (step === 'askSide') {
+            if (q.includes('edge')) { diag.side = 'edge'; diag.step = 'skirt'; diag.summary.push('Wear Side: Edge'); appendMessage('bot', `Skirt rubber standard size/material ka laga hai, ya kahin belt-piece laga hua hai?\n\n${renderOptionButtons(['Skirt Rubber Standard Hai', 'Belt Piece Laga Hai'])}`); return true; }
+            if (q.includes('center') || q.includes('centre')) { diag.side = 'center'; diag.step = 'spillage'; diag.summary.push('Wear Side: Center'); appendMessage('bot', `Belt ke around spillage material zyada accumulate to nahi hua?\n\n${renderOptionButtons(['Spillage Zyada Hai', 'Spillage Normal Hai'])}`); return true; }
+            appendMessage('bot', `Please "Edge Par" ya "Center Par" mein se select karein.\n\n${renderOptionButtons(['Edge Par', 'Center Par'])}`); return true;
+        }
+        if (step === 'skirt') {
+            if (q.includes('beltpiece')) { diag.summary.push('Skirt: Belt-piece mila (rubber standard nahi)'); appendMessage('bot', `🔧 **Recommendation:** Belt-piece hata kar standard skirt rubber lagao — isse edge wear kam hoga.`); }
+            else diag.summary.push('Skirt: Standard hai');
+            diagAskCategoryDateStep(); return true;
+        }
+        if (step === 'spillage') {
+            if (q.includes('zyadahai')) { diag.summary.push('Spillage: Zyada accumulated'); appendMessage('bot', `🔧 **Recommendation:** Spillage material clear karo.`); }
+            else diag.summary.push('Spillage: Normal');
+            diagAskCategoryDateStep(); return true;
+        }
+        if (step === 'rub') {
+            if (q.includes('haan') || (q.includes('rub') && !q.includes('nahi'))) { diag.summary.push('Rubbing: Haan, kisi cheez se rub ho raha hai'); finishDiagnosis(`🔧 **Recommendation:** Jo bhi cheez (jaise damaged idler) belt ko rub kar rahi hai, usse **theek/replace** karo — yehi thickness loss ka reason ho sakta hai.`); }
+            else { diag.summary.push('Rubbing: Nahi'); diagWearRateVerdict(); }
+            return true;
+        }
+        if (step === 'ply') {
+            if (q.includes('2nd') || q.includes('second')) { diag.summary.push('Ply: 2nd ply visible'); finishDiagnosis(`🔴 **Recommendation:** 2nd ply visible hai (area chhota ho ya bada) — **turant Belt Replacement** chahiye.`); }
+            else if (q.includes('1st') || q.includes('first')) { diag.summary.push('Ply: 1st ply visible'); diag.step = 'plyArea'; appendMessage('bot', `Ply kitne area mein visible hai?\n\n${renderOptionButtons(['Kuch Portion Mein', 'Poori Length Mein'])}`); }
+            else { diag.summary.push('Ply: Visible nahi'); diag.step = 'crack'; appendMessage('bot', `Theek hai, ply visible nahi hai. Ab crack check karo:\n\nBelt mein koi crack dikh raha hai kya?\n\n${renderOptionButtons(['Internal Cracks (Poori Length)', 'Channel Mein Crack', 'Step Crack', 'Koi Crack Nahi'])}`); }
+            return true;
+        }
+        if (step === 'plyArea') { diagPlyVerdict((q.includes('poori') || q.includes('through') || q.includes('full')) ? 'throughout' : 'partial'); return true; }
+        if (step === 'crack') { diagCrackVerdict(q.includes('internal') ? 'internal' : q.includes('channel') ? 'channel' : q.includes('step') ? 'step' : 'none'); return true; }
+        if (step === 'takeup') {
+            if (q.includes('haan') || q.includes('clearancehai')) { diag.summary.push('Take-up Clearance: Haan'); finishDiagnosis(`🔧 **Recommendation:** Take-up clearance available hai — **Rejoint** karo.`); }
+            else { diag.summary.push('Take-up Clearance: Nahi'); finishDiagnosis(`🔧 **Recommendation:** Take-up clearance nahi hai — **Piece Addition** karo.`); }
+            return true;
+        }
+        if (step === 'abnAskAdd') {
+            if (q === 'yes' || q.includes('yes') || q.includes('haan')) { diag.step = 'abnAddText'; appendMessage('bot', `✍️ Theek hai, likho kya add karna hai (apni bhasha mein likh sakte ho):`); }
+            else presentFinalSummary();
+            return true;
+        }
+        if (step === 'abnAddText') {
+            let cleaned = rawText.trim();
+            if (cleaned.length > 0) cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+            diag.addedText = cleaned;
+            presentFinalSummary();
+            return true;
+        }
+    }
+
+    // ---- Naya recommendation trigger (sirf Thickness dataset ke liye) ----
+    if (fileType === 'thk' && isRecommendationTrigger(rawText)) {
+        let record = window.chatState.lastRecord;
+        if (!record) {
+            let m = findConveyorMatches(rawText, parsedData);
+            if (m.length === 0) m = findFuzzyConveyorMatches(rawText, parsedData);
+            let uniqueNames = [...new Set(m.map(getConvName))];
+            if (uniqueNames.length === 1) record = m[0];
+        }
+        if (!record) { appendMessage('bot', `🤔 Kis conveyor ke liye recommendation chahiye? Pehle uska naam batao (jaise "BC14" ya "C1").`); return true; }
+        return startWearDiagnosis(record);
+    }
+
+    return false;
+}
+
+// =========================================================================
 // 📊 OFFLINE ANALYTICS ENGINE (aggregate/analysis sawaalon ke liye — bina AI ke)
 // "kitne critical hain", "6 mahine se pending list do", "top wear rate", etc.
 // Ab AI (OpenRouter) sirf tab lagti hai jab yeh bhi jawab na de paaye.
@@ -1615,6 +1814,13 @@ async function handleChat() {
     
     appendMessage('user', text); 
     inputEl.value = '';
+
+    // 🛠️ STEP A0: WEAR-RATE RECOMMENDATION WIZARD — agar wizard chal raha hai ya
+    // user recommendation maang raha hai, ISE SABSE PEHLE handle karo (warna
+    // niche wala fresh-search follow-up ko galti se conveyor-naam samajh sakta hai).
+    if (wearDiagnosisEngine(text)) {
+        return;
+    }
 
     // 🔥 STEP A: LOCAL SMART SEARCH ENGINE (Department drill-down) — koi AI/network nahi lagti,
     // isiliye conveyor-specific sawaalon ka jawab turant aur bilkul accurate milta hai.
