@@ -1426,6 +1426,18 @@ function smartConveyorSearch(rawText) {
     if (!dataset || dataset.length === 0) return false; // let normal flow show "data not synced" msg
 
     const state = window.chatState;
+    let q = cleanText(rawText); // User input ko lowercase aur clean kar raha hai
+
+    // ---- 🔥 NAYA STAGE: Detail dene ke baad khud puchega Wizard start karna hai ya nahi ----
+    if (state.stage === 'ask_start_wizard') {
+        if (q.includes('haan') || q.includes('yes') || q.includes('start')) {
+            return startWearDiagnosis(state.lastRecord); // Seedha wizard shuru
+        } else {
+            appendMessage('bot', '👍 Theek hai. Kisi aur conveyor ki detail chahiye toh uska naam type karein.');
+            resetChatState();
+            return true;
+        }
+    }
 
     // ---- STAGE: awaiting department selection ----
     if (state.stage === 'awaiting_dept') {
@@ -1434,7 +1446,6 @@ function smartConveyorSearch(rawText) {
                        || state.deptOptions.find(dep => cleanInput.includes(cleanText(dep)) || cleanText(dep).includes(cleanInput))
                        || bestFuzzyMatch(rawText, state.deptOptions); // spelling mistake tolerant
         if (!matchedDept) {
-            // Ho sakta hai user ne bilkul naya search type kar diya ho
             let fresh = findConveyorMatches(rawText, dataset);
             if (fresh.length === 0) fresh = findFuzzyConveyorMatches(rawText, dataset);
             if (fresh.length > 0) { resetChatState(); return smartConveyorSearch(rawText); }
@@ -1462,6 +1473,68 @@ function smartConveyorSearch(rawText) {
         }
         return presentDetailChoice(matched);
     }
+
+    // ---- STAGE: awaiting detail type (conveyor already locked in) ----
+    if (state.stage === 'awaiting_detail') {
+        let reply = generateDetailReply(state.selectedRecord, rawText);
+        appendMessage('bot', reply);
+        
+        // 🔥 NAYA LOGIC: Detail print karne ke turant baad bot khud puchega 🔥
+        if (fileType === 'thk') {
+            window.chatState.stage = 'ask_start_wizard';
+            appendMessage('bot', `🔍 Kya aapko is conveyor mein inspection ke dauran koi **Abnormality** mili, ya wear rate se related **Recommendation** chahiye?\n\n${renderOptionButtons(['Haan (Start Diagnosis)', 'Nahi (Sab Theek Hai)'])}`);
+        } else {
+            resetChatState();
+        }
+        return true;
+    }
+
+    // ---- STAGE: idle -> fresh search ----
+    let matches = findConveyorMatches(rawText, dataset);
+    let isFuzzy = false;
+
+    if (matches.length === 0) {
+        // Exact/substring match nahi mila — ab typo-tolerant fuzzy search try karo
+        let fuzzy = findFuzzyConveyorMatches(rawText, dataset);
+        if (fuzzy.length > 0) { matches = fuzzy.slice(0, 20); isFuzzy = true; }
+    }
+
+    if (matches.length === 0) {
+        // Follow-up detail question about the last-discussed conveyor (e.g. "aur wear rate?")
+        if (state.lastRecord && isDetailKeyword(rawText)) {
+            appendMessage('bot', generateDetailReply(state.lastRecord, rawText));
+            
+            // Follow up ke baad bhi wizard ka trigger de dete hain
+            if (fileType === 'thk') {
+                window.chatState.stage = 'ask_start_wizard';
+                appendMessage('bot', `🔍 Kya aapko koi **Abnormality** mili ya **Recommendation** chahiye?\n\n${renderOptionButtons(['Haan (Start Diagnosis)', 'Nahi (Sab Theek Hai)'])}`);
+            }
+            return true;
+        }
+        return false; // no conveyor match -> let AI / offline engine handle general chat
+    }
+
+    if (isFuzzy) {
+        appendMessage('bot', `🔎 "${rawText}" ka exact match nahi mila (spelling check kar liya), lekin yeh sabse close naam mile:`);
+    }
+
+    let uniqueNames = [...new Set(matches.map(getConvName))];
+    if (uniqueNames.length === 1) {
+        let record = matches.find(d => getConvName(d) === uniqueNames[0]);
+        return presentDetailChoice(record);
+    }
+
+    let uniqueDepts = [...new Set(matches.map(getConvDept))];
+    if (uniqueDepts.length > 1) {
+        state.stage = 'awaiting_dept';
+        state.candidates = matches;
+        state.deptOptions = uniqueDepts;
+        appendMessage('bot', `🔍 "${rawText}" se milte julte **${uniqueNames.length} conveyors** mile, ${uniqueDepts.length} alag departments mein. Pehle Department batayein:\n\n${renderOptionButtons(uniqueDepts)}`);
+        return true;
+    }
+
+    return presentConveyorChoices(matches, uniqueDepts[0]);
+}
 
     // ---- STAGE: awaiting detail type (conveyor already locked in) ----
     if (state.stage === 'awaiting_detail') {
