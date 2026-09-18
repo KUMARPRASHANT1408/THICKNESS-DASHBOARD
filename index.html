@@ -1626,8 +1626,9 @@ function checkExistingAbnormalityAndAsk() {
     const diag = window.chatState.diag; const r = diag.record;
     let existing = (window.abnAllRecords || []).filter(d => d['NO.'] === r.conv && d.status && d.status.toLowerCase() === 'open');
     if (existing.length === 0) {
-        diag.existingAbnText = null; // Abnormality sheet mein kuch nahi — hamare diagnostic answers hi summary ban jayenge
-        presentFinalSummary();
+        diag.existingAbnText = null; // Abnormality sheet mein kuch nahi darj
+        diag.step = 'abnAskFound';
+        appendMessage('bot', `🔍 Abnormality sheet mein iss conveyor ke liye kuch darj nahi hai. Inspection ke dauran tumhe koi Abnormality mili?\n\n${renderOptionButtons(['Yes', 'No'])}`);
         return;
     }
     diag.existingAbnText = existing.map(d => `"${d['Major Abnormality']}" (${d['Abnormality Date']} se open, ${d.ageDays} din)`).join('; ');
@@ -1697,6 +1698,11 @@ function wearDiagnosisEngine(rawText) {
         if (step === 'abnAskAdd') {
             if (q === 'yes' || q.includes('yes') || q.includes('haan')) { diag.step = 'abnAddText'; appendMessage('bot', `✍️ Theek hai, likho kya add karna hai (apni bhasha mein likh sakte ho):`); }
             else presentFinalSummary();
+            return true;
+        }
+        if (step === 'abnAskFound') {
+            if (q === 'yes' || q.includes('yes') || q.includes('haan')) { diag.step = 'abnAddText'; appendMessage('bot', `✍️ Theek hai, batao kya Abnormality mili (apni bhasha mein likh sakte ho):`); }
+            else { appendMessage('bot', `👍 Theek hai, koi Abnormality nahi.`); presentFinalSummary(); }
             return true;
         }
         if (step === 'abnAddText') {
