@@ -1560,9 +1560,14 @@ function diagAskCategoryDateStep() {
         diag.step = 'rub';
         appendMessage('bot', `📅 Last thickness reading **is mahine hi** li gayi thi. Ek aur cheez check karo:\n\nBelt kisi **damaged idler ya kisi aur cheez se rub** to nahi ho rahi?\n\n${renderOptionButtons(['Haan, Rub Ho Rahi Hai', 'Nahi, Rubbing Nahi Hai'])}`);
     } else {
-        diag.step = 'ply';
-        appendMessage('bot', `📅 Last thickness reading **is mahine ki nahi** hai. Ab yeh batao:\n\nCenter ya Skirt area mein **Ply visible** hai kya?\n\n${renderOptionButtons(['Ply Visible Nahi Hai', '1st Ply Visible Hai', '2nd Ply Visible Hai'])}`);
+        diag.step = 'plySkirtAsk';
+        appendMessage('bot', `📅 Last thickness reading **is mahine ki nahi** hai. Ab agla check:\n\n**Skirt area** mein Ply visible hai kya?\n\n${renderOptionButtons(['Haan (Yes)', 'Nahi (No)'])}`);
     }
+}
+
+function processCombinedPlyVerdict(diag) {
+    diag.step = 'crack';
+    appendMessage('bot', `Theek hai, dono areas ka ply data save ho gaya. Ab next check:\n\nBelt mein koi **crack** dikh raha hai kya?\n\n${renderOptionButtons(['Internal Cracks (Poori Length)', 'Channel Mein Crack', 'Step Crack', 'Koi Crack Nahi'])}`);
 }
 
 function diagWearRateVerdict() {
@@ -1707,24 +1712,68 @@ function wearDiagnosisEngine(rawText) {
         if (step === 'rub') {
             if (q.includes('haan') || (q.includes('rub') && !q.includes('nahi'))) { 
                 pushSummary(diag, 'Rubbing: Haan, kisi cheez se rub ho raha hai', 'Rubbing: Yes, belt rubbing against an object'); 
-                // Agar rubbing hai, toh ek chota note dekar aage badh jayega
                 appendMessage('bot', `🔧 **Note:** Jo bhi cheez (jaise damaged idler) belt ko rub kar rahi hai, usse theek karna zaroori hai.`); 
             } else { 
                 pushSummary(diag, 'Rubbing: Nahi', 'Rubbing: No'); 
             }
+            // Agla sawal Skirt Ply ka aayega
+            diag.step = 'plySkirtAsk'; 
+            appendMessage('bot', `Ab agla check:\n\n**Skirt area** mein Ply visible hai kya?\n\n${renderOptionButtons(['Haan (Yes)', 'Nahi (No)'])}`);
+            return true;
+        }
+
+        // 1. Skirt Area Ply Pucho
+        if (step === 'plySkirtAsk') {
+            if (q.includes('haan') || q.includes('yes')) {
+                diag.step = 'plySkirtLevel';
+                appendMessage('bot', `Skirt area mein kaun si ply visible hai?\n\n${renderOptionButtons(['1st Ply', '2nd Ply', '3rd Ply'])}`);
+            } else {
+                diag.skirtPly = 'Nahi';
+                pushSummary(diag, 'Skirt Area Ply: Nahi', 'Skirt Area Ply: Not visible');
+                diag.step = 'plyCenterAsk';
+                appendMessage('bot', `Theek hai. Ab batao, **Center area** mein Ply visible hai kya?\n\n${renderOptionButtons(['Haan (Yes)', 'Nahi (No)'])}`);
+            }
+            return true;
+        }
+
+        // 2. Skirt Area Ply Save Karo aur Center ke baare mein pucho
+        if (step === 'plySkirtLevel') {
+            if (q.includes('1st') || q.includes('first')) diag.skirtPly = '1st Ply';
+            else if (q.includes('2nd') || q.includes('second')) diag.skirtPly = '2nd Ply';
+            else if (q.includes('3rd') || q.includes('third')) diag.skirtPly = '3rd Ply';
+            else diag.skirtPly = 'Visible (Unknown Level)';
+
+            pushSummary(diag, `Skirt Area Ply: ${diag.skirtPly}`, `Skirt Area Ply: ${diag.skirtPly}`);
             
-            // 🔥 NAYA: Ab diagnosis khatam nahi hoga, seedha Ply wale sawal par flow jayega 🔥
-            diag.step = 'ply';
-            appendMessage('bot', `Ab agla check:\n\nCenter ya Skirt area mein **Ply visible** hai kya?\n\n${renderOptionButtons(['Ply Visible Nahi Hai', '1st Ply Visible Hai', '2nd Ply Visible Hai'])}`);
+            diag.step = 'plyCenterAsk';
+            appendMessage('bot', `Noted. Ab batao, **Center area** mein Ply visible hai kya?\n\n${renderOptionButtons(['Haan (Yes)', 'Nahi (No)'])}`);
             return true;
         }
-        if (step === 'ply') {
-            if (q.includes('2nd') || q.includes('second')) { pushSummary(diag, 'Ply: 2nd ply visible', 'Ply Condition: 2nd ply visible'); finishDiagnosis(`🔴 **Recommendation:** 2nd ply visible hai (area chhota ho ya bada) — **turant Belt Replacement** chahiye.`, `Recommendation: 2nd ply is visible (regardless of extent) — immediate belt replacement required.`); }
-            else if (q.includes('1st') || q.includes('first')) { pushSummary(diag, 'Ply: 1st ply visible', 'Ply Condition: 1st ply visible'); diag.step = 'plyArea'; appendMessage('bot', `Ply kitne area mein visible hai?\n\n${renderOptionButtons(['Kuch Portion Mein', 'Poori Length Mein'])}`); }
-            else { pushSummary(diag, 'Ply: Visible nahi', 'Ply Condition: Not visible'); diag.step = 'crack'; appendMessage('bot', `Theek hai, ply visible nahi hai. Ab crack check karo:\n\nBelt mein koi crack dikh raha hai kya?\n\n${renderOptionButtons(['Internal Cracks (Poori Length)', 'Channel Mein Crack', 'Step Crack', 'Koi Crack Nahi'])}`); }
+
+        // 3. Center Area Ply Pucho
+        if (step === 'plyCenterAsk') {
+            if (q.includes('haan') || q.includes('yes')) {
+                diag.step = 'plyCenterLevel';
+                appendMessage('bot', `Center area mein kaun si ply visible hai?\n\n${renderOptionButtons(['1st Ply', '2nd Ply', '3rd Ply'])}`);
+            } else {
+                diag.centerPly = 'Nahi';
+                pushSummary(diag, 'Center Area Ply: Nahi', 'Center Area Ply: Not visible');
+                processCombinedPlyVerdict(diag); // Data save karke Crack par le jayega
+            }
             return true;
         }
-        if (step === 'plyArea') { diagPlyVerdict((q.includes('poori') || q.includes('through') || q.includes('full')) ? 'throughout' : 'partial'); return true; }
+
+        // 4. Center Area Ply Save Karo aur Crack par aage badho
+        if (step === 'plyCenterLevel') {
+            if (q.includes('1st') || q.includes('first')) diag.centerPly = '1st Ply';
+            else if (q.includes('2nd') || q.includes('second')) diag.centerPly = '2nd Ply';
+            else if (q.includes('3rd') || q.includes('third')) diag.centerPly = '3rd Ply';
+            else diag.centerPly = 'Visible (Unknown Level)';
+
+            pushSummary(diag, `Center Area Ply: ${diag.centerPly}`, `Center Area Ply: ${diag.centerPly}`);
+            processCombinedPlyVerdict(diag); // Data save karke Crack par le jayega
+            return true;
+        }
         if (step === 'crack') { diagCrackVerdict(q.includes('internal') ? 'internal' : q.includes('channel') ? 'channel' : q.includes('step') ? 'step' : 'none'); return true; }
         if (step === 'takeup') {
             if (q.includes('haan') || q.includes('clearancehai')) { pushSummary(diag, 'Take-up Clearance: Haan', 'Take-up Clearance: Available'); finishDiagnosis(`🔧 **Recommendation:** Take-up clearance available hai — **Rejoint** karo.`, `Recommendation: Take-up clearance is available — proceed with Rejoint.`); }
