@@ -22,7 +22,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        
         /* ================= PREMIUM GLASSMORPHIC THEMES ================= */
         :root { 
             --bg: #020617; 
@@ -289,7 +288,10 @@
         .stat-card h3 { font-size: 0.8rem; }
         .stat-card .value { font-size: 1.5rem; }
         .dashboard-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
-        .chat-window { width: 95%; right: 2.5%; }
+        /* FIX: chat-window ka parent (.chat-widget) sirf button jitna hi "wide" hai (~65px),
+           isliye 'width: 95%' galat tha (95% of 65px = razor-thin strip). Ab 'position: fixed'
+           + left/right se seedha real viewport width use hoti hai. */
+        .chat-window { position: fixed; left: 15px; right: 15px; width: auto; bottom: 100px; max-height: 65vh; }
     }
     </style>
 </head>
@@ -677,7 +679,6 @@ function logout() {
             document.getElementById('admin-schedule-kpi').style.display = currentRole === 'admin' ? 'block' : 'none';
             fetchLiveData();
         }
-        function logout() { location.reload(); }
 
         // DATE LOGIC
         function parseDateCustom(dateStr) {
