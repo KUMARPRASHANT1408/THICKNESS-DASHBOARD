@@ -1705,8 +1705,17 @@ function wearDiagnosisEngine(rawText) {
             diagAskCategoryDateStep(); return true;
         }
         if (step === 'rub') {
-            if (q.includes('haan') || (q.includes('rub') && !q.includes('nahi'))) { pushSummary(diag, 'Rubbing: Haan, kisi cheez se rub ho raha hai', 'Rubbing: Yes, belt rubbing against an object'); finishDiagnosis(`🔧 **Recommendation:** Jo bhi cheez (jaise damaged idler) belt ko rub kar rahi hai, usse **theek/replace** karo — yehi thickness loss ka reason ho sakta hai.`, `Recommendation: Identify and repair/replace the object (e.g. damaged idler) causing the belt to rub — this is likely contributing to thickness loss.`); }
-            else { pushSummary(diag, 'Rubbing: Nahi', 'Rubbing: No'); diagWearRateVerdict(); }
+            if (q.includes('haan') || (q.includes('rub') && !q.includes('nahi'))) { 
+                pushSummary(diag, 'Rubbing: Haan, kisi cheez se rub ho raha hai', 'Rubbing: Yes, belt rubbing against an object'); 
+                // Agar rubbing hai, toh ek chota note dekar aage badh jayega
+                appendMessage('bot', `🔧 **Note:** Jo bhi cheez (jaise damaged idler) belt ko rub kar rahi hai, usse theek karna zaroori hai.`); 
+            } else { 
+                pushSummary(diag, 'Rubbing: Nahi', 'Rubbing: No'); 
+            }
+            
+            // 🔥 NAYA: Ab diagnosis khatam nahi hoga, seedha Ply wale sawal par flow jayega 🔥
+            diag.step = 'ply';
+            appendMessage('bot', `Ab agla check:\n\nCenter ya Skirt area mein **Ply visible** hai kya?\n\n${renderOptionButtons(['Ply Visible Nahi Hai', '1st Ply Visible Hai', '2nd Ply Visible Hai'])}`);
             return true;
         }
         if (step === 'ply') {
