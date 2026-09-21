@@ -1373,9 +1373,9 @@ function getAbnormalityStatusText(convName) {
     if (!window.abnAllRecords || window.abnAllRecords.length === 0) return ''; 
     let records = window.abnAllRecords.filter(d => d['NO.'] === convName);
     let openOnes = records.filter(d => d.status && d.status.toLowerCase() === 'open');
-    if (openOnes.length === 0) return `\n* Abnormality: **✅ Currently koi Abnormality nahi hai**`;
-    let lines = openOnes.map(d => `  - "${d['Major Abnormality']}" — **${d['Abnormality Date']}** se open (${d.ageDays} din)`);
-    return `\n* Abnormality: **⚠️ Open hai**\n${lines.join('\n')}`;
+    if (openOnes.length === 0) return `\n* Abnormality: **✅ Currently no Abnormality**`;
+    let lines = openOnes.map(d => `  - "${d['Major Abnormality']}" — Abnormality is open since **${d['Abnormality Date']}**, ${d.ageDays} Days`);
+    return `\n* Abnormality: **⚠️ Open**\n${lines.join('\n')}`;
 }
 
 function fullThkDetail(r) {
@@ -1699,6 +1699,7 @@ function checkExistingAbnormalityAndAsk() {
         return;
     }
     diag.existingAbnText = existing.map(d => `"${d['Major Abnormality']}" (${d['Abnormality Date']} se open, ${d.ageDays} din)`).join('; ');
+    diag.existingAbnTextEn = existing.map(d => `"${d['Major Abnormality']}" (open since ${d['Abnormality Date']}, ${d.ageDays} days)`).join('; ');
     diag.step = 'abnAskAdd';
     appendMessage('bot', `📋 Iss conveyor ki pehle se yeh **Abnormality darj** hai:\n"${diag.existingAbnText}"\n\nIsme kuch add karna hai?\n\n${renderOptionButtons(['Yes', 'No'])}`);
 }
@@ -1711,8 +1712,8 @@ function presentFinalSummary() {
         : (diag.existingAbnText || diag.summary.join('; '));
         
     let abnormalityTextEn = diag.addedTextEn
-        ? (diag.existingAbnText ? `${diag.existingAbnText}; ${diag.addedTextEn}` : diag.addedTextEn)
-        : (diag.existingAbnText || diag.summaryEn.join('; '));
+        ? (diag.existingAbnTextEn ? `${diag.existingAbnTextEn}; ${diag.addedTextEn}` : diag.addedTextEn)
+        : (diag.existingAbnTextEn || diag.summaryEn.join('; '));
 
     let mailSubject = encodeURIComponent(`Maintenance Recommendation - ${r.conv}`);
     let mailBody = encodeURIComponent(`Conveyor: ${r.conv} (${r.dept})\n\nObservation: ${diag.summaryEn.join(' | ')}\n\nAbnormality: ${abnormalityTextEn}\n\n${diag.verdictEn}\n\nRegards,\nRTG-MED/CMM`);
