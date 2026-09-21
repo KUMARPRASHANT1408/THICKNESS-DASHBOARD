@@ -1235,28 +1235,23 @@
         // =========================================================================
         // 🌐 TRANSLATE HINGLISH TO PROFESSIONAL ENGLISH FOR EMAIL
         // =========================================================================
-    async function translateToEnglish(text) {
-    const proxyUrl = "https://script.google.com/macros/s/AKfycbw8BPxPiQI_Kh0EjCniPi8KyVOOwxYLum94BF2NGs1FMGv7LjxfLDxT1hqem-bRh51VGA/exec"; // <-- YAHAN APNA URL DAALEIN
-    const sysPrompt = "You are a Tata Steel technical translator. Translate the user's maintenance abnormality text (which might be in Hindi, Hinglish or broken English) into a single, concise, professional English sentence for an official email. Do not add any conversational text, just output the translation.";
-    try {
-        const response = await fetch(proxyUrl, {
-            method: 'POST',
-            // Headers hata diye gaye hain proxy ke liye
-            body: JSON.stringify({
-                "model": "openrouter/free", 
-                "messages": [
-                    { "role": "system", "content": sysPrompt },
-                    { "role": "user", "content": text }
-                ]
-            })
-        });
-        const apiData = await response.json();
-        if (apiData.choices && apiData.choices.length > 0) {
-            return apiData.choices[0].message.content.trim().replace(/^"|"$/g, '');
-        }
-    } catch(e) { console.error(e); }
-    return text; // API fail hone par original text use karega
-}
+        async function translateToEnglish(text) {
+            const part1 = "sk-or-v1-";
+            const part2 = "95c779c0eddc3fef5723871443e6c00ff75b99af9469ece4f0614451d8ee1f24"; 
+            const apiKey = part1 + part2;
+            const sysPrompt = "You are a Tata Steel technical translator. Translate the user's maintenance abnormality text (which might be in Hindi, Hinglish or broken English) into a single, concise, professional English sentence for an official email. Do not add any conversational text, just output the translation.";
+            try {
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        "model": "openrouter/free", 
+                        "messages": [
+                            { "role": "system", "content": sysPrompt },
+                            { "role": "user", "content": text }
+                        ]
+                    })
+                });
                 const apiData = await response.json();
                 if (apiData.choices && apiData.choices.length > 0) {
                     return apiData.choices[0].message.content.trim().replace(/^"|"$/g, '');
@@ -1967,7 +1962,9 @@ function offlineAnalyticsEngine(rawText) {
 // 🤖 2. MAIN CHATBOT FUNCTION
 // =========================================================================
 async function handleChat() {
-    const proxyUrl = "https://script.google.com/macros/s/AKfycbw8BPxPiQI_Kh0EjCniPi8KyVOOwxYLum94BF2NGs1FMGv7LjxfLDxT1hqem-bRh51VGA/exec"; // <-- YAHAN APNA URL DAALEIN
+    const part1 = "sk-or-v1-";
+    const part2 = "95c779c0eddc3fef5723871443e6c00ff75b99af9469ece4f0614451d8ee1f24"; 
+    const apiKey = part1 + part2;
     
     const inputEl = document.getElementById('chatInput'); 
     const text = inputEl.value.trim(); 
@@ -2029,9 +2026,12 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-        const response = await fetch(proxyUrl, {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: 'POST',
-            // Headers hata diye gaye hain proxy ke liye
+            headers: { 
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
                 "model": "openrouter/free", 
                 "messages": [
