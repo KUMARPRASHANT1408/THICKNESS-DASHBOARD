@@ -593,6 +593,10 @@
     <script>
         // ✅ DATA SOURCE CHANGED TO LOCAL CSV FETCHED BY GITHUB ACTIONS
         const sheetCsvUrl = "./data.csv";
+        // Abnormality sheet — GitHub Action se sync hoga (dekho sync.yml instructions).
+        // Thickness dashboard khula hone par bhi background mein fetch hota hai, taaki
+        // chatbot Abnormality cross-check (open/closed) kar sake.
+        const abnCsvUrl = "./abn.csv";
 
         let parsedData = []; let filteredData = []; let fileType = ''; let currentKpiFilter = 'All'; 
         let currentRole = 'user';
@@ -755,7 +759,7 @@
                             
                             document.getElementById('skeleton-screen').style.display = 'none';
 
-                            if (isAbn) { fileType = 'abn'; processAbnormality(cleanedData); } else if (isThk) { fileType = 'thk'; processThickness(cleanedData, cleanHeaders); } else { resetDashboard(); }
+                            if (isAbn) { fileType = 'abn'; processAbnormality(cleanedData); } else if (isThk) { fileType = 'thk'; processThickness(cleanedData, cleanHeaders); fetchAbnormalityDataInBackground(); } else { resetDashboard(); }
                         },
                         error: function() { alert("data.csv file not found! Make sure GitHub Action has successfully generated it."); }
                     });
@@ -763,9 +767,43 @@
                 .catch(error => { console.error("Error Fetching Data: ", error); document.getElementById('skeleton-screen').innerHTML = '<h3 style="color:var(--red); text-align:center;">Local data.csv connection error. Run GitHub Action.</h3>'; });
         }
 
+        // 🔗 Abnormality sheet ko background mein (silently) fetch karta hai taaki chatbot
+        // "iss conveyor mein abnormality hai ya nahi" cross-check kar sake — Thickness
+        // dashboard ki UI (charts/tabs) ko yeh bilkul touch nahi karta.
+        function fetchAbnormalityDataInBackground() {
+            if (!abnCsvUrl) return;
+            fetch(abnCsvUrl + '?t=' + Date.now(), { cache: 'no-store' })
+                .then(response => { if (!response.ok) throw new Error("Abnormality CSV not found"); return response.text(); })
+                .then(csvText => {
+                    let headerCounts = {};
+                    Papa.parse(csvText, {
+                        header: true, skipEmptyLines: true,
+                        transformHeader: function(h) {
+                            h = h ? h.trim() : ''; if (h === 'NO_x002e_') { h = 'NO.'; }
+                            if (headerCounts[h]) { headerCounts[h]++; return h + '_' + headerCounts[h]; } else { headerCounts[h] = 1; return h; }
+                        },
+                        complete: function(results) {
+                            const rawHeaders = results.meta.fields || [];
+                            let startIndex = 0; if (rawHeaders.length > 0 && String(rawHeaders[0]).includes('@odata')) { startIndex = 2; }
+                            const cleanHeaders = rawHeaders.slice(startIndex);
+                            let cleanedData = results.data.map(oldRow => {
+                                let newRow = {};
+                                for (let j = 0; j < cleanHeaders.length; j++) { let head = cleanHeaders[j]; newRow[head] = oldRow[head]; }
+                                return newRow;
+                            });
+                            processAbnormality(cleanedData, true); // silent = true, UI touch nahi karega
+                        },
+                        error: function() { console.warn("Abnormality background sync failed to parse."); }
+                    });
+                })
+                .catch(error => { console.warn("Abnormality background sync failed (abn.csv not found yet?):", error); });
+        }
+
         // ================= ABNORMALITY TAB LOGIC =================
-        function processAbnormality(data) {
-            document.getElementById('tabs-menu').style.display = 'flex'; document.getElementById('btn-thk').style.display = 'none'; document.getElementById('btn-abn').style.display = 'block'; switchTab('abnTab', 'btn-abn');
+        function processAbnormality(data, silent) {
+            if (!silent) {
+                document.getElementById('tabs-menu').style.display = 'flex'; document.getElementById('btn-thk').style.display = 'none'; document.getElementById('btn-abn').style.display = 'block'; switchTab('abnTab', 'btn-abn');
+            }
             let today = new Date();
             window.abnAllRecords = data.filter(row => row['NO.'] && row['NO.'].trim() !== '' && !row['NO.'].includes('#REF!')).map(row => {
                 let rawPlan = row['Plan as per New Belt philosophy'] ? row['Plan as per New Belt philosophy'].replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').trim() : '';
@@ -782,6 +820,7 @@
                 return row;
             });
             window.openRecords = window.abnAllRecords.filter(d => d.status.toLowerCase() === 'open');
+            if (silent) return; // Background load (Thickness dashboard khula hone par bhi Abnormality data chahiye) — UI touch nahi karna
             const criticalActions = ['Replace', 'Rejoint', 'Piece Addition', 'Operate under Observation'];
             document.getElementById('a-k-total').innerText = window.abnAllRecords.length; document.getElementById('a-k-closed').innerText = window.abnAllRecords.filter(d => d.status.toLowerCase() === 'closed').length; document.getElementById('a-k-open').innerText = window.openRecords.length; document.getElementById('a-k-crit').innerText = window.openRecords.filter(d => criticalActions.includes(d.plan)).length; document.getElementById('a-k-6m').innerText = window.openRecords.filter(d => d.ageDays > 180).length;
             populateAbnDeptDropdown(); showAbnCharts();
