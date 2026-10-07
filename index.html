@@ -11,10 +11,6 @@
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="./icon-192.png">
     <meta name="theme-color" content="#020617">
-    <!-- iOS PWA support: bina inke "Add to Home Screen" karne par Safari URL-bar ke saath khulta hai, fullscreen app jaisa nahi -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="RTG Master">
     <!-- REQUIRED LIBRARIES -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
@@ -129,7 +125,7 @@
         
         .theme-toggle-top { position: absolute; top: 20px; right: 20px; z-index: 10000; padding: 10px 15px; border-radius: 12px; font-weight: bold; background: var(--slate); color: white; border: none; cursor: pointer; box-shadow: var(--shadow-premium); backdrop-filter: blur(10px);}
         
-        #mainDashboard { display: none; min-height: 100vh; }
+        #mainDashboard { display: flex; min-height: 100vh; }
         .sidebar { width: 260px; display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; left: -260px; top: 0; z-index: 2000; transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-right: 1px solid var(--glass-border); border-radius: 0 20px 20px 0;}
         .sidebar.active { left: 0; }
         .sidebar-header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 20px; position: relative; }
@@ -246,32 +242,6 @@
         
         /* CHATBOT STYLES FOR MARKDOWN */
         .chat-widget { position: fixed; bottom: 30px; right: 30px; z-index: 9999; }
-
-        /* ===== LANDING PAGE (3-app launcher) ===== */
-        #landingPage { display: none; min-height: 100vh; flex-direction: column; align-items: center; justify-content: center; padding: 30px 20px; gap: 40px; }
-        .landing-header { text-align: center; }
-        .landing-header h1 { font-size: 1.8rem; font-weight: 800; background: linear-gradient(90deg, var(--teal), var(--blue)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .landing-header p { color: var(--text-muted); margin-top: 6px; }
-        .app-card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; max-width: 1000px; width: 100%; }
-        @media (max-width: 768px) { .app-card-grid { grid-template-columns: 1fr; } }
-        .app-card { cursor: pointer; padding: 35px 25px; border-radius: 20px; text-align: center; transition: 0.3s; border: 1px solid var(--glass-border); }
-        .app-card:hover { transform: translateY(-6px); box-shadow: 0 12px 30px rgba(14,165,233,0.25); }
-        .app-card .app-icon { font-size: 2.5rem; margin-bottom: 18px; width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-left: auto; margin-right: auto; }
-        .app-card.card-thk .app-icon { background: rgba(14,165,233,0.15); color: var(--teal); }
-        .app-card.card-abn .app-icon { background: rgba(225,29,72,0.15); color: var(--red); }
-        .app-card.card-bot .app-icon { background: rgba(139,92,246,0.15); color: var(--purple); }
-        .app-card h3 { font-size: 1.15rem; margin-bottom: 8px; }
-        .app-card p { font-size: 0.85rem; color: var(--text-muted); }
-        .back-home-btn { background: transparent; border: 1px solid var(--glass-border); color: var(--text-main); padding: 8px 16px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-right: 12px; }
-        .back-home-btn:hover { border-color: var(--teal); color: var(--teal); }
-
-        /* ===== RTG BELT INSPECTOR (full-screen chat) ===== */
-        #beltInspectorScreen { display: none; position: fixed; inset: 0; z-index: 10000; flex-direction: column; background: var(--bg); }
-        .inspector-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--glass-border); flex-shrink: 0; }
-        .inspector-header .bot-icon { width: 38px; height: 38px; }
-        .inspector-header-title { font-weight: 700; flex: 1; }
-        #beltInspectorScreen .chat-body { flex: 1; overflow-y: auto; }
-        #beltInspectorScreen .chat-footer { flex-shrink: 0; }
         .chat-toggle { background: linear-gradient(135deg, var(--teal), var(--blue)); color: white; width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; cursor: pointer; box-shadow: 0 8px 25px rgba(14,165,233,0.5); border: none; }
         .chat-toggle:hover { transform: scale(1.1) rotate(10deg); }
         .chat-window { display: none; position: absolute; bottom: 85px; right: 0; width: 350px; height: 500px; border-radius: 20px; box-shadow: var(--shadow-premium); flex-direction: column; overflow: hidden; }
@@ -354,31 +324,6 @@
         </div>
     </div>
 
-    <!-- LANDING PAGE: 3-app launcher -->
-    <div id="landingPage">
-        <div class="landing-header">
-            <h1>RTG Master Control</h1>
-            <p>Konsa app kholna hai, select karo</p>
-        </div>
-        <div class="app-card-grid">
-            <div class="app-card card-thk glass-panel" onclick="openThicknessApp()">
-                <div class="app-icon"><i class="fas fa-ruler-combined"></i></div>
-                <h3>Thickness App</h3>
-                <p>Belt thickness, wear rate & life analytics dashboard</p>
-            </div>
-            <div class="app-card card-abn glass-panel" onclick="openAbnormalityApp()">
-                <div class="app-icon"><i class="fas fa-triangle-exclamation"></i></div>
-                <h3>Abnormality App</h3>
-                <p>Open/closed abnormalities, categories & action plans</p>
-            </div>
-            <div class="app-card card-bot glass-panel" onclick="openBeltInspectorApp()">
-                <div class="app-icon"><i class="fas fa-robot"></i></div>
-                <h3>RTG Belt Inspector</h3>
-                <p>Chat with the bot for full diagnosis & recommendations</p>
-            </div>
-        </div>
-    </div>
-
     <!-- MAIN WRAPPER -->
     <div id="mainDashboard">
         <div class="sidebar glass-panel" id="appSidebar">
@@ -407,7 +352,6 @@
         <div class="main-content" id="mainContent">
             <div class="header">
                 <div class="header-title">
-                    <button class="back-home-btn" onclick="backToHome()" title="Back to Home"><i class="fas fa-arrow-left"></i> Home</button>
                     <button class="menu-toggle" onclick="toggleSidebar(event)" title="Open Menu"><i class="fas fa-bars"></i></button>
                     <div class="conv-logo" title="System Active"><div class="conv-belt"></div><div class="conv-pulley left"></div><div class="conv-idler i1"></div><div class="conv-idler i2"></div><div class="conv-idler i3"></div><div class="conv-pulley right"></div></div>
                     RTG Dashboard
@@ -443,15 +387,6 @@
                         <div class="kpi-card glass-panel" id="abn-kpi-crit" onclick="filterAbnTable('Critical')" style="border-bottom: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);"><div class="kpi-title" style="color: var(--orange);">Critical Open</div><div class="kpi-val" id="a-k-crit" style="color:var(--orange);">0</div><i class="fas fa-fire kpi-icon" style="color:var(--orange);"></i></div>
                         <div class="kpi-card glass-panel" id="kpi-card-abn-6m" onclick="filterAbnTable('Over6M')" style="border-bottom: 3px solid var(--pink); background: rgba(236, 72, 153, 0.05); display: none;"><div class="kpi-title" style="color: var(--pink);"><i class="fas fa-clock"></i> >6M Backlog</div><div class="kpi-val" id="a-k-6m" style="color:var(--pink);">0</div></div>
                     </div>
-                </div>
-
-                <div class="interactive-section glass-panel" style="cursor:pointer; display:flex; align-items:center; gap:18px; padding:20px 25px;" onclick="openLogObservationModal()">
-                    <div style="width:55px; height:55px; border-radius:50%; background:rgba(14,165,233,0.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="fas fa-clipboard-list" style="font-size:1.5rem; color:var(--teal);"></i></div>
-                    <div style="flex:1;">
-                        <h3 style="margin:0; font-weight:800;">📝 Log Your Observation</h3>
-                        <p style="margin:4px 0 0; color:var(--text-muted); font-size:0.85rem;">Field inspection mein kuch mila? Department, route aur conveyor select karke turant log karo.</p>
-                    </div>
-                    <i class="fas fa-chevron-right" style="color:var(--teal);"></i>
                 </div>
 
                 <div id="abn-chart-section" class="interactive-section glass-panel">
@@ -632,71 +567,26 @@
             </div>
             <div class="chart-container" style="height: 350px;"><canvas id="historyChart"></canvas></div>
             <p style="font-size: 0.75rem; color: var(--text-muted); margin-top:10px; text-align:center;">*Graph auto-resets upon new belt installation. Baseline: Top Cover Thickness.</p>
-
-            <div id="lifeProjectionSection" style="margin-top:20px; display:none;">
-                <h4 style="font-weight:800; margin-bottom:10px;">📊 Life Projection — Expected vs Current Wear Rate</h4>
-                <div class="chart-container" style="height: 180px;"><canvas id="lifeProjectionChart"></canvas></div>
-                <p id="lifeProjectionSummary" style="font-size:0.85rem; margin-top:10px; text-align:center; font-weight:600;"></p>
-            </div>
         </div>
     </div>
 
-    <!-- Log Observation Modal -->
-    <div id="logObsModal" class="modal">
-        <div class="modal-content glass-panel">
-            <div class="modal-header">
-                <h3 style="font-weight: 800;">📝 Log Your Observation</h3>
-                <button class="close-btn" onclick="closeLogObsModal()"><i class="fas fa-times"></i></button>
+    <!-- CHATBOT WINDOW -->
+    <div class="chat-widget">
+        <button class="chat-toggle" onclick="toggleChat()"><i class="fas fa-robot"></i></button>
+        <div class="chat-window glass-panel" id="chatWindow">
+            <div class="chat-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="bot-icon"><i class="fas fa-bolt"></i></div> RTG-Bot (Smart AI)
+                </div>
+                <!-- CLEAR CHAT BUTTON -->
+                <button onclick="clearChat()" title="Clear Chat" style="margin-left:auto; background:transparent; border:none; color:var(--red); font-size:1.2rem; cursor:pointer; transition:0.3s;"><i class="fas fa-trash-alt"></i></button>
             </div>
-            <div style="display:flex; flex-direction:column; gap:14px; padding: 5px;">
-                <div>
-                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Employee ID</label>
-                    <input type="text" id="logObsEmpId" class="search-input glass-panel" style="width:100%; margin-top:5px;" placeholder="Apna Employee ID daalo">
-                </div>
-                <div>
-                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Observation Date <span style="font-weight:400; color:var(--text-muted);">(jab belt mein yeh mila — logging date se alag ho sakti hai)</span></label>
-                    <input type="date" id="logObsDate" class="search-input glass-panel" style="width:100%; margin-top:5px;">
-                </div>
-                <div>
-                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Department</label>
-                    <select id="logObsDept" class="search-input glass-panel" style="width:100%; margin-top:5px;" onchange="updateLogObsSections()"></select>
-                </div>
-                <div>
-                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Section / Route</label>
-                    <select id="logObsSection" class="search-input glass-panel" style="width:100%; margin-top:5px;"></select>
-                </div>
-                <div>
-                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Conveyor</label>
-                    <input type="text" id="logObsConveyor" list="logObsConveyorList" class="search-input glass-panel" style="width:100%; margin-top:5px;" placeholder="🔍 Conveyor naam type karo...">
-                    <datalist id="logObsConveyorList"></datalist>
-                </div>
-                <div>
-                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Observations (jo bhi mila, select karo)</label>
-                    <div id="logObsChecklist" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:8px;"></div>
-                </div>
-                <div id="logObsOtherWrap" style="display:none;">
-                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Other (likho)</label>
-                    <input type="text" id="logObsOtherText" class="search-input glass-panel" style="width:100%; margin-top:5px;" placeholder="Jo bhi extra observation hai...">
-                </div>
-                <button class="role-btn role-btn-user" style="width:100%; justify-content:center;" onclick="submitLogObservation()"><i class="fas fa-paper-plane"></i> Submit Observation</button>
-                <p id="logObsStatus" style="text-align:center; font-size:0.85rem; margin:0;"></p>
+            <div class="chat-body" id="chatBody"><div class="msg msg-bot">Systems Online. Connected via <b>OpenRouter</b>. Ask me anything!</div></div>
+            <div class="typing-indicator" id="typingIndicator" style="display:none; padding:10px; font-size:0.8rem; color:var(--teal); text-align:center; font-style:italic;">AI is analyzing data...</div>
+            <div class="chat-footer">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Type your query..." onkeypress="if(event.key === 'Enter') handleChat()">
+                <button class="chat-send" onclick="handleChat()"><i class="fas fa-paper-plane"></i></button>
             </div>
-        </div>
-    </div>
-
-    <!-- RTG BELT INSPECTOR — full-screen chat (replaces the old floating widget) -->
-    <div id="beltInspectorScreen">
-        <div class="inspector-header">
-            <button class="back-home-btn" onclick="backToHome()" title="Back to Home"><i class="fas fa-arrow-left"></i> Home</button>
-            <div class="bot-icon"><i class="fas fa-bolt"></i></div>
-            <div class="inspector-header-title">RTG Belt Inspector</div>
-            <button onclick="clearChat()" title="Clear Chat" style="background:transparent; border:none; color:var(--red); font-size:1.2rem; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>
-        </div>
-        <div class="chat-body" id="chatBody"><div class="msg msg-bot">Systems Online. Kisi conveyor ka naam batao ya apna sawaal poochho!</div></div>
-        <div class="typing-indicator" id="typingIndicator" style="display:none; padding:10px; font-size:0.8rem; color:var(--teal); text-align:center; font-style:italic;">AI is analyzing data...</div>
-        <div class="chat-footer">
-            <input type="text" id="chatInput" class="chat-input" placeholder="Type your query..." onkeypress="if(event.key === 'Enter') handleChat()">
-            <button class="chat-send" onclick="handleChat()"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
 
@@ -776,7 +666,6 @@
             localStorage.setItem('rtg_badgeText', roleText);
             localStorage.setItem('rtg_badgeColor', badgeColor);
             document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('landingPage').style.display = 'flex';
             let badge = document.getElementById('roleBadge');
             badge.innerText = roleText; badge.style.background = badgeColor; badge.style.color = '#fff'; badge.style.border = 'none';
             
@@ -870,7 +759,7 @@
                             
                             document.getElementById('skeleton-screen').style.display = 'none';
 
-                            if (isAbn) { fileType = 'abn'; window.abnRawDataCache = cleanedData; processAbnormality(cleanedData, true); } else if (isThk) { fileType = 'thk'; processThickness(cleanedData, cleanHeaders); fetchAbnormalityDataInBackground(); } else { resetDashboard(); }
+                            if (isAbn) { fileType = 'abn'; processAbnormality(cleanedData); } else if (isThk) { fileType = 'thk'; processThickness(cleanedData, cleanHeaders); fetchAbnormalityDataInBackground(); } else { resetDashboard(); }
                         },
                         error: function() { alert("data.csv file not found! Make sure GitHub Action has successfully generated it."); }
                     });
@@ -902,8 +791,7 @@
                                 for (let j = 0; j < cleanHeaders.length; j++) { let head = cleanHeaders[j]; newRow[head] = oldRow[head]; }
                                 return newRow;
                             });
-                            window.abnRawDataCache = cleanedData; // cache taaki "Abnormality App" khulne par dobara fetch na karni pade
-                            processAbnormality(cleanedData, true); // silent = true, UI touch nahi karega (abhi Thickness App khula hai)
+                            processAbnormality(cleanedData, true); // silent = true, UI touch nahi karega
                         },
                         error: function() { console.warn("Abnormality background sync failed to parse."); }
                     });
@@ -938,103 +826,6 @@
             populateAbnDeptDropdown(); showAbnCharts();
         }
         
-        // ===== LOG YOUR OBSERVATION (writes to a separate Google Sheet via Apps Script Web App) =====
-        const observationLogUrl = "https://script.google.com/macros/s/AKfycby36wU2qlN-f-hhldF_IIuu1oMQx5c7AgD7mHSyAMrKEHTS3YiDOEzwdrGS_2dJAKeo/exec";
-        const observationCategories = ['Ply Visible', 'Edge Damage', 'Crack', 'Spillage', 'Joint Damage', 'Idler Damage', 'Belt Misalignment', 'Rubber Peeling', 'Other'];
-
-        function openLogObservationModal() {
-            // Observation date default aaj ki date (user chahe to badal sakta hai)
-            document.getElementById('logObsDate').value = new Date().toISOString().split('T')[0];
-
-            // Department dropdown — Thickness + Abnormality dono se unique depts
-            let depts = new Set();
-            (parsedData || []).forEach(d => depts.add(d.dept));
-            (window.abnAllRecords || []).forEach(d => depts.add(d.Dept));
-            let deptSel = document.getElementById('logObsDept');
-            deptSel.innerHTML = Array.from(depts).filter(Boolean).sort().map(d => `<option value="${d}">${d}</option>`).join('');
-            updateLogObsSections();
-
-            // Conveyor datalist — Thickness + Abnormality dono se unique names
-            let convs = new Set();
-            (parsedData || []).forEach(d => convs.add(d.conv));
-            (window.abnAllRecords || []).forEach(d => convs.add(d['NO.']));
-            document.getElementById('logObsConveyorList').innerHTML = Array.from(convs).filter(Boolean).sort().map(c => `<option value="${c}">`).join('');
-            document.getElementById('logObsConveyor').value = '';
-
-            // Checklist
-            document.getElementById('logObsChecklist').innerHTML = observationCategories.map(cat =>
-                `<label class="ms-opt" style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="log-obs-chk" value="${cat}" onchange="toggleLogObsOther()"> ${cat}</label>`
-            ).join('');
-            document.getElementById('logObsOtherWrap').style.display = 'none';
-            document.getElementById('logObsOtherText').value = '';
-            document.getElementById('logObsStatus').innerText = '';
-
-            document.getElementById('logObsModal').style.display = 'flex';
-        }
-
-        function updateLogObsSections() {
-            let selectedDept = document.getElementById('logObsDept').value;
-            let sections = new Set();
-            (parsedData || []).forEach(d => { if (d.dept === selectedDept && d.section) sections.add(d.section); });
-            let secSel = document.getElementById('logObsSection');
-            if (sections.size > 0) {
-                secSel.innerHTML = Array.from(sections).sort().map(s => `<option value="${s}">${s}</option>`).join('');
-            } else {
-                secSel.innerHTML = `<option value="${selectedDept}">${selectedDept}</option>`;
-            }
-        }
-
-        function toggleLogObsOther() {
-            let otherChecked = document.querySelector('.log-obs-chk[value="Other"]').checked;
-            document.getElementById('logObsOtherWrap').style.display = otherChecked ? 'block' : 'none';
-        }
-
-        function closeLogObsModal() { document.getElementById('logObsModal').style.display = 'none'; }
-
-        function submitLogObservation() {
-            let empId = document.getElementById('logObsEmpId').value.trim();
-            if (!empId) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Employee ID daalo.</span>'; return; }
-
-            let obsDate = document.getElementById('logObsDate').value;
-            if (!obsDate) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Observation Date daalo.</span>'; return; }
-
-            let conveyor = document.getElementById('logObsConveyor').value.trim();
-            if (!conveyor) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Conveyor naam daalo.</span>'; return; }
-
-            let checked = Array.from(document.querySelectorAll('.log-obs-chk:checked')).map(c => c.value);
-            if (checked.length === 0) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Kam se kam ek observation select karo.</span>'; return; }
-
-            let otherText = document.getElementById('logObsOtherText').value.trim();
-            let observations = checked.map(c => c === 'Other' && otherText ? `Other: ${otherText}` : c);
-
-            let payload = {
-                employeeId: empId,
-                observationDate: obsDate,
-                department: document.getElementById('logObsDept').value,
-                section: document.getElementById('logObsSection').value,
-                conveyor: conveyor,
-                observations: observations
-            };
-
-            if (!observationLogUrl || observationLogUrl.includes('PASTE_YOUR')) {
-                document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Setup abhi incomplete hai — observationLogUrl set nahi hua.</span>';
-                return;
-            }
-
-            document.getElementById('logObsStatus').innerText = 'Submit ho raha hai...';
-            fetch(observationLogUrl, { method: 'POST', body: JSON.stringify(payload) })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--green);">✅ Observation log ho gaya!</span>';
-                        setTimeout(closeLogObsModal, 1200);
-                    } else {
-                        document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Error: ' + (data.message || 'kuch gadbad hui') + '</span>';
-                    }
-                })
-                .catch(() => { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Network error — dobara try karo.</span>'; });
-        }
-
         function populateAbnDeptDropdown() {
             const depts = new Set(window.abnAllRecords.map(d => d.Dept || 'Unknown'));
             let msHtml = `<label class="ms-opt"><input type="checkbox" id="chkAllAbn" onchange="toggleAllAbnDept(this)" checked> <b>Select All Depts</b></label><hr style="border-color:var(--glass-border); margin:5px 0;">`;
@@ -1139,7 +930,6 @@
             let colLastRep = headers.find(k => k && k.trim().toLowerCase() === 'last belt replacement') || 'Last Belt Replacement';
             let colNextCBM = headers.find(k => k && k.replace(/[\r\n]+/g, ' ').includes('Next Prediction (CBM)')) || 'Next Prediction (CBM)';
             let colPredLife = headers.find(k => k && k.includes('Predicted Life (in Months) (Actual)')) || 'Predicted Life (in Months) (Actual)';
-            let colPredLifeMatrix = headers.find(k => k && k.includes('Predicted Life (in Months) (Matrix)')) || 'Predicted Life (in Months) (Matrix)';
             let colAgeAsOnDate = headers.find(k => k && k.includes('Age as on Date')) || 'Age as on Date (in Months)';
             let colTopCover = headers.find(k => k && k === 'TOP') || 'TOP';
             
@@ -1184,7 +974,7 @@
                 let nCbmDate = parseDateCustom(rawNextCBM);
                 row.nextCBM = nCbmDate ? `${String(nCbmDate.getDate()).padStart(2,'0')}-${String(nCbmDate.getMonth()+1).padStart(2,'0')}-${nCbmDate.getFullYear()}` : (rawNextCBM || '-');
                 
-                row.predLife = parseFloat(row[colPredLife]) || 0; row.predLifeMatrix = parseFloat(row[colPredLifeMatrix]) || 0; row.ageAsOnDate = parseFloat(row[colAgeAsOnDate]) || 0; row.topCover = parseFloat(row[colTopCover]) || 0;
+                row.predLife = parseFloat(row[colPredLife]) || 0; row.ageAsOnDate = parseFloat(row[colAgeAsOnDate]) || 0; row.topCover = parseFloat(row[colTopCover]) || 0;
                 
                 let cbmValid = (row.cbmLife !== 999); let lifeDiff = cbmValid ? (row.cbmLife - row.predLife) : 0; row.actualRemainingLife = cbmValid ? (row.cbmLife - row.ageAsOnDate) : 0;
                 
@@ -1408,83 +1198,20 @@
             });
             if(labels.length === 0) { alert('New belt installed. Awaiting first thickness reading since ' + row.lastRep); closeModal(); return; }
             historyChartInst = new Chart(document.getElementById('historyChart').getContext('2d'), { type: 'line', data: { labels: labels, datasets: [ { label: `Original Top Cover (${row.topCover}mm)`, data: dTopCover, borderColor: getCssVar('--green'), backgroundColor: 'transparent', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, tension: 0 }, { label: 'Edge 1', data: dE1, borderColor: getCssVar('--red'), backgroundColor: getCssVar('--red'), tension: 0.3 }, { label: 'Center', data: dC, borderColor: getCssVar('--teal'), backgroundColor: getCssVar('--teal'), tension: 0.3 }, { label: 'Edge 2', data: dE2, borderColor: getCssVar('--orange'), backgroundColor: getCssVar('--orange'), tension: 0.3 } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: {display: true, text: 'Thickness (mm)', color: getCssVar('--text-muted')} } }, plugins: { tooltip: { mode: 'index', intersect: false } } } });
-            renderLifeProjection(row);
-        }
-
-        let lifeProjChartInst = null;
-        function renderLifeProjection(row) {
-            const section = document.getElementById('lifeProjectionSection');
-            if (!row.predLifeMatrix || row.predLifeMatrix === 0) { section.style.display = 'none'; return; }
-            section.style.display = 'block';
-
-            const matrix = row.predLifeMatrix;
-            const actual = row.predLife;
-            const age = row.ageAsOnDate;
-            const remainingMatrix = Math.max(matrix - age, 0);
-            const remainingActual = Math.max(actual - age, 0);
-            const diff = actual - matrix;
-
-            if (lifeProjChartInst) lifeProjChartInst.destroy();
-            lifeProjChartInst = new Chart(document.getElementById('lifeProjectionChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: ['Expected (Matrix)', 'Projected (Current Wear Rate)'],
-                    datasets: [{
-                        label: 'Total Life (Months)',
-                        data: [matrix, actual],
-                        backgroundColor: [getCssVar('--blue'), diff < 0 ? getCssVar('--red') : getCssVar('--green')],
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    scales: { x: { beginAtZero: true, title: { display: true, text: 'Months', color: getCssVar('--text-muted') } } },
-                    plugins: { legend: { display: false } }
-                }
-            });
-
-            let summary = document.getElementById('lifeProjectionSummary');
-            let diffText = diff < 0
-                ? `⚠️ Current wear rate ke hisab se yeh belt expected se <b style="color:var(--red);">${Math.abs(diff).toFixed(1)} months KAM</b> chalega.`
-                : `✅ Yeh belt expected life ke barabar ya usse <b style="color:var(--green);">behtar</b> chal raha hai.`;
-            summary.innerHTML = `${diffText}<br>Ab se aur chalega — Expected ke hisab se: <b>${remainingMatrix.toFixed(1)} months</b>, Current wear rate ke hisab se: <b>${remainingActual.toFixed(1)} months</b>`;
         }
         function closeModal() { document.getElementById('historyModal').style.display = 'none'; }
         function closeDropdownEvent(e) { if (!e.target.closest('.ms-container')) { document.querySelectorAll('.ms-dropdown').forEach(d => d.classList.remove('show')); } } document.addEventListener('click', closeDropdownEvent); document.addEventListener('touchstart', closeDropdownEvent);
         function resetDashboard() { alert("Auto-sync is enabled. Refresh the page to reload data."); location.reload(); }
 
          // ================= BULLETPROOF AI ENGINE & OFFLINE ENGINE =================
-        // ===== 3-APP LANDING PAGE NAVIGATION =====
-        function backToHome() {
-            document.getElementById('mainDashboard').style.display = 'none';
-            document.getElementById('beltInspectorScreen').style.display = 'none';
-            document.getElementById('landingPage').style.display = 'flex';
-        }
-
-        function openThicknessApp() {
-            document.getElementById('landingPage').style.display = 'none';
-            document.getElementById('mainDashboard').style.display = 'flex';
-            document.getElementById('tabs-menu').style.display = 'none';
-            switchTab('thkTab', 'btn-thk');
-        }
-
-        function openAbnormalityApp() {
-            document.getElementById('landingPage').style.display = 'none';
-            document.getElementById('mainDashboard').style.display = 'flex';
-            document.getElementById('tabs-menu').style.display = 'none';
-            if (window.abnRawDataCache) {
-                processAbnormality(window.abnRawDataCache, false);
-                document.getElementById('tabs-menu').style.display = 'none'; // tab-bar nahi chahiye, navigation ab landing page se hoti hai
+        function toggleChat() { 
+            const cw = document.getElementById('chatWindow'); 
+            if(cw.style.display === 'flex') {
+                cw.style.display = 'none';
             } else {
-                alert('Abnormality data abhi load ho raha hai — ek-do second ruk kar dobara try karo.');
-                document.getElementById('mainDashboard').style.display = 'none';
-                document.getElementById('landingPage').style.display = 'flex';
+                cw.style.display = 'flex';
+                clearChat();
             }
-        }
-
-        function openBeltInspectorApp() {
-            document.getElementById('landingPage').style.display = 'none';
-            document.getElementById('beltInspectorScreen').style.display = 'flex';
         }
         
         function clearChat() {
