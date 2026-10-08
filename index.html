@@ -380,7 +380,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-j</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-l</div>
         </div>
     </div>
 
@@ -592,8 +592,15 @@
                         <select id="loStatus" class="lo-sel" onchange="renderLoggedObservations()">
                             <option value="All">All Status</option><option value="Open">Open</option><option value="Closed">Closed</option>
                             <option value="Operate under Observation">Operate under Observation</option><option value="Operate">Operate</option>
+                            <option value="Replacement">Replacement</option><option value="Rejoint">Rejoint</option><option value="Piece Addition">Piece Addition</option>
                         </select>
+                        <select id="loDateBy" class="lo-sel" onchange="renderLoggedObservations()">
+                            <option value="obs">Observed On</option><option value="log">Logged On</option>
+                        </select>
+                        <input type="text" id="loDate" class="search-input glass-panel" readonly placeholder="📅 Filter by date" style="width:150px; cursor:pointer;" onclick="toggleLoCal()">
+                        <button type="button" class="btn-slate" id="loDateClear" style="display:none; padding:8px 12px;" onclick="loCalClear()">✕ Clear date</button>
                     </div>
+                    <div id="loCal" class="glass-panel" style="display:none; margin:-5px 0 15px; padding:12px; border-radius:14px; border:1px solid var(--glass-border); max-width:340px;"></div>
                     <div class="table-container">
                         <table>
                             <thead><tr>
@@ -1043,11 +1050,67 @@
 
         // ===== LOGGED OBSERVATIONS (shared list; only Admin can change status / recommendation) =====
         const LOG_STATUS = {
-            'Open': '#ef4444', 'Closed': '#22c55e', 'Operate under Observation': '#eab308', 'Operate': '#10b981'
+            'Open': '#ef4444', 'Closed': '#22c55e', 'Operate under Observation': '#eab308', 'Operate': '#10b981',
+            'Replacement': '#a855f7', 'Rejoint': '#3b82f6', 'Piece Addition': '#06b6d4'
         };
         let loggedObsData = [];
         function escHtml(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
         function fmtDMY(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '-' + m[2] + '-' + m[1] : (iso || ''); }
+
+        // ===== Date filter calendar (admin/user: see how many observations on a given date) =====
+        let loCalSel = '', loCalView = null;
+        function loIso(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+        function toggleLoCal() {
+            const cal = document.getElementById('loCal');
+            if (cal.style.display === 'block') { cal.style.display = 'none'; return; }
+            const b = loCalSel ? new Date(loCalSel + 'T00:00:00') : new Date();
+            loCalView = new Date(b.getFullYear(), b.getMonth(), 1);
+            renderLoCal(); cal.style.display = 'block';
+        }
+        function loCalNav(n) { loCalView = new Date(loCalView.getFullYear(), loCalView.getMonth() + n, 1); renderLoCal(); }
+        function loCalJump() {
+            const m = parseInt(document.getElementById('loCalMonth').value), y = parseInt(document.getElementById('loCalYear').value);
+            if (!isNaN(y) && y >= 1990 && y <= 2100) { loCalView = new Date(y, m, 1); renderLoCal(); }
+        }
+        function loCalPick(iso) {
+            loCalSel = iso;
+            document.getElementById('loDate').value = fmtDMY(iso);
+            document.getElementById('loDateClear').style.display = 'inline-block';
+            document.getElementById('loCal').style.display = 'none';
+            renderLoggedObservations();
+        }
+        function loCalClear() {
+            loCalSel = ''; document.getElementById('loDate').value = '';
+            document.getElementById('loDateClear').style.display = 'none';
+            document.getElementById('loCal').style.display = 'none';
+            renderLoggedObservations();
+        }
+        function renderLoCal() {
+            const y = loCalView.getFullYear(), m = loCalView.getMonth();
+            const names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate(), today = loIso(new Date());
+            const st = 'padding:6px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid var(--glass-border);';
+            // dates that have observations get a dot
+            const key = document.getElementById('loDateBy').value === 'log' ? 'loggedOn' : 'obsDate';
+            const counts = {}; loggedObsData.forEach(o => { const k = String(o[key] || '').slice(0, 10); counts[k] = (counts[k] || 0) + 1; });
+            let h = `<div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-bottom:8px;">
+                <button type="button" class="btn-slate" style="padding:6px 9px;" onclick="loCalNav(-12)">«</button>
+                <button type="button" class="btn-slate" style="padding:6px 11px;" onclick="loCalNav(-1)">‹</button>
+                <select id="loCalMonth" style="flex:1; min-width:0; ${st}" onchange="loCalJump()">${names.map((n, i) => `<option value="${i}" ${i === m ? 'selected' : ''}>${n}</option>`).join('')}</select>
+                <input id="loCalYear" type="number" style="width:78px; ${st}" value="${y}" min="1990" max="2100" onchange="loCalJump()">
+                <button type="button" class="btn-slate" style="padding:6px 11px;" onclick="loCalNav(1)">›</button>
+                <button type="button" class="btn-slate" style="padding:6px 9px;" onclick="loCalNav(12)">»</button></div>
+                <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center; font-size:0.8rem;">`;
+            ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => h += `<div style="color:var(--text-muted); font-weight:700;">${d}</div>`);
+            for (let i = 0; i < first; i++) h += '<div></div>';
+            for (let d = 1; d <= days; d++) {
+                const iso = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+                const sel = iso === loCalSel, c = counts[iso] || 0;
+                h += `<div onclick="loCalPick('${iso}')" style="cursor:pointer; padding:6px 0; border-radius:8px; ${sel ? 'background:var(--blue); color:#fff; font-weight:800;' : (iso === today ? 'border:1px solid var(--blue);' : '')}">${d}${c ? `<div style="font-size:0.6rem; color:${sel ? '#fff' : 'var(--teal)'}; font-weight:800;">${c}</div>` : '<div style="font-size:0.6rem;">&nbsp;</div>'}</div>`;
+            }
+            h += `</div><div style="text-align:center; margin-top:8px;"><button type="button" class="btn-slate" style="padding:6px 14px; font-size:0.8rem;" onclick="loCalPick('${today}')">Today</button></div>`;
+            document.getElementById('loCal').innerHTML = h;
+        }
 
         function loadLoggedObservations() {
             const body = document.getElementById('loggedObsBody');
@@ -1104,7 +1167,8 @@
             const st = document.getElementById('loStatus').value || 'All';
             const q = document.getElementById('loSearch').value.trim().toLowerCase();
             // KPI chips (department/route/search filters applied; clicking a chip sets the status filter)
-            const base = loggedObsData.filter(o => (dept === 'All' || o.department === dept) && (route === 'All' || o.section === route) && (!q || String(o.conveyor).toLowerCase().includes(q)));
+            const dkey = document.getElementById('loDateBy').value === 'log' ? 'loggedOn' : 'obsDate';
+            const base = loggedObsData.filter(o => (dept === 'All' || o.department === dept) && (route === 'All' || o.section === route) && (!q || String(o.conveyor).toLowerCase().includes(q)) && (!loCalSel || String(o[dkey] || '').slice(0, 10) === loCalSel));
             const kp = [['All', 'Total', 'var(--blue)', base.length]].concat(Object.keys(LOG_STATUS).map(k => [k, k, LOG_STATUS[k], base.filter(o => o.status === k).length]));
             document.getElementById('loggedObsKpis').innerHTML = kp.map(k => `<div class="kpi-card glass-panel" onclick="document.getElementById('loStatus').value='${k[0]}'; renderLoggedObservations();" style="border-bottom:3px solid ${k[2]}; ${st === k[0] ? 'outline:2px solid ' + k[2] + ';' : ''}"><div class="kpi-title" style="color:${k[2]};">${k[1]}</div><div class="kpi-val" style="color:${k[2]};">${k[3]}</div></div>`).join('');
             const items = base.filter(o => st === 'All' || o.status === st);
@@ -1649,28 +1713,24 @@
         let lifeProjChartInst = null;
         function renderLifeProjection(row) {
             const section = document.getElementById('lifeProjectionSection');
-            if (!row.predLifeMatrix || row.predLifeMatrix === 0) { section.style.display = 'none'; return; }
+            // Expected = "Predicted Life (in Months) (Actual)" column; Projected = life at current wear rate ("CBM life1")
+            const expected = row.predLife;
+            const hasProj = row.cbmLife && row.cbmLife !== 999 && row.cbmLife > 0;
+            if (!expected || expected === 0) { section.style.display = 'none'; return; }
             section.style.display = 'block';
 
-            const matrix = row.predLifeMatrix;
-            const actual = row.predLife;
+            const projected = hasProj ? row.cbmLife : null;
             const age = row.ageAsOnDate;
-            const remainingMatrix = Math.max(matrix - age, 0);
-            const remainingActual = Math.max(actual - age, 0);
-            const diff = actual - matrix;
+            const remainingExpected = Math.max(expected - age, 0);
+            const diff = hasProj ? projected - expected : 0;
 
             if (lifeProjChartInst) lifeProjChartInst.destroy();
+            const labels = ['Expected (Predicted Life)'], vals = [expected], cols = [getCssVar('--blue')];
+            if (hasProj) { labels.push('Projected (Current Wear Rate)'); vals.push(projected); cols.push(diff < 0 ? getCssVar('--red') : getCssVar('--green')); }
+            labels.push('Age as on Date'); vals.push(age); cols.push(getCssVar('--orange'));
             lifeProjChartInst = new Chart(document.getElementById('lifeProjectionChart').getContext('2d'), {
                 type: 'bar',
-                data: {
-                    labels: ['Expected (Matrix)', 'Projected (Current Wear Rate)'],
-                    datasets: [{
-                        label: 'Total Life (Months)',
-                        data: [matrix, actual],
-                        backgroundColor: [getCssVar('--blue'), diff < 0 ? getCssVar('--red') : getCssVar('--green')],
-                        borderRadius: 8
-                    }]
-                },
+                data: { labels: labels, datasets: [{ label: 'Months', data: vals, backgroundColor: cols, borderRadius: 8 }] },
                 options: {
                     indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                     scales: { x: { beginAtZero: true, title: { display: true, text: 'Months', color: getCssVar('--text-muted') } } },
@@ -1679,10 +1739,15 @@
             });
 
             let summary = document.getElementById('lifeProjectionSummary');
+            if (!hasProj) {
+                summary.innerHTML = `Expected life: <b>${expected.toFixed(1)} months</b>, Age: <b>${age.toFixed(1)} months</b>, Remaining (expected): <b>${remainingExpected.toFixed(1)} months</b>.<br><span style="color:var(--text-muted);">Projection at current wear rate is not available for this belt.</span>`;
+                return;
+            }
+            const remainingProj = Math.max(projected - age, 0);
             let diffText = diff < 0
                 ? `⚠️ At the current wear rate, this belt will last <b style="color:var(--red);">${Math.abs(diff).toFixed(1)} months LESS</b> than expected.`
-                : `✅ This belt is performing <b style="color:var(--green);">equal to or better than</b> its expected life.`;
-            summary.innerHTML = `${diffText}<br>Remaining life — Expected: <b>${remainingMatrix.toFixed(1)} months</b>, At current wear rate: <b>${remainingActual.toFixed(1)} months</b>`;
+                : `✅ At the current wear rate, this belt will last <b style="color:var(--green);">${diff.toFixed(1)} months MORE</b> than expected.`;
+            summary.innerHTML = `${diffText}<br>Remaining life — Expected: <b>${remainingExpected.toFixed(1)} months</b>, At current wear rate: <b>${remainingProj.toFixed(1)} months</b>`;
         }
         function closeModal() { document.getElementById('historyModal').style.display = 'none'; }
         function closeDropdownEvent(e) { if (!e.target.closest('.ms-container')) { document.querySelectorAll('.ms-dropdown').forEach(d => d.classList.remove('show')); } } document.addEventListener('click', closeDropdownEvent); document.addEventListener('touchstart', closeDropdownEvent);
