@@ -322,7 +322,38 @@
         .dashboard-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
         .chat-window { position: fixed; left: 15px; right: 15px; width: auto; bottom: 100px; max-height: 65vh; }
     }
-    </style>
+            /* ===== SBC SCREEN ===== */
+        .app-card.card-sbc .app-icon { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        #sbcScreen { display: none; position: fixed; inset: 0; z-index: 10000; background: var(--bg); overflow-y: auto; padding: 20px; color: var(--text-main); }
+        #sbcScreen .sbc-wrap { max-width: 1300px; margin: 0 auto; }
+        .sbc-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 15px; }
+        .sbc-bar h2 { margin: 0; font-size: 1.3rem; flex: 1; min-width: 220px; }
+        .sbc-sel { background: var(--slate); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 9px 12px; border-radius: 10px; font-weight: 700; }
+        .sbc-banner { padding: 12px 16px; border-radius: 12px; margin-bottom: 12px; font-weight: 700; font-size: 0.9rem; }
+        .sbc-banner.red { background: rgba(239,68,68,0.18); border: 1px solid #ef4444; color: #fca5a5; }
+        .sbc-banner.amber { background: rgba(245,158,11,0.15); border: 1px solid #f59e0b; color: #fcd34d; }
+        .sbc-banner.green { background: rgba(16,185,129,0.15); border: 1px solid #10b981; color: #6ee7b7; }
+        .sbc-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+        .sbc-kpi { padding: 12px; border-radius: 12px; text-align: center; }
+        .sbc-kpi b { display: block; font-size: 1.5rem; }
+        .sbc-kpi span { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+        .sbc-panel { padding: 14px; border-radius: 14px; margin-bottom: 14px; }
+        .sbc-panel h3 { margin: 0 0 10px; font-size: 1rem; }
+        .sbc-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 14px; }
+        .sbc-chart { position: relative; height: 340px; }
+        .sbc-tablewrap { overflow-x: auto; }
+        .sbc-table { border-collapse: collapse; width: 100%; font-size: 0.78rem; }
+        .sbc-table th, .sbc-table td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: right; white-space: nowrap; }
+        .sbc-table th:first-child, .sbc-table td:first-child { text-align: left; position: sticky; left: 0; background: var(--bg); }
+        .sbc-table th { color: var(--text-muted); font-weight: 700; }
+        .sbc-table tr.tot td { font-weight: 800; border-top: 2px solid rgba(255,255,255,0.25); }
+        .sbc-g { color: #10b981; } .sbc-y { color: #f59e0b; } .sbc-r { color: #ef4444; font-weight: 800; }
+        .sbc-chip { display: inline-block; padding: 7px 13px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; font-size: 0.78rem; font-weight: 700; margin: 0 6px 6px 0; background: transparent; color: var(--text-main); }
+        .sbc-chip.on { background: var(--teal); color: #fff; border-color: var(--teal); }
+        .sbc-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; }
+        .sbc-pill { padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
+        @media (max-width: 600px) { .sbc-grid2 { grid-template-columns: 1fr; } #sbcScreen { padding: 12px; } }
+</style>
 </head>
 <body>
     <script>
@@ -377,10 +408,15 @@
                 <h3>RTG Belt Inspector</h3>
                 <p>Chat with the bot for full diagnosis & recommendations</p>
             </div>
+            <div class="app-card card-sbc glass-panel" id="card-sbc" style="display:none;" onclick="openSbcApp()">
+                <div class="app-icon"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 54V30M26 54V18M42 54V36M58 54V10"/><path d="M6 58h54"/><path d="M10 22l16-10 16 14 16-16" opacity="0.7"/></svg></div>
+                <h3>SBC Tracker</h3>
+                <p>Specific Belt Consumption, FY targets, dept-wise & ABP plan</p>
+            </div>
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-m</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-n</div>
         </div>
     </div>
 
@@ -729,6 +765,27 @@
     </div>
 
     <!-- RTG BELT INSPECTOR — full-screen chat (replaces the old floating widget) -->
+    <!-- SBC SCREEN (admin only) -->
+    <div id="sbcScreen">
+      <div class="sbc-wrap">
+        <div class="sbc-bar">
+            <button class="btn-slate" onclick="closeSbcApp()"><i class="fas fa-arrow-left"></i> Home</button>
+            <h2><i class="fas fa-chart-line" style="color:#f59e0b"></i> SBC - Specific Belt Consumption</h2>
+            <select id="sbcFy" class="sbc-sel" onchange="sbcRender()"></select>
+            <button class="btn-slate" onclick="sbcExport()"><i class="fas fa-file-pdf"></i> Export Report</button>
+            <select id="sbcDeptExp" class="sbc-sel" onchange="sbcExportDept(this.value); this.value='';"><option value="">Dept report PDF...</option></select>
+        </div>
+        <div id="sbcLoading" class="sbc-note">Loading data...</div>
+        <div id="sbcReport"></div>
+        <div class="glass-panel sbc-panel" id="sbcListPanel" style="display:none;">
+            <h3><i class="fas fa-list"></i> Belt Lists (Admin)</h3>
+            <div id="sbcChips"></div>
+            <select id="sbcListDept" class="sbc-sel" onchange="sbcRenderList()" style="margin-bottom:10px;"></select>
+            <div class="sbc-tablewrap" id="sbcListWrap"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="beltInspectorScreen">
         <div class="inspector-header">
             <button class="back-home-btn" onclick="backToHome()" title="Back to Home"><i class="fas fa-arrow-left"></i> Home</button>
@@ -832,6 +889,7 @@
             document.getElementById('abn-admin-charts').style.display = currentRole === 'admin' ? 'grid' : 'none';
             document.getElementById('admin-schedule-kpi').style.display = currentRole === 'admin' ? 'block' : 'none';
             document.getElementById('card-bot').style.display = isAdmin ? '' : 'none';
+            const sbcc = document.getElementById('card-sbc'); if (sbcc) sbcc.style.display = isAdmin ? '' : 'none';
         }
 
         function finalizeLogin(roleText, badgeColor) {
@@ -2768,5 +2826,237 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             });
         }
     </script>
+<script>
+// ===== SBC (Specific Belt Consumption) - admin only =====
+(function () {
+    const TOTAL_KM = 170;
+    const DEPTS = [['RMHS', 45], ['RMPP', 36], ['DRI', 14], ['RMBB', 14.8], ['SP#1', 9.7], ['SP#2#3', 9.2], ['BF#1', 4.3], ['BF#2', 6.97], ['CO#1', 9.5], ['CO#2', 7], ['LCP', 3], ['SMS#2', 11.1]];
+    const KM = {}; DEPTS.forEach(d => KM[d[0]] = d[1]);
+    const FY_TARGET = { 27: 252, 26: 270, 25: 318 };
+    const M_TARGET_27 = [40, 30, 20, 20, 20, 20, 17, 17, 17, 15, 18, 18];
+    const MON = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+    const GREEN = '#10b981', YELLOW = '#f59e0b', RED = '#ef4444';
+    const REASONS = [['HIGHWEARRATE', 'High wear rate'], ['B/C CATEGORY LONG BELT', 'Long B/C category belts'], ['JAN-MAR 2027', "Falling Jan-Mar'27"], ['SKIRT DAMAGE', 'Damaged at skirt area'], ['OTHERS', 'Others']];
+    const S = { daily: [], abp: [], thk: {}, mode: 'sbc', list: 'upcoming', charts: {}, loaded: false };
+
+    const key = s => String(s || '').trim().toUpperCase().replace(/\s+/g, '');
+    function nd(d) {
+        let k = key(d); if (!k || k === '#REF!') return '';
+        if (k === 'BRIQUETTING' || k === 'DRI+BRIQUETTING' || k === 'DRI/BRIQUETTING') return 'DRI';
+        if (/^SP#?2/.test(k) || k === 'SP#3' || k === 'SP3') return 'SP#2#3';
+        return k;
+    }
+    const fmt = n => Math.round(n || 0).toLocaleString('en-IN');
+    const f1 = n => (Math.round((n || 0) * 10) / 10).toFixed(1);
+    const fyOf = d => (d.getMonth() >= 3 ? d.getFullYear() + 1 : d.getFullYear()) % 100;
+    const mi = d => (d.getMonth() + 9) % 12;
+    const dstr = d => d ? String(d.getDate()).padStart(2, '0') + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + d.getFullYear() : '-';
+    function pdmy(s) { const p = String(s || '').split('-'); if (p.length < 3) return null; const d = new Date(+p[2], +p[1] - 1, +p[0]); return isNaN(d) ? null : d; }
+    const num = v => parseFloat(String(v == null ? '' : v).replace(/,/g, '')) || 0;
+    const el = id => document.getElementById(id);
+    const fyNow = () => +el('sbcFy').value;
+    const target = fy => FY_TARGET[fy] || 252;
+    function colorFor(r) { return r > 1 ? RED : (r > 0.8 ? YELLOW : GREEN); }
+    function clsFor(r) { return r > 1 ? 'sbc-r' : (r > 0.8 ? 'sbc-y' : 'sbc-g'); }
+
+    function get(url) {
+        return fetch(url + '?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw 0; return r.text(); })
+            .then(t => new Promise(res => Papa.parse(t, { header: true, skipEmptyLines: true, transformHeader: h => (h || '').trim(), complete: x => res(x.data) })))
+            .catch(() => []);
+    }
+
+    window.openSbcApp = function () {
+        if (typeof currentRole === 'undefined' || currentRole !== 'admin') return;
+        el('landingPage').style.display = 'none'; el('sbcScreen').style.display = 'block'; window.scrollTo(0, 0); el('sbcScreen').scrollTop = 0;
+        el('sbcLoading').style.display = 'block'; el('sbcLoading').innerText = 'Loading data...';
+        Promise.all([get('./daily.csv'), get('./abp.csv'), get('./data.csv')]).then(([daily, abp, thk]) => {
+            S.daily = [];
+            daily.forEach(r => {
+                const t = String(r['Type Of Job'] || '').toLowerCase(); const type = t.includes('replacement') ? 'R' : (t.includes('piece addition') ? 'P' : null);
+                if (!type) return; const d = parseDateCustom(r['Date']); if (!d) return; const c = key(r['Conv_x002e_ Name']);
+                S.daily.push({ type, date: d, fy: fyOf(d), mi: mi(d), dept: nd(r['Department']), conv: c, name: String(r['Conv_x002e_ Name'] || '').trim(), m: num(r['consumption']), vendor: String(r['Job done by (Jointing team)'] || '').trim() || '-', desc: String(r['Job Description'] || '').trim() });
+            });
+            S.abp = abp.map(r => ({ fy: String(r.FY || '').replace(/\D/g, '') * 1, dept: nd(r.Dept), conv: key(r.Conveyor), name: r.Conveyor, cat: r.Category, len: num(r.Length), grade: r.Grade, type: r.Type, next: pdmy(r.NextCBM), plan: num(r.PlannedMtrs), cls: r.Class, reason: r.Reason, remarks: r.Remarks }));
+            S.thk = {};
+            thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']) }; });
+            const fys = new Set(Object.keys(FY_TARGET).map(Number)); S.daily.forEach(x => fys.add(x.fy));
+            const arr = Array.from(fys).sort((a, b) => b - a); const sel = el('sbcFy'); const cur = sel.value;
+            sel.innerHTML = arr.map(f => `<option value="${f}">FY'${f}</option>`).join(''); sel.value = cur && arr.includes(+cur) ? cur : (arr.includes(27) ? 27 : arr[0]);
+            const dsel = el('sbcDeptExp'); dsel.innerHTML = '<option value="">Dept report PDF...</option>' + DEPTS.map(d => `<option>${d[0]}</option>`).join('');
+            el('sbcLoading').style.display = 'none'; S.loaded = true; window.sbcRender();
+        });
+    };
+    window.closeSbcApp = function () { el('sbcScreen').style.display = 'none'; el('landingPage').style.display = 'flex'; };
+    window.sbcSetMode = function (m) { S.mode = m; window.sbcRender(); };
+    window.sbcSetList = function (l) { S.list = l; sbcChips(); window.sbcRenderList(); };
+
+    function stats(fy) {
+        const rows = S.daily.filter(x => x.fy === fy);
+        const dm = {}; DEPTS.forEach(d => dm[d[0]] = Array(12).fill(0)); dm.OTHER = Array(12).fill(0);
+        const all = Array(12).fill(0); let last = -1, minD = null, maxD = null;
+        rows.forEach(x => { const k = dm[x.dept] ? x.dept : 'OTHER'; dm[k][x.mi] += x.m; all[x.mi] += x.m; if (!minD || x.date < minD) minD = x.date; if (!maxD || x.date > maxD) maxD = x.date; });
+        if (maxD) last = mi(maxD);
+        const total = all.reduce((a, b) => a + b, 0);
+        return { rows, dm, all, last, total, minD, maxD };
+    }
+    const sumRange = (a, n) => a.slice(0, n + 1).reduce((x, y) => x + y, 0);
+
+    window.sbcRender = function () {
+        if (!S.loaded) return; const fy = fyNow(); const st = stats(fy); const T = target(fy);
+        Object.values(S.charts).forEach(c => { try { c.destroy(); } catch (e) {} }); S.charts = {};
+        const sbcT = st.total / TOTAL_KM; const ratio = sbcT / T; let h = '';
+        // banners
+        if (sbcT > T) h += `<div class="sbc-banner red"><i class="fas fa-triangle-exclamation"></i> TARGET EXCEEDED: FY'${fy} SBC ${f1(sbcT)} is above target ${T} (by ${f1(sbcT - T)} m/km = ${fmt((sbcT - T) * TOTAL_KM)} m).</div>`;
+        else if (ratio > 0.8) h += `<div class="sbc-banner amber"><i class="fas fa-circle-exclamation"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} of ${T}). Only ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m) left.</div>`;
+        else h += `<div class="sbc-banner green"><i class="fas fa-circle-check"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} of ${T}). Balance ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m).</div>`;
+        const over = DEPTS.filter(d => st.dm[d[0]].reduce((a, b) => a + b, 0) / d[1] > T).map(d => `${d[0]} (${f1(st.dm[d[0]].reduce((a, b) => a + b, 0) / d[1])})`);
+        if (over.length) h += `<div class="sbc-banner red"><i class="fas fa-triangle-exclamation"></i> Departments above the ${T} SBC target (on own km): ${over.join(', ')}</div>`;
+        if (st.minD && st.minD > new Date(2000 + fy - 1, 3, 11)) h += `<div class="sbc-banner amber"><i class="fas fa-database"></i> Partial data: FY'${fy} ka daily report ${dstr(st.minD)} se available hai, uske pehle ka data missing hai - actual SBC isse zyada hoga.</div>`;
+        if (!st.rows.length) h += `<div class="sbc-banner amber">Is FY ke liye daily report me Belt Replacement / Piece Addition ka data nahi mila.</div>`;
+        // KPIs
+        h += `<div class="sbc-kpis">
+            <div class="glass-panel sbc-kpi"><b>${T}</b><span>FY Target (m/km)</span></div>
+            <div class="glass-panel sbc-kpi"><b class="${clsFor(ratio)}">${f1(sbcT)}</b><span>SBC till date</span></div>
+            <div class="glass-panel sbc-kpi"><b>${fmt(st.total)}</b><span>Metres consumed</span></div>
+            <div class="glass-panel sbc-kpi"><b>${f1(Math.max(0, T - sbcT))}</b><span>Balance SBC</span></div>
+            <div class="glass-panel sbc-kpi"><b>${fmt(Math.max(0, T * TOTAL_KM - st.total))}</b><span>Balance metres</span></div>
+            <div class="glass-panel sbc-kpi"><b>${TOTAL_KM}</b><span>Total km</span></div></div>`;
+        // main chart
+        h += `<div class="glass-panel sbc-panel"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;"><h3 style="margin:0;flex:1;">Month-wise ${S.mode === 'sbc' ? 'SBC (m/km)' : 'Consumption (m)'} - FY'${fy}</h3>
+            <button class="sbc-chip ${S.mode === 'sbc' ? 'on' : ''}" onclick="sbcSetMode('sbc')">SBC</button><button class="sbc-chip ${S.mode === 'm' ? 'on' : ''}" onclick="sbcSetMode('m')">Metres</button></div>
+            <div class="sbc-chart"><canvas id="sbcMain"></canvas></div>
+            <div class="sbc-note">Bar colour: <span class="sbc-g">green</span> &le;80% of target, <span class="sbc-y">yellow</span> 80-100%, <span class="sbc-r">red</span> &gt;100% ${fy === 27 ? '(monthly target)' : '(annual target / 12)'}. Cumulative line aur annual target right axis par.</div></div>`;
+        // plan graphs
+        const abp = S.abp.filter(a => a.fy === fy); const showPlan = abp.length > 0;
+        const repKeys = new Set(st.rows.filter(x => x.type === 'R').map(x => x.conv));
+        let plan = null;
+        if (showPlan) {
+            const pl = abp.filter(a => a.cls === 'Planned' && a.type === 'Fabric'), av = abp.filter(a => a.cls === 'Avoid');
+            let thkM = 0; Object.keys(S.thk).forEach(k => { const t = S.thk[k]; const fyStart = new Date(2000 + fy - 1, 3, 1); if (repKeys.has(k)) return; if (t.lastRep && t.lastRep >= fyStart) return; thkM += t.len; });
+            plan = { target: T * TOTAL_KM, consumed: st.total, balance: Math.max(0, T * TOTAL_KM - st.total), thk: thkM, fab: pl.reduce((a, b) => a + b.plan, 0), steel: abp.filter(a => a.cls === 'Planned' && a.type === 'Steel').reduce((a, b) => a + b.plan, 0), bucket: abp.filter(a => a.cls === 'Planned' && a.type === 'Bucket').reduce((a, b) => a + b.plan, 0), avoid: av.reduce((a, b) => a + b.len, 0), reasons: REASONS.map(r => av.filter(a => a.reason === r[0]).reduce((x, y) => x + y.len, 0)) };
+            h += `<div class="sbc-grid2"><div class="glass-panel sbc-panel"><h3>SBC (m/km) - Target vs Plan</h3><div class="sbc-chart"><canvas id="sbcPlanA"></canvas></div></div>
+                <div class="glass-panel sbc-panel"><h3>Length (m) - Target vs Plan</h3><div class="sbc-chart"><canvas id="sbcPlanB"></canvas></div></div></div>
+                <div class="glass-panel sbc-panel"><h3>Belts that can be avoided - reason wise</h3><div class="sbc-chart" style="height:280px"><canvas id="sbcAvoid"></canvas></div>
+                <div class="sbc-note">Plan source: abp.csv (ABP list). Steel cord aur bucket belts ka sirf total plan hai (belt-wise list nahi).</div></div>`;
+        }
+        // dept tables
+        const val = (m, km) => S.mode === 'sbc' ? (m ? f1(m / km) : '-') : (m ? fmt(m) : '-');
+        const cols = (fn) => MON.map((mm, i) => fn(i)).join('');
+        const depRows = DEPTS.map(d => ({ n: d[0], km: d[1], a: st.dm[d[0]] })); if (st.dm.OTHER.some(v => v)) depRows.push({ n: 'Other', km: 0, a: st.dm.OTHER });
+        h += `<div class="glass-panel sbc-panel"><h3>Department-wise month-wise ${S.mode === 'sbc' ? 'SBC' : 'metres'}</h3><div class="sbc-tablewrap"><table class="sbc-table"><thead><tr><th>Dept</th><th>km</th>${MON.map(m => `<th>${m}</th>`).join('')}<th>Total m</th><th>SBC</th></tr></thead><tbody>`;
+        depRows.forEach(r => { const tot = r.a.reduce((x, y) => x + y, 0); const sb = r.km ? tot / r.km : 0; h += `<tr><td>${r.n}</td><td>${r.km || '-'}</td>${r.a.map((v, i) => `<td>${i > st.last ? '' : val(v, r.km || 1)}</td>`).join('')}<td>${fmt(tot)}</td><td class="${r.km ? clsFor(sb / T) : ''}">${r.km ? f1(sb) : '-'}</td></tr>`; });
+        h += `<tr class="tot"><td>TOTAL</td><td>${TOTAL_KM}</td>${st.all.map((v, i) => `<td>${i > st.last ? '' : val(v, TOTAL_KM)}</td>`).join('')}<td>${fmt(st.total)}</td><td class="${clsFor(ratio)}">${f1(sbcT)}</td></tr></tbody></table></div></div>`;
+        h += `<div class="glass-panel sbc-panel"><h3>Cumulative ${S.mode === 'sbc' ? 'SBC' : 'metres'} (dept-wise)</h3><div class="sbc-tablewrap"><table class="sbc-table"><thead><tr><th>Dept</th>${MON.map(m => `<th>${m}</th>`).join('')}</tr></thead><tbody>`;
+        depRows.forEach(r => { h += `<tr><td>${r.n}</td>${r.a.map((v, i) => { if (i > st.last) return '<td></td>'; const c = sumRange(r.a, i); const cl = S.mode === 'sbc' && r.km ? clsFor(c / r.km / T) : ''; return `<td class="${cl}">${val(c, r.km || 1)}</td>`; }).join('')}</tr>`; });
+        h += `<tr class="tot"><td>TOTAL</td>${st.all.map((v, i) => { if (i > st.last) return '<td></td>'; const c = sumRange(st.all, i); return `<td class="${S.mode === 'sbc' ? clsFor(c / TOTAL_KM / T) : ''}">${val(c, TOTAL_KM)}</td>`; }).join('')}</tr></tbody></table></div></div>`;
+        // dept plan status
+        if (showPlan) {
+            const planned = new Set(abp.filter(a => a.cls === 'Planned' && a.conv).map(a => a.conv));
+            h += `<div class="glass-panel sbc-panel"><h3>Department-wise plan status (ABP)</h3><div class="sbc-tablewrap"><table class="sbc-table"><thead><tr><th>Dept</th><th>Consumed m</th><th>SBC</th><th>Planned belts</th><th>Done</th><th>Remaining planned (belts / m)</th><th>Can be avoided (belts / m)</th><th>Unplanned replaced (belts / m)</th><th>SBC if remaining plan done</th></tr></thead><tbody>`;
+            const tt = { c: 0, pn: 0, dn: 0, rn: 0, rm: 0, an: 0, am: 0, un: 0, um: 0 };
+            DEPTS.forEach(d => {
+                const n = d[0]; const cons = st.dm[n].reduce((a, b) => a + b, 0);
+                const pl = abp.filter(a => a.cls === 'Planned' && a.dept === n && a.conv); const done = pl.filter(a => repKeys.has(a.conv)); const rem = pl.filter(a => !repKeys.has(a.conv));
+                const rm = rem.reduce((a, b) => a + b.plan, 0); const av = abp.filter(a => a.cls === 'Avoid' && a.dept === n && !repKeys.has(a.conv)); const am = av.reduce((a, b) => a + b.len, 0);
+                const un = unplannedRows(fy, planned, abp).filter(x => (nd(x.dept) || '') === n); const um = un.reduce((a, b) => a + b.m, 0);
+                tt.c += cons; tt.pn += pl.length; tt.dn += done.length; tt.rn += rem.length; tt.rm += rm; tt.an += av.length; tt.am += am; tt.un += un.length; tt.um += um;
+                const proj = (cons + rm) / d[1];
+                h += `<tr><td>${n}</td><td>${fmt(cons)}</td><td>${f1(cons / d[1])}</td><td>${pl.length}</td><td>${done.length}</td><td>${rem.length} / ${fmt(rm)}</td><td>${av.length} / ${fmt(am)}</td><td class="${um > 0 ? 'sbc-y' : ''}">${un.length} / ${fmt(um)}</td><td class="${clsFor(proj / T)}">${f1(proj)}</td></tr>`;
+            });
+            const projAll = (tt.c + tt.rm + plan.steel + plan.bucket) / TOTAL_KM;
+            h += `<tr class="tot"><td>TOTAL</td><td>${fmt(tt.c)}</td><td>${f1(tt.c / TOTAL_KM)}</td><td>${tt.pn}</td><td>${tt.dn}</td><td>${tt.rn} / ${fmt(tt.rm)}</td><td>${tt.an} / ${fmt(tt.am)}</td><td>${tt.un} / ${fmt(tt.um)}</td><td class="${clsFor(projAll / T)}">${f1(projAll)}</td></tr></tbody></table></div>
+                <div class="sbc-note">Unplanned replacement = daily report me Belt Replacement jo ABP planned list me nahi tha. Har unplanned replacement plan ke metres kha leta hai aur baaki planned belts ko avoid karne ka room kam kar deta hai. Total projection me steel cord + bucket planned metres bhi jode gaye hain.</div></div>`;
+        }
+        el('sbcReport').innerHTML = `<div id="sbcReportInner">${h}</div>`;
+        drawMain(fy, st, T); if (plan) drawPlan(plan, T);
+        el('sbcListPanel').style.display = showPlan || st.rows.length ? 'block' : 'none';
+        const ls = el('sbcListDept'); const cd = ls.value || 'All'; ls.innerHTML = '<option>All</option>' + DEPTS.map(d => `<option>${d[0]}</option>`).join(''); ls.value = cd;
+        sbcChips(); window.sbcRenderList();
+    };
+
+    function unplannedRows(fy, plannedSet, abp) {
+        const pre = new Set(abp.filter(a => a.cls === 'Replaced').map(a => a.conv));
+        return S.daily.filter(x => x.fy === fy && x.type === 'R' && !plannedSet.has(x.conv) && !pre.has(x.conv));
+    }
+
+    function tcol() { return { tick: '#cbd5e1', grid: 'rgba(148,163,184,0.15)' }; }
+    function drawMain(fy, st, T) {
+        const k = S.mode === 'sbc' ? 1 / TOTAL_KM : 1; const mt = fy === 27 ? M_TARGET_27 : Array(12).fill(T / 12);
+        const yy = fy; const labels = MON.map((m, i) => `${m}'${String(i < 9 ? yy - 1 : yy).padStart(2, '0')}`);
+        const data = st.all.map((v, i) => i > st.last ? null : v * k); const cum = st.all.map((v, i) => i > st.last ? null : sumRange(st.all, i) * k);
+        const cols = st.all.map((v, i) => colorFor((v / TOTAL_KM) / mt[i]));
+        const c = tcol();
+        S.charts.main = new Chart(el('sbcMain'), { data: { labels, datasets: [
+            { type: 'bar', label: S.mode === 'sbc' ? 'Monthly SBC' : 'Monthly metres', data, backgroundColor: cols, yAxisID: 'y', order: 3 },
+            { type: 'line', label: 'Monthly target', data: mt.map(v => v * (S.mode === 'sbc' ? 1 : TOTAL_KM)), borderColor: '#38bdf8', borderDash: [5, 4], pointRadius: 2, stepped: true, yAxisID: 'y', order: 2, hidden: false },
+            { type: 'line', label: 'Cumulative', data: cum, borderColor: '#e2e8f0', backgroundColor: '#e2e8f0', pointRadius: 3, tension: 0.2, yAxisID: 'y1', order: 1 },
+            { type: 'line', label: `Annual target (${S.mode === 'sbc' ? T : fmt(T * TOTAL_KM)})`, data: Array(12).fill(T * (S.mode === 'sbc' ? 1 : TOTAL_KM)), borderColor: RED, borderDash: [8, 4], pointRadius: 0, yAxisID: 'y1', order: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.tick } } }, scales: { x: { ticks: { color: c.tick }, grid: { color: c.grid } }, y: { beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid }, title: { display: true, text: S.mode === 'sbc' ? 'Monthly m/km' : 'Monthly m', color: c.tick } }, y1: { beginAtZero: true, position: 'right', ticks: { color: c.tick }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Cumulative', color: c.tick } } } } });
+    }
+    function drawPlan(p, T) {
+        const labels = ["FY target", 'Consumed till date', 'Balance', 'As per Thickness monitoring', 'Planned RTG (Fabric)', 'Planned RTG (Steel Cord)', 'Planned RTG (Bucket)', 'Can be avoided'];
+        const vals = [p.target, p.consumed, p.balance, p.thk, p.fab, p.steel, p.bucket, p.avoid];
+        const colors = ['#38bdf8', '#f59e0b', '#10b981', '#a78bfa', '#0ea5e9', '#64748b', '#94a3b8', '#ef4444'];
+        const c = tcol();
+        const mk = (id, k, dec) => new Chart(el(id), { type: 'bar', data: { labels, datasets: [{ data: vals.map(v => v * k), backgroundColor: colors }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: x => (dec ? f1(x.raw) : fmt(x.raw)) } } }, scales: { x: { ticks: { color: c.tick, maxRotation: 60, minRotation: 40, font: { size: 10 } }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid } } } }, plugins: [{ id: 'lbl', afterDatasetsDraw(ch) { const ctx = ch.ctx; ctx.save(); ctx.fillStyle = '#e2e8f0'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ch.getDatasetMeta(0).data.forEach((b, i) => { const v = ch.data.datasets[0].data[i]; ctx.fillText(dec ? f1(v) : fmt(v), b.x, b.y - 4); }); ctx.restore(); } }] });
+        S.charts.pa = mk('sbcPlanA', 1 / TOTAL_KM, true); S.charts.pb = mk('sbcPlanB', 1, false);
+        S.charts.av = new Chart(el('sbcAvoid'), { type: 'bar', data: { labels: REASONS.map(r => r[1]), datasets: [{ label: 'Avoidable length (m)', data: p.reasons, backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#a78bfa', '#64748b'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: x => fmt(x.raw) + ' m  (' + f1(x.raw / TOTAL_KM) + ' m/km)' } } }, scales: { x: { ticks: { color: c.tick }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid } } } } });
+    }
+
+    // ---- belt lists ----
+    const CHIPS = [['upcoming', 'Upcoming (planned, pending)'], ['planned', 'All planned'], ['unplanned', 'Unplanned replaced'], ['steel', 'Steel cord piece addition'], ['avoid', 'Can be avoided']];
+    function sbcChips() { el('sbcChips').innerHTML = CHIPS.map(c => `<button class="sbc-chip ${S.list === c[0] ? 'on' : ''}" onclick="sbcSetList('${c[0]}')">${c[1]}</button>`).join(''); }
+    function listData(fy, dept) {
+        const st = stats(fy); const abp = S.abp.filter(a => a.fy === fy); const repMap = {}; st.rows.filter(x => x.type === 'R').forEach(x => { (repMap[x.conv] = repMap[x.conv] || []).push(x); });
+        const planned = new Set(abp.filter(a => a.cls === 'Planned' && a.conv).map(a => a.conv)); const df = r => dept === 'All' || r.dept === dept;
+        const status = a => { const r = repMap[a.conv]; return r ? `<span class="sbc-pill" style="background:rgba(16,185,129,.2);color:#6ee7b7">Done ${dstr(r[r.length - 1].date)}</span>` : '<span class="sbc-pill" style="background:rgba(245,158,11,.2);color:#fcd34d">Pending</span>'; };
+        const L = S.list; let head = [], rows = [], tm = 0;
+        if (L === 'upcoming' || L === 'planned') {
+            let r = abp.filter(a => a.cls === 'Planned' && a.type === 'Fabric' && a.conv && df(a)); if (L === 'upcoming') r = r.filter(a => !repMap[a.conv]); r.sort((a, b) => (a.next || 0) - (b.next || 0));
+            head = ['Dept', 'Conveyor', 'Cat', 'Length m', 'Planned m', 'Grade', 'Next CBM', 'Status']; r.forEach(a => { tm += a.plan; rows.push([a.dept, a.name, a.cat, fmt(a.len), fmt(a.plan), a.grade, dstr(a.next), status(a)]); });
+        } else if (L === 'avoid') {
+            const r = abp.filter(a => a.cls === 'Avoid' && df(a)); head = ['Dept', 'Conveyor', 'Cat', 'Length m', 'Grade', 'Reason', 'Next CBM', 'Status'];
+            r.forEach(a => { tm += a.len; rows.push([a.dept, a.name, a.cat, fmt(a.len), a.grade, (REASONS.find(x => x[0] === a.reason) || [0, a.reason])[1], dstr(a.next), repMap[a.conv] ? '<span class="sbc-pill" style="background:rgba(239,68,68,.2);color:#fca5a5">Replaced anyway</span>' : 'Avoid']); });
+        } else if (L === 'unplanned') {
+            const r = unplannedRows(fy, planned, abp).filter(x => df(x)).sort((a, b) => a.date - b.date); const avoidSet = new Set(abp.filter(a => a.cls === 'Avoid').map(a => a.conv)); head = ['Date', 'Dept', 'Conveyor', 'Metres', 'Vendor', 'Job', 'Note'];
+            r.forEach(x => { tm += x.m; rows.push([dstr(x.date), x.dept, x.name, fmt(x.m), x.vendor, x.desc, avoidSet.has(x.conv) ? 'Was in avoid list' : 'Not in ABP']); });
+        } else if (L === 'steel') {
+            const r = st.rows.filter(x => x.type === 'P' && S.thk[x.conv] && S.thk[x.conv].grade.includes('STEEL') && df(x)).sort((a, b) => a.date - b.date); head = ['Date', 'Dept', 'Conveyor', 'Metres', 'Vendor', 'Job'];
+            r.forEach(x => { tm += x.m; rows.push([dstr(x.date), x.dept, x.name, fmt(x.m), x.vendor, x.desc]); });
+        }
+        return { head, rows, tm };
+    }
+    window.sbcRenderList = function () {
+        if (!S.loaded) return; const d = listData(fyNow(), el('sbcListDept').value || 'All');
+        el('sbcListWrap').innerHTML = `<table class="sbc-table"><thead><tr>${d.head.map(h => `<th style="text-align:left">${h}</th>`).join('')}</tr></thead><tbody>${d.rows.map(r => `<tr>${r.map(c => `<td style="text-align:left">${c}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${d.head.length}">Koi record nahi</td></tr>`}</tbody></table><div class="sbc-note">${d.rows.length} belts / ${fmt(d.tm)} m${S.list === 'steel' ? ' (steel cord = data.csv ka Belt CoverGrade STEELCORD)' : ''}</div>`;
+    };
+
+    // ---- export ----
+    function pdf(node, name) {
+        const bg = getComputedStyle(el('sbcScreen')).backgroundColor;
+        return html2pdf().set({ margin: 6, filename: name, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, backgroundColor: bg, useCORS: true, scrollY: 0 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }, pagebreak: { mode: ['css', 'legacy'], avoid: ['.sbc-panel', '.sbc-banner'] } }).from(node).save();
+    }
+    window.sbcExport = function () { if (!S.loaded) return; pdf(el('sbcReportInner'), `SBC_Report_FY${fyNow()}.pdf`); };
+    window.sbcExportDept = function (dept) {
+        if (!dept || !S.loaded) return; const fy = fyNow(); const T = target(fy); const st = stats(fy); const abp = S.abp.filter(a => a.fy === fy); const km = KM[dept];
+        const cons = st.dm[dept].reduce((a, b) => a + b, 0); const sb = cons / km; const repKeys = new Set(st.rows.filter(x => x.type === 'R').map(x => x.conv));
+        const planned = new Set(abp.filter(a => a.cls === 'Planned' && a.conv).map(a => a.conv));
+        const up = abp.filter(a => a.cls === 'Planned' && a.dept === dept && a.conv && !repKeys.has(a.conv)).sort((a, b) => (a.next || 0) - (b.next || 0));
+        const av = abp.filter(a => a.cls === 'Avoid' && a.dept === dept); const un = unplannedRows(fy, planned, abp).filter(x => x.dept === dept);
+        const tbl = (head, rows) => `<table class="sbc-table"><thead><tr>${head.map(h => `<th style="text-align:left">${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td style="text-align:left">${c}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${head.length}">None</td></tr>`}</tbody></table>`;
+        const img = S.charts.main ? `<img src="${S.charts.main.toBase64Image()}" style="width:100%;max-height:300px;object-fit:contain">` : '';
+        const div = document.createElement('div'); div.style.cssText = 'position:absolute;left:-10000px;top:0;width:1100px;padding:16px;background:' + getComputedStyle(el('sbcScreen')).backgroundColor + ';color:#f8fafc;';
+        div.innerHTML = `<h2 style="margin:0 0 4px">${dept} - Specific Belt Consumption awareness report, FY'${fy}</h2><div class="sbc-note" style="margin-bottom:10px">Generated ${dstr(new Date())}. Plant target ${T} m/km (total ${TOTAL_KM} km). ${dept} length: ${km} km.</div>
+        <div class="sbc-kpis"><div class="sbc-kpi glass-panel"><b>${fmt(cons)} m</b><span>Consumed</span></div><div class="sbc-kpi glass-panel"><b class="${clsFor(sb / T)}">${f1(sb)}</b><span>${dept} SBC (m/km)</span></div><div class="sbc-kpi glass-panel"><b>${up.length}</b><span>Planned belts pending</span></div><div class="sbc-kpi glass-panel"><b>${un.length}</b><span>Unplanned replaced (${fmt(un.reduce((a, b) => a + b.m, 0))} m)</span></div></div>
+        <div class="sbc-banner amber">Unplanned replacements consume the plant's SBC target and force planned belts to be postponed. Please replace only belts in the ABP list and try to avoid belts marked "can be avoided".</div>
+        <h3>Plant monthly SBC trend</h3>${img}
+        <h3>Upcoming planned belts - ${dept}</h3>${tbl(['Conveyor', 'Cat', 'Length m', 'Planned m', 'Grade', 'Next CBM'], up.map(a => [a.name, a.cat, fmt(a.len), fmt(a.plan), a.grade, dstr(a.next)]))}
+        <h3>Belts that can be avoided - ${dept}</h3>${tbl(['Conveyor', 'Cat', 'Length m', 'Reason', 'Next CBM'], av.map(a => [a.name, a.cat, fmt(a.len), (REASONS.find(x => x[0] === a.reason) || [0, a.reason])[1], dstr(a.next)]))}
+        <h3>Unplanned replacements so far - ${dept}</h3>${tbl(['Date', 'Conveyor', 'Metres', 'Job'], un.sort((a, b) => a.date - b.date).map(x => [dstr(x.date), x.name, fmt(x.m), x.desc]))}`;
+        el('sbcScreen').appendChild(div);
+        pdf(div, `SBC_${dept.replace(/[^A-Za-z0-9]/g, '')}_FY${fy}.pdf`).then(() => div.remove()).catch(() => div.remove());
+    };
+})();
+</script>
 </body>
 </html>
