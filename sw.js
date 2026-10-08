@@ -1,6 +1,6 @@
 // Version bump karo (v2, v3, v4...) sirf tab jab STATIC_ASSETS list badle -
 // baaki HTML/data updates ab automatically pick ho jayenge, cache-bump ki zaroorat nahi.
-const CACHE_NAME = 'rtg-app-v2';
+const CACHE_NAME = 'rtg-app-v4';
 
 // Sirf woh files jo shayad hi kabhi badlein - inhe cache-first rakha hai (fast load)
 const STATIC_ASSETS = [
@@ -32,7 +32,7 @@ self.addEventListener('fetch', event => {
   // App shell (index.html) aur live data (data.csv, abn.csv) => NETWORK-FIRST
   // Matlab: online hote hi hamesha LATEST version/data milega.
   // Offline hone par hi purane cached version par fallback hoga.
-  if (req.mode === 'navigate' || req.url.includes('index.html') || req.url.includes('data.csv') || req.url.includes('abn.csv')) {
+  if (req.mode === 'navigate' || req.url.includes('index.html') || req.url.includes('data.csv') || req.url.includes('abn.csv') || req.url.includes('daily.csv') || req.url.includes('patching.csv')) {
     event.respondWith(
       fetch(req)
         .then(res => {
