@@ -193,7 +193,8 @@
         .chart-container { height: 280px; width: 100%; margin-top: 10px; }
         .chart-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;}
         
-        .table-section-wrapper { scroll-margin-top: 180px; } 
+        .table-section-wrapper { scroll-margin-top: 180px; }
+        .lo-sel { padding: 9px 10px; border-radius: 10px; background: #1e293b; color: #fff; border: 1px solid var(--glass-border); max-width: 200px; } 
         .table-container { max-height: 500px; overflow-x: auto; overflow-y: auto; margin-top: 15px; border-radius: 12px; background: rgba(0,0,0,0.15);}
         .table-container::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-container::-webkit-scrollbar-track { background: var(--bg); border-radius: 10px; }
@@ -379,7 +380,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-h</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-j</div>
         </div>
     </div>
 
@@ -445,6 +446,7 @@
                         <div class="kpi-card glass-panel" id="abn-kpi-closed" onclick="filterAbnTable('Closed')" style="border-bottom: 3px solid var(--green);"><div class="kpi-title">Total Closed</div><div class="kpi-val" id="a-k-closed">0</div><i class="fas fa-check-circle kpi-icon"></i></div>
                         <div class="kpi-card glass-panel" id="abn-kpi-open" onclick="filterAbnTable('Open')" style="border-bottom: 3px solid var(--red); background: rgba(244, 63, 94, 0.05);"><div class="kpi-title" style="color: var(--red);">Total Open</div><div class="kpi-val" id="a-k-open" style="color:var(--red);">0</div><i class="fas fa-exclamation-triangle kpi-icon" style="color:var(--red);"></i></div>
                         <div class="kpi-card glass-panel" id="abn-kpi-crit" onclick="filterAbnTable('Critical')" style="border-bottom: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);"><div class="kpi-title" style="color: var(--orange);">Critical Open</div><div class="kpi-val" id="a-k-crit" style="color:var(--orange);">0</div><i class="fas fa-fire kpi-icon" style="color:var(--orange);"></i></div>
+                        <div class="kpi-card glass-panel" id="kpi-card-logged" onclick="openLoggedObsPage()" style="border-bottom: 3px solid var(--teal); background: rgba(14,165,233,0.06);"><div class="kpi-title" style="color: var(--teal);"><i class="fas fa-clipboard-list"></i> Logged by Users</div><div class="kpi-val" id="a-k-logged" style="color:var(--teal);">–</div></div>
                         <div class="kpi-card glass-panel" id="kpi-card-abn-6m" onclick="filterAbnTable('Over6M')" style="border-bottom: 3px solid var(--pink); background: rgba(236, 72, 153, 0.05); display: none;"><div class="kpi-title" style="color: var(--pink);"><i class="fas fa-clock"></i> >6M Backlog</div><div class="kpi-val" id="a-k-6m" style="color:var(--pink);">0</div></div>
                     </div>
                 </div>
@@ -456,20 +458,6 @@
                         <p style="margin:4px 0 0; color:var(--text-muted); font-size:0.85rem;">Found something during field inspection? Select department, route and conveyor and log it instantly.</p>
                     </div>
                     <i class="fas fa-chevron-right" style="color:var(--teal);"></i>
-                </div>
-
-                <div id="loggedObsSection" class="interactive-section glass-panel">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-                        <h3 style="margin:0; font-weight:800;">🧾 Abnormalities Logged by Users <span class="count-badge" id="loggedObsCount">0</span></h3>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <select id="loggedObsFilter" onchange="renderLoggedObservations()" style="padding:7px 10px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid var(--glass-border);">
-                                <option value="All">All Status</option><option value="Open">Open</option><option value="Closed">Closed</option>
-                                <option value="Operate under Observation">Operate under Observation</option><option value="Operate">Operate</option>
-                            </select>
-                            <button type="button" class="btn-slate" onclick="loadLoggedObservations()"><i class="fas fa-sync-alt"></i> Refresh</button>
-                        </div>
-                    </div>
-                    <div id="loggedObsList" style="display:flex; flex-direction:column; gap:12px; max-height:520px; overflow-y:auto;"></div>
                 </div>
 
                 <div id="abn-chart-section" class="interactive-section glass-panel">
@@ -583,6 +571,40 @@
             </div>
             
             <!-- ADMIN THICKNESS SCHEDULE SUB-PAGE -->
+            <!-- LOGGED OBSERVATIONS PAGE -->
+            <div id="loggedObsPage" style="display: none;">
+                <div class="header" style="padding-top:0;">
+                    <div class="header-title" style="gap:15px;">
+                        <button class="btn btn-slate glass-panel" onclick="closeLoggedObsPage()"><i class="fas fa-arrow-left"></i> Back</button>
+                        <span><i class="fas fa-clipboard-list text-teal"></i> Abnormalities Logged by Users</span>
+                    </div>
+                    <button class="btn btn-slate glass-panel" onclick="loadLoggedObservations()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+                <div class="sticky-kpi" style="top: 0; padding-top:10px;">
+                    <div class="kpi-grid" id="loggedObsKpis"></div>
+                </div>
+                <div class="interactive-section table-section-wrapper glass-panel" style="display:block;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                        <h3 style="margin:0; font-weight:800;">Observations <span class="count-badge" id="loggedObsCount">0</span></h3>
+                        <input type="text" id="loSearch" class="search-input glass-panel" placeholder="🔍 Search Conveyor..." onkeyup="renderLoggedObservations()">
+                        <select id="loDept" class="lo-sel" onchange="loDeptChanged()"></select>
+                        <select id="loRoute" class="lo-sel" onchange="renderLoggedObservations()"></select>
+                        <select id="loStatus" class="lo-sel" onchange="renderLoggedObservations()">
+                            <option value="All">All Status</option><option value="Open">Open</option><option value="Closed">Closed</option>
+                            <option value="Operate under Observation">Operate under Observation</option><option value="Operate">Operate</option>
+                        </select>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr>
+                                <th>#</th><th>Observed On</th><th>Dept</th><th>Route</th><th>Conveyor</th><th>Logged By</th><th>Observations</th><th>Status</th><th>Admin Recommendation</th>
+                            </tr></thead>
+                            <tbody id="loggedObsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div id="adminThkPage" style="display: none;">
                 <div class="header" style="padding-top:0;">
                     <div class="header-title" style="gap:15px;">
@@ -761,7 +783,7 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             if(btnId) document.getElementById(btnId).classList.add('active');
-            closeAdminThkPage(); 
+            closeAdminThkPage(); document.getElementById('loggedObsPage').style.display = 'none';
             window.scrollTo(0,0); 
         }
 
@@ -1028,50 +1050,89 @@
         function fmtDMY(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '-' + m[2] + '-' + m[1] : (iso || ''); }
 
         function loadLoggedObservations() {
-            const list = document.getElementById('loggedObsList');
-            if (!observationLogUrl || observationLogUrl.includes('PASTE_YOUR')) { list.innerHTML = '<p style="color:var(--text-muted);">Setup incomplete.</p>'; return; }
-            list.innerHTML = '<p style="color:var(--text-muted);">Loading...</p>';
+            const body = document.getElementById('loggedObsBody');
+            if (!observationLogUrl || observationLogUrl.includes('PASTE_YOUR')) return;
+            if (body && document.getElementById('loggedObsPage').style.display !== 'none') body.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--text-muted);">Loading...</td></tr>';
             fetch(observationLogUrl + '?t=' + Date.now())
                 .then(r => r.json())
                 .then(d => {
                     if (d.status !== 'success') throw new Error(d.message || 'error');
                     loggedObsData = d.items || [];
+                    updateLoggedKpi();
+                    buildLoFilters();
                     renderLoggedObservations();
                 })
-                .catch(() => { list.innerHTML = '<p style="color:var(--red);">Could not load logged observations. Please try Refresh.</p>'; });
+                .catch(() => {
+                    document.getElementById('a-k-logged').innerText = '!';
+                    if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--red);">Could not load logged observations. Please try Refresh.</td></tr>';
+                });
         }
 
+        function updateLoggedKpi() {
+            const open = loggedObsData.filter(o => o.status === 'Open').length;
+            document.getElementById('a-k-logged').innerText = open;
+        }
+
+        function openLoggedObsPage() {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById('tabs-menu').style.display = 'none';
+            document.getElementById('loggedObsPage').style.display = 'block';
+            window.scrollTo(0, 0);
+            loadLoggedObservations();
+        }
+        function closeLoggedObsPage() { switchTab('abnTab', 'btn-abn'); }
+
+        function buildLoFilters() {
+            const dSel = document.getElementById('loDept'); const cur = dSel.value || 'All';
+            const depts = Array.from(new Set(loggedObsData.map(o => o.department).filter(Boolean))).sort();
+            dSel.innerHTML = '<option value="All">All Departments</option>' + depts.map(d => `<option value="${escHtml(d)}">${escHtml(d)}</option>`).join('');
+            dSel.value = depts.includes(cur) ? cur : 'All';
+            buildLoRoutes();
+        }
+        function buildLoRoutes() {
+            const d = document.getElementById('loDept').value; const rSel = document.getElementById('loRoute'); const cur = rSel.value || 'All';
+            const routes = Array.from(new Set(loggedObsData.filter(o => d === 'All' || o.department === d).map(o => o.section).filter(Boolean))).sort();
+            rSel.innerHTML = '<option value="All">All Routes</option>' + routes.map(r => `<option value="${escHtml(r)}">${escHtml(r)}</option>`).join('');
+            rSel.value = routes.includes(cur) ? cur : 'All';
+        }
+        function loDeptChanged() { buildLoRoutes(); renderLoggedObservations(); }
+
         function renderLoggedObservations() {
-            const list = document.getElementById('loggedObsList');
-            const filter = document.getElementById('loggedObsFilter').value;
+            const body = document.getElementById('loggedObsBody');
             const isAdmin = currentRole === 'admin';
-            const items = loggedObsData.filter(o => filter === 'All' || o.status === filter);
+            const dept = document.getElementById('loDept').value || 'All', route = document.getElementById('loRoute').value || 'All';
+            const st = document.getElementById('loStatus').value || 'All';
+            const q = document.getElementById('loSearch').value.trim().toLowerCase();
+            // KPI chips (department/route/search filters applied; clicking a chip sets the status filter)
+            const base = loggedObsData.filter(o => (dept === 'All' || o.department === dept) && (route === 'All' || o.section === route) && (!q || String(o.conveyor).toLowerCase().includes(q)));
+            const kp = [['All', 'Total', 'var(--blue)', base.length]].concat(Object.keys(LOG_STATUS).map(k => [k, k, LOG_STATUS[k], base.filter(o => o.status === k).length]));
+            document.getElementById('loggedObsKpis').innerHTML = kp.map(k => `<div class="kpi-card glass-panel" onclick="document.getElementById('loStatus').value='${k[0]}'; renderLoggedObservations();" style="border-bottom:3px solid ${k[2]}; ${st === k[0] ? 'outline:2px solid ' + k[2] + ';' : ''}"><div class="kpi-title" style="color:${k[2]};">${k[1]}</div><div class="kpi-val" style="color:${k[2]};">${k[3]}</div></div>`).join('');
+            const items = base.filter(o => st === 'All' || o.status === st);
             document.getElementById('loggedObsCount').innerText = items.length;
-            if (items.length === 0) { list.innerHTML = '<p style="color:var(--text-muted);">No logged observations yet.</p>'; return; }
-            list.innerHTML = items.slice(0, 100).map(o => {
+            if (items.length === 0) { body.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--text-muted);">No logged observations found.</td></tr>'; return; }
+            body.innerHTML = items.slice(0, 300).map((o, idx) => {
                 const col = LOG_STATUS[o.status] || '#94a3b8';
                 const obsHtml = escHtml(o.observations).replace(/\n/g, '<br>');
-                let controls;
+                let statusCell, recoCell;
                 if (isAdmin) {
-                    const opts = Object.keys(LOG_STATUS).map(k => `<option value="${k}" ${k === o.status ? 'selected' : ''} style="color:${LOG_STATUS[k]};">${k}</option>`).join('');
-                    controls = `<div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
-                        <select id="ls-${o.id}" onchange="this.style.color=LOG_STATUS[this.value]; this.style.borderColor=LOG_STATUS[this.value];" style="padding:8px; border-radius:8px; background:#1e293b; font-weight:700; color:${col}; border:2px solid ${col};">${opts}</select>
-                        <textarea id="lr-${o.id}" rows="3" class="search-input glass-panel" style="width:100%; resize:vertical; font-family:inherit;" placeholder="Admin recommendation...">${escHtml(o.recommendation)}</textarea>
-                        <div><button type="button" class="btn-slate" onclick="saveLoggedObs('${o.id}', this)"><i class="fas fa-save"></i> Save</button> <span id="lm-${o.id}" style="font-size:0.8rem; margin-left:8px;"></span></div></div>`;
+                    const opts = Object.keys(LOG_STATUS).map(k => `<option value="${k}" ${k === o.status ? 'selected' : ''}>${k}</option>`).join('');
+                    statusCell = `<select id="ls-${o.id}" onchange="this.style.color=LOG_STATUS[this.value]; this.style.borderColor=LOG_STATUS[this.value]; loMarkDirty('${o.id}')" style="padding:6px; border-radius:8px; background:#1e293b; font-weight:700; color:${col}; border:2px solid ${col}; min-width:150px;">${opts}</select>`;
+                    recoCell = `<textarea id="lr-${o.id}" rows="3" class="search-input glass-panel" style="width:100%; min-width:160px; resize:vertical; font-family:inherit;" placeholder="Admin recommendation..." oninput="loMarkDirty('${o.id}')">${escHtml(o.recommendation)}</textarea>
+                        <div style="margin-top:6px;"><button type="button" id="lb-${o.id}" class="btn-slate" style="padding:6px 14px; display:none;" onclick="saveLoggedObs('${o.id}', this)"><i class="fas fa-save"></i> Save</button> <span id="lm-${o.id}" style="font-size:0.8rem; margin-left:6px;"></span></div>`;
                 } else {
-                    controls = `<div style="margin-top:10px; padding:10px; border-radius:10px; background:rgba(148,163,184,0.1);">
-                        <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:4px;">ADMIN RECOMMENDATION</div>
-                        <div style="font-size:0.9rem;">${o.recommendation ? escHtml(o.recommendation).replace(/\n/g, '<br>') : '<span style="color:var(--text-muted);">No recommendation yet.</span>'}</div></div>`;
+                    statusCell = `<span style="background:${col}; color:#000; font-weight:800; font-size:0.75rem; padding:3px 10px; border-radius:20px; white-space:nowrap;">${escHtml(o.status)}</span>`;
+                    recoCell = o.recommendation ? escHtml(o.recommendation).replace(/\n/g, '<br>') : '<span style="color:var(--text-muted);">—</span>';
                 }
-                return `<div class="glass-panel" style="padding:14px; border-radius:14px; border-left:5px solid ${col};">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
-                        <div><b>${escHtml(o.conveyor)}</b> <span style="color:var(--text-muted); font-size:0.8rem;">· ${escHtml(o.department)}${o.section && o.section !== o.department ? ' · ' + escHtml(o.section) : ''}</span></div>
-                        <span style="background:${col}; color:#000; font-weight:800; font-size:0.75rem; padding:3px 10px; border-radius:20px;">${escHtml(o.status)}</span>
-                    </div>
-                    <div style="font-size:0.78rem; color:var(--text-muted); margin:4px 0 8px;">Observed on ${fmtDMY(o.obsDate)} · Logged by ${escHtml(o.employeeId)} on ${fmtDMY(o.loggedOn)}</div>
-                    <div style="font-size:0.9rem;">${obsHtml}</div>
-                    ${controls}</div>`;
+                return `<tr style="border-left:4px solid ${col};"><td>${idx + 1}</td><td style="white-space:nowrap;">${fmtDMY(o.obsDate)}</td><td>${escHtml(o.department)}</td><td>${escHtml(o.section)}</td><td><b>${escHtml(o.conveyor)}</b></td><td>${escHtml(o.employeeId)}<br><span style="font-size:0.7rem; color:var(--text-muted);">${fmtDMY(o.loggedOn)}</span></td><td style="min-width:200px;">${obsHtml}</td><td>${statusCell}</td><td>${recoCell}</td></tr>`;
             }).join('');
+        }
+
+        // Save button sirf tab dikhao jab status/recommendation badla ho
+        function loMarkDirty(id) {
+            const o = loggedObsData.find(x => x.id === id); if (!o) return;
+            const changed = document.getElementById('ls-' + id).value !== o.status || document.getElementById('lr-' + id).value.trim() !== String(o.recommendation || '').trim();
+            document.getElementById('lb-' + id).style.display = changed ? 'inline-block' : 'none';
+            const m = document.getElementById('lm-' + id); if (changed) m.innerText = '';
         }
 
         function saveLoggedObs(id, btn) {
@@ -1091,8 +1152,9 @@
                     btn.disabled = false;
                     if (d.status === 'success') {
                         const o = loggedObsData.find(x => x.id === id); if (o) { o.status = payload.status; o.recommendation = payload.recommendation; }
+                        btn.style.display = 'none';
                         msg.style.color = 'var(--green)'; msg.innerText = '✅ Saved';
-                        setTimeout(renderLoggedObservations, 900);
+                        updateLoggedKpi(); setTimeout(renderLoggedObservations, 900);
                     } else { msg.style.color = 'var(--red)'; msg.innerText = 'Error: ' + (d.message || 'failed'); }
                 })
                 .catch(() => { btn.disabled = false; msg.style.color = 'var(--red)'; msg.innerText = 'Network error'; });
