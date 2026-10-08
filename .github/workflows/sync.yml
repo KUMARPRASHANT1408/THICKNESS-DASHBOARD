@@ -23,9 +23,17 @@ jobs:
         run: |
           curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWKjd9swnkqU7NLBWL_RP7J5KTumUQslWnJ3GZyglyYZRt9xJy6WqvJa7ST297K4F4w01K24xJ5cvN/pub?gid=0&single=true&output=csv" -o abn.csv
 
+      - name: Download latest Daily Report CSV from Google Sheet
+        run: |
+          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWKjd9swnkqU7NLBWL_RP7J5KTumUQslWnJ3GZyglyYZRt9xJy6WqvJa7ST297K4F4w01K24xJ5cvN/pub?gid=193430657&single=true&output=csv" -o daily.csv
+
+      - name: Download latest Patching CSV from Google Sheet
+        run: |
+          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWKjd9swnkqU7NLBWL_RP7J5KTumUQslWnJ3GZyglyYZRt9xJy6WqvJa7ST297K4F4w01K24xJ5cvN/pub?gid=2017604099&single=true&output=csv" -o patching.csv
+
       - name: Commit and push if data changed
         run: |
           git config --global user.name 'GitHub Actions Bot'
           git config --global user.email 'actions@github.com'
-          git add data.csv abn.csv
+          git add data.csv abn.csv daily.csv patching.csv
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-sync latest CSV data from Google Sheet" && git push)
