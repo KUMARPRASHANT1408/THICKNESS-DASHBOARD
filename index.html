@@ -367,7 +367,7 @@
                 <p>Belt thickness, wear rate & life analytics dashboard</p>
             </div>
             <div class="app-card card-abn glass-panel" onclick="openAbnormalityApp()">
-                <div class="app-icon"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 6L8 16v16c0 14 10 22 24 26 14-4 24-12 24-26V16L32 6z" fill="rgba(255,255,255,0.2)"/><path d="M32 20v14"/><circle cx="32" cy="43" r="1.5" fill="currentColor"/><path d="M14 36h7l3-5 4 9 3-6h5" opacity="0.0"/></svg></div>
+                <div class="app-icon"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 6L8 16v16c0 14 10 22 24 26 14-4 24-12 24-26V16L32 6z" fill="rgba(255,255,255,0.2)"/><path d="M32 20v14"/><circle cx="32" cy="43" r="1.5" fill="currentColor"/></svg></div>
                 <h3>Abnormality App</h3>
                 <p>Open/closed abnormalities, categories & action plans</p>
             </div>
@@ -379,6 +379,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-f</div>
         </div>
     </div>
 
@@ -658,7 +659,8 @@
                 </div>
                 <div>
                     <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Observation Date <span style="font-weight:400; color:var(--text-muted);">(when it was observed — can differ from the logging date)</span></label>
-                    <input type="date" id="logObsDate" class="search-input glass-panel" style="width:100%; margin-top:5px;">
+                    <input type="text" id="logObsDate" class="search-input glass-panel" style="width:100%; margin-top:5px; cursor:pointer;" readonly placeholder="📅 Select date" onclick="toggleLogObsCalendar()">
+                    <div id="logObsCal" class="glass-panel" style="display:none; margin-top:8px; padding:12px; border-radius:14px; border:1px solid var(--glass-border);"></div>
                 </div>
                 <div>
                     <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Department</label>
@@ -953,9 +955,52 @@
         // ===== LOG YOUR OBSERVATION (writes to a separate Google Sheet via Apps Script Web App) =====
         const observationLogUrl = "https://script.google.com/macros/s/AKfycby36wU2qlN-f-hhldF_IIuu1oMQx5c7AgD7mHSyAMrKEHTS3YiDOEzwdrGS_2dJAKeo/exec";
 
+        // ===== Calendar date picker (tap a day to select; no typing/deleting needed) =====
+        let logObsCalSel = '', logObsCalView = null;
+        function toggleLogObsCalendar() {
+            let cal = document.getElementById('logObsCal');
+            if (cal.style.display === 'block') { cal.style.display = 'none'; return; }
+            let base = logObsCalSel ? new Date(logObsCalSel + 'T00:00:00') : new Date();
+            logObsCalView = new Date(base.getFullYear(), base.getMonth(), 1);
+            renderLogObsCalendar();
+            cal.style.display = 'block';
+        }
+        function logObsCalNav(delta) {
+            logObsCalView = new Date(logObsCalView.getFullYear(), logObsCalView.getMonth() + delta, 1);
+            renderLogObsCalendar();
+        }
+        function logObsCalPick(iso) {
+            logObsCalSel = iso;
+            document.getElementById('logObsDate').value = iso;
+            document.getElementById('logObsCal').style.display = 'none';
+        }
+        function renderLogObsCalendar() {
+            const y = logObsCalView.getFullYear(), m = logObsCalView.getMonth();
+            const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const firstDow = new Date(y, m, 1).getDay();
+            const days = new Date(y, m + 1, 0).getDate();
+            const t = new Date(); const todayIso = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+            let h = `<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <button type="button" class="btn-slate" style="padding:6px 12px;" onclick="logObsCalNav(-1)"><i class="fas fa-chevron-left"></i></button>
+                <b>${monthNames[m]} ${y}</b>
+                <button type="button" class="btn-slate" style="padding:6px 12px;" onclick="logObsCalNav(1)"><i class="fas fa-chevron-right"></i></button></div>
+                <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center; font-size:0.8rem;">`;
+            ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => h += `<div style="color:var(--text-muted); font-weight:700;">${d}</div>`);
+            for (let i = 0; i < firstDow; i++) h += '<div></div>';
+            for (let d = 1; d <= days; d++) {
+                const iso = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+                const sel = iso === logObsCalSel, isToday = iso === todayIso;
+                h += `<div onclick="logObsCalPick('${iso}')" style="cursor:pointer; padding:8px 0; border-radius:8px; ${sel ? 'background:var(--blue); color:#fff; font-weight:800;' : (isToday ? 'border:1px solid var(--blue);' : '')}">${d}</div>`;
+            }
+            h += `</div><div style="text-align:center; margin-top:8px;"><button type="button" class="btn-slate" style="padding:6px 14px; font-size:0.8rem;" onclick="logObsCalPick('${todayIso}')">Today</button></div>`;
+            document.getElementById('logObsCal').innerHTML = h;
+        }
+
         function openLogObservationModal() {
             // Observation date default aaj ki date (user chahe to badal sakta hai)
-            document.getElementById('logObsDate').value = new Date().toISOString().split('T')[0];
+            let _t = new Date(); logObsCalSel = _t.getFullYear() + '-' + String(_t.getMonth()+1).padStart(2,'0') + '-' + String(_t.getDate()).padStart(2,'0');
+            document.getElementById('logObsDate').value = logObsCalSel;
+            document.getElementById('logObsCal').style.display = 'none';
 
             // Department dropdown — Thickness + Abnormality dono se unique depts
             let depts = new Set();
