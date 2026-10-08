@@ -653,10 +653,10 @@
             <div style="display:flex; flex-direction:column; gap:14px; padding: 5px;">
                 <div>
                     <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Employee ID</label>
-                    <input type="text" id="logObsEmpId" class="search-input glass-panel" style="width:100%; margin-top:5px;" placeholder="Apna Employee ID daalo">
+                    <input type="text" id="logObsEmpId" class="search-input glass-panel" style="width:100%; margin-top:5px;" placeholder="Enter your Employee ID">
                 </div>
                 <div>
-                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Observation Date <span style="font-weight:400; color:var(--text-muted);">(jab belt mein yeh mila — logging date se alag ho sakti hai)</span></label>
+                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Observation Date <span style="font-weight:400; color:var(--text-muted);">(when it was observed — can differ from the logging date)</span></label>
                     <input type="date" id="logObsDate" class="search-input glass-panel" style="width:100%; margin-top:5px;">
                 </div>
                 <div>
@@ -669,16 +669,12 @@
                 </div>
                 <div>
                     <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Conveyor</label>
-                    <input type="text" id="logObsConveyor" list="logObsConveyorList" class="search-input glass-panel" style="width:100%; margin-top:5px;" placeholder="🔍 Conveyor naam type karo...">
+                    <input type="text" id="logObsConveyor" list="logObsConveyorList" class="search-input glass-panel" style="width:100%; margin-top:5px;" placeholder="🔍 Type conveyor name...">
                     <datalist id="logObsConveyorList"></datalist>
                 </div>
                 <div>
-                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Observations (jo bhi mila, select karo)</label>
-                    <div id="logObsChecklist" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:8px;"></div>
-                </div>
-                <div id="logObsOtherWrap" style="display:none;">
-                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Other (likho)</label>
-                    <input type="text" id="logObsOtherText" class="search-input glass-panel" style="width:100%; margin-top:5px;" placeholder="Jo bhi extra observation hai...">
+                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Observations (press Enter for a new point)</label>
+                    <textarea id="logObsText" class="search-input glass-panel" rows="6" style="width:100%; margin-top:8px; resize:vertical; font-family:inherit;" placeholder="1. Belt edge is damaged." onfocus="logObsInitNumbering()" onkeydown="logObsKeydown(event)"></textarea>
                 </div>
                 <button class="role-btn role-btn-user" style="width:100%; justify-content:center;" onclick="submitLogObservation()"><i class="fas fa-paper-plane"></i> Submit Observation</button>
                 <p id="logObsStatus" style="text-align:center; font-size:0.85rem; margin:0;"></p>
@@ -954,7 +950,6 @@
         
         // ===== LOG YOUR OBSERVATION (writes to a separate Google Sheet via Apps Script Web App) =====
         const observationLogUrl = "https://script.google.com/macros/s/AKfycby36wU2qlN-f-hhldF_IIuu1oMQx5c7AgD7mHSyAMrKEHTS3YiDOEzwdrGS_2dJAKeo/exec";
-        const observationCategories = ['Ply Visible', 'Edge Damage', 'Crack', 'Spillage', 'Joint Damage', 'Idler Damage', 'Belt Misalignment', 'Rubber Peeling', 'Other'];
 
         function openLogObservationModal() {
             // Observation date default aaj ki date (user chahe to badal sakta hai)
@@ -975,12 +970,7 @@
             document.getElementById('logObsConveyorList').innerHTML = Array.from(convs).filter(Boolean).sort().map(c => `<option value="${c}">`).join('');
             document.getElementById('logObsConveyor').value = '';
 
-            // Checklist
-            document.getElementById('logObsChecklist').innerHTML = observationCategories.map(cat =>
-                `<label class="ms-opt" style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="log-obs-chk" value="${cat}" onchange="toggleLogObsOther()"> ${cat}</label>`
-            ).join('');
-            document.getElementById('logObsOtherWrap').style.display = 'none';
-            document.getElementById('logObsOtherText').value = '';
+            document.getElementById('logObsText').value = '';
             document.getElementById('logObsStatus').innerText = '';
 
             document.getElementById('logObsModal').style.display = 'flex';
@@ -998,28 +988,46 @@
             }
         }
 
-        function toggleLogObsOther() {
-            let otherChecked = document.querySelector('.log-obs-chk[value="Other"]').checked;
-            document.getElementById('logObsOtherWrap').style.display = otherChecked ? 'block' : 'none';
+        // Auto-numbered observation box: Enter => new line with next number
+        function logObsInitNumbering() {
+            let ta = document.getElementById('logObsText');
+            if (!ta.value.trim()) ta.value = '1. ';
+        }
+        function logObsKeydown(e) {
+            let ta = e.target;
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                let lines = ta.value.split('\n');
+                let last = lines[lines.length - 1];
+                if (/^\d+\.\s*$/.test(last)) return;
+                let n = lines.filter(l => /^\d+\./.test(l)).length + 1;
+                ta.value = ta.value.replace(/\s+$/, '') + '\n' + n + '. ';
+                ta.scrollTop = ta.scrollHeight;
+            } else if (e.key === 'Backspace') {
+                let lines = ta.value.split('\n');
+                let last = lines[lines.length - 1];
+                if (/^\d+\.\s*$/.test(last) && lines.length > 1 && ta.selectionStart === ta.value.length) {
+                    e.preventDefault();
+                    lines.pop();
+                    ta.value = lines.join('\n');
+                }
+            }
         }
 
         function closeLogObsModal() { document.getElementById('logObsModal').style.display = 'none'; }
 
         function submitLogObservation() {
             let empId = document.getElementById('logObsEmpId').value.trim();
-            if (!empId) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Employee ID daalo.</span>'; return; }
+            if (!empId) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Please enter Employee ID.</span>'; return; }
 
             let obsDate = document.getElementById('logObsDate').value;
-            if (!obsDate) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Observation Date daalo.</span>'; return; }
+            if (!obsDate) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Please enter Observation Date.</span>'; return; }
 
             let conveyor = document.getElementById('logObsConveyor').value.trim();
-            if (!conveyor) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Conveyor naam daalo.</span>'; return; }
+            if (!conveyor) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Please enter Conveyor name.</span>'; return; }
 
-            let checked = Array.from(document.querySelectorAll('.log-obs-chk:checked')).map(c => c.value);
-            if (checked.length === 0) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Kam se kam ek observation select karo.</span>'; return; }
-
-            let otherText = document.getElementById('logObsOtherText').value.trim();
-            let observations = checked.map(c => c === 'Other' && otherText ? `Other: ${otherText}` : c);
+            let observations = document.getElementById('logObsText').value.split('\n').map(l => l.trim()).filter(l => l && !/^\d+\.\s*$/.test(l));
+            if (observations.length === 0) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Please write at least one observation.</span>'; return; }
 
             let payload = {
                 employeeId: empId,
@@ -1031,22 +1039,22 @@
             };
 
             if (!observationLogUrl || observationLogUrl.includes('PASTE_YOUR')) {
-                document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Setup abhi incomplete hai — observationLogUrl set nahi hua.</span>';
+                document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Setup incomplete — observationLogUrl is not set.</span>';
                 return;
             }
 
-            document.getElementById('logObsStatus').innerText = 'Submit ho raha hai...';
+            document.getElementById('logObsStatus').innerText = 'Submitting...';
             fetch(observationLogUrl, { method: 'POST', body: JSON.stringify(payload) })
                 .then(res => res.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--green);">✅ Observation log ho gaya!</span>';
+                        document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--green);">✅ Observation logged!</span>';
                         setTimeout(closeLogObsModal, 1200);
                     } else {
-                        document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Error: ' + (data.message || 'kuch gadbad hui') + '</span>';
+                        document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Error: ' + (data.message || 'something went wrong') + '</span>';
                     }
                 })
-                .catch(() => { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Network error — dobara try karo.</span>'; });
+                .catch(() => { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Network error — please try again.</span>'; });
         }
 
         function populateAbnDeptDropdown() {
