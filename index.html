@@ -380,7 +380,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-l</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-m</div>
         </div>
     </div>
 
@@ -927,7 +927,7 @@
                             
                             document.getElementById('skeleton-screen').style.display = 'none';
 
-                            if (isAbn) { fileType = 'abn'; window.abnRawDataCache = cleanedData; processAbnormality(cleanedData, true); } else if (isThk) { fileType = 'thk'; processThickness(cleanedData, cleanHeaders); fetchAbnormalityDataInBackground(); } else { resetDashboard(); }
+                            if (isAbn) { fileType = 'abn'; window.abnRawDataCache = cleanedData; processAbnormality(cleanedData, true); } else if (isThk) { fileType = 'thk'; processThickness(cleanedData, cleanHeaders); fetchAbnormalityDataInBackground(); fetchJointDataInBackground(); } else { resetDashboard(); }
                         },
                         error: function() { alert("data.csv file not found! Make sure GitHub Action has successfully generated it."); }
                     });
@@ -1945,6 +1945,88 @@ function findFuzzyConveyorMatches(query, dataset) {
     return [...scored.values()].sort((a, b) => a.dist - b.dist).map(r => r.d);
 }
 
+// ===== JOINT HISTORY (Daily Report + Patching sheets) =====
+const dailyCsvUrl = "./daily.csv";
+const patchingCsvUrl = "./patching.csv";
+window.jointDaily = {}; window.jointPatch = {};
+const JOINT_REPEAT_LIMIT = 2;   // itni baar Rejoint/Piece Addition ke baad Replacement suggest hoga
+const PATCH_COUNT_LIMIT = 3;    // itni patching ke baad joints par dhyan dene ko bolega
+
+function jKey(s) { return String(s || '').trim().toUpperCase().replace(/\s+/g, ''); }
+function jFmtDate(d) { return d ? String(d.getDate()).padStart(2, '0') + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + d.getFullYear() : '-'; }
+
+function fetchJointDataInBackground() {
+    const load = (url, cb) => fetch(url + '?t=' + Date.now(), { cache: 'no-store' })
+        .then(r => { if (!r.ok) throw new Error('missing'); return r.text(); })
+        .then(t => Papa.parse(t, { header: true, skipEmptyLines: true, transformHeader: h => (h || '').trim(), complete: res => cb(res.data) }))
+        .catch(() => console.warn('Joint data not available yet:', url));
+    load(dailyCsvUrl, rows => {
+        const map = {};
+        rows.forEach(r => {
+            const t = String(r['Type Of Job'] || '').toLowerCase();
+            let type = t.includes('replacement') ? 'Replacement' : t.includes('rejoint') ? 'Rejoint' : t.includes('piece addition') ? 'Piece Addition' : null;
+            if (!type) return;
+            const k = jKey(r['Conv_x002e_ Name']); if (!k) return;
+            const d = parseDateCustom(r['Date']); if (!d) return;
+            (map[k] = map[k] || []).push({ type: type, date: d, joint: String(r['Job Description'] || '').trim(), vendor: String(r['Job done by (Jointing team)'] || '').trim() || '-', metres: String(r['consumption'] || '').trim() });
+        });
+        Object.keys(map).forEach(k => map[k].sort((a, b) => a.date - b.date));
+        window.jointDaily = map;
+    });
+    load(patchingCsvUrl, rows => {
+        const map = {};
+        rows.forEach(r => {
+            const k = jKey(r['Conveyor']); if (!k) return;
+            map[k] = { total: r['Total Joint'] || '0', hot: r['Hot'] || '0', cold: r['Cold/MLT/FASTNER'] || '0', count: parseInt(r['Patching count since last replacement']) || 0, status: r['Joint Status'] || '-' };
+        });
+        window.jointPatch = map;
+    });
+}
+
+// last replacement ke baad ki joint history (lastRepStr = thickness sheet ki 'Last Belt Replacement')
+function getJointFacts(conv, lastRepStr) {
+    const k = jKey(conv); const jobs = window.jointDaily[k] || []; const pt = window.jointPatch[k] || null;
+    const lr = parseDateCustom(lastRepStr);
+    const reps = jobs.filter(j => j.type === 'Replacement');
+    const lastRepJob = reps.length ? reps[reps.length - 1] : null;
+    const after = jobs.filter(j => j.type !== 'Replacement' && (!lr || j.date >= lr));
+    return { jobs, pt, lastRepJob, after, lr };
+}
+
+function getJointInfoText(conv, lastRepStr) {
+    const f = getJointFacts(conv, lastRepStr);
+    if (f.jobs.length === 0 && !f.pt) return '';
+    let out = '';
+    if (f.jobs.length > 0) {
+        let lines = [];
+        if (f.lastRepJob) lines.push(`  - Replacement: **${f.lastRepJob.joint || '-'}** by **${f.lastRepJob.vendor}** on **${jFmtDate(f.lastRepJob.date)}**`);
+        f.after.forEach(j => lines.push(`  - ${j.type}: **${j.joint || '-'}** by **${j.vendor}** on **${jFmtDate(j.date)}**${j.type === 'Piece Addition' && j.metres ? ' (' + j.metres + ' m)' : ''}`));
+        if (f.after.length === 0) lines.push(`  - Last replacement ke baad koi Rejoint / Piece Addition record nahi hai`);
+        out += `\n* Joint History:\n${lines.join('\n')}`;
+    }
+    if (f.pt) out += `\n* Patching: Hot joints **${f.pt.hot}**, Cold joints **${f.pt.cold}**, Patching count **${f.pt.count}** _(Joint status: ${f.pt.status})_`;
+    return out;
+}
+
+// Wizard ke liye: repeated rejoint / patching ka note (null agar kuch nahi)
+function getJointRiskNote(record) {
+    const f = getJointFacts(record.conv, record.lastRep);
+    let hi = [], en = [], facts = [];
+    const rj = f.after.filter(j => j.type === 'Rejoint').length, pa = f.after.filter(j => j.type === 'Piece Addition').length;
+    if (f.jobs.length > 0) facts.push(`Since last replacement: ${rj} Rejoint, ${pa} Piece Addition`);
+    if (f.pt) facts.push(`Hot joints ${f.pt.hot}, Cold joints ${f.pt.cold}, Patching count ${f.pt.count}`);
+    if (rj + pa >= JOINT_REPEAT_LIMIT) {
+        hi.push(`⚠️ Pichle replacement ke baad **${rj + pa} baar** Rejoint/Piece Addition ho chuka hai (Rejoint ${rj}, Piece Addition ${pa}) — baar-baar joint ke bajay **Replacement** consider karo.`);
+        en.push(`Rejoint/Piece Addition has already been done ${rj + pa} times since the last replacement (Rejoint ${rj}, Piece Addition ${pa}) — consider Replacement instead of repeated jointing.`);
+    }
+    if (f.pt && (f.pt.count >= PATCH_COUNT_LIMIT || /alert/i.test(f.pt.status))) {
+        hi.push(`⚠️ Patching count **${f.pt.count}**, Joint status **${f.pt.status}** — joints par dhyan do.`);
+        en.push(`Patching count ${f.pt.count}, Joint status ${f.pt.status} — joints need attention.`);
+    }
+    if (facts.length === 0) return null;
+    return { hi: hi.join('\n'), en: en.join(' '), facts: facts.join('; ') };
+}
+
 function getAbnormalityStatusText(convName) {
     if (!window.abnAllRecords || window.abnAllRecords.length === 0) return ''; 
     let records = window.abnAllRecords.filter(d => d['NO.'] === convName);
@@ -1955,7 +2037,7 @@ function getAbnormalityStatusText(convName) {
 }
 
 function fullThkDetail(r) {
-    return `⚡ **Full Details:**\nConveyor **${r.conv}** (${r.dept}):\n* Length: **${r.length || 'N/A'} meters**\n* Top Cover: **${r.topCover} mm**\n* Min Thickness: **${parseFloat(r.minThk).toFixed(2)} mm** _(${r.wearType})_\n* Wear Rate: **${parseFloat(r.cWear).toFixed(3)} mm/M**\n* Predicted Life: **${r.predLife ? parseFloat(r.predLife).toFixed(1) + ' Months' : '-'}**\n* Last Thickness Inspection: **${r.lastInspDisp || '-'}**\n* Last Belt Replacement: **${r.lastRep || '-'}**\n* Next Repl. Plan: **${r.nextCBM || '-'}**\n* Status: **${r.crit}**${getAbnormalityStatusText(r.conv)}`;
+    return `⚡ **Full Details:**\nConveyor **${r.conv}** (${r.dept}):\n* Length: **${r.length || 'N/A'} meters**\n* Top Cover: **${r.topCover} mm**\n* Min Thickness: **${parseFloat(r.minThk).toFixed(2)} mm** _(${r.wearType})_\n* Wear Rate: **${parseFloat(r.cWear).toFixed(3)} mm/M**\n* Predicted Life: **${r.predLife ? parseFloat(r.predLife).toFixed(1) + ' Months' : '-'}**\n* Last Thickness Inspection: **${r.lastInspDisp || '-'}**\n* Last Belt Replacement: **${r.lastRep || '-'}**\n* Next Repl. Plan: **${r.nextCBM || '-'}**\n* Status: **${r.crit}**${getAbnormalityStatusText(r.conv)}${getJointInfoText(r.conv, r.lastRep)}`;
 }
 function fullAbnDetail(r) {
     return `⚡ **Full Details:**\nConveyor **${r['NO.']}** (${r.Dept}):\n* Issue: **"${r['Major Abnormality']}"**\n* Category: **${r.category}**\n* Reported On: **${r['Abnormality Date']}**\n* Pending Since: **${r.ageDays} din**\n* Action Plan: **${r.plan}**`;
@@ -1964,6 +2046,10 @@ function fullAbnDetail(r) {
 function generateDetailReply(record, queryText) {
     let q = cleanText(queryText);
     if (fileType === 'thk') {
+        if (q.includes('joint') || q.includes('patch') || q.includes('vendor') || q.includes('hot') || q.includes('cold')) {
+            const jt = getJointInfoText(record.conv, record.lastRep);
+            return jt ? `🔩 **${record.conv}** Joint & Patching:${jt}` : `🔩 **${record.conv}** ke liye Joint / Patching record nahi mila.`;
+        }
         if ((q.includes('thick') || q.includes('moti') || q.includes('mota')) && q.includes('date')) {
             return `🗓️ **${record.conv}** Last Thickness Date: **${record.lastInspDisp || '-'}**`;
         }
@@ -2021,7 +2107,7 @@ function presentDetailChoice(record) {
     window.chatState.lastRecord = record;
     let name = getConvName(record);
     let quickOpts = (fileType === 'thk')
-        ? ['Full Details', 'Thickness', 'Last Thickness Date', 'Replacement Date', 'Wear Rate', 'Length', 'Predicted Life']
+        ? ['Full Details', 'Thickness', 'Last Thickness Date', 'Replacement Date', 'Wear Rate', 'Length', 'Predicted Life', 'Joint History']
         : ['Full Details', 'Issue', 'Action Plan', 'Pending Since', 'Category'];
     appendMessage('bot', `✅ Conveyor **${name}** select ho gaya. Kya detail chahiye?\n\n${renderOptionButtons(quickOpts)}`);
     return true;
@@ -2259,6 +2345,11 @@ function diagCrackVerdict(choice) {
 
 function finishDiagnosis(verdictText, verdictTextEn) {
     const diag = window.chatState.diag;
+    const jrisk = getJointRiskNote(diag.record);
+    if (jrisk) {
+        pushSummary(diag, 'Joint history: ' + jrisk.facts, 'Joint history: ' + jrisk.facts);
+        if (jrisk.hi) { verdictText += '\n\n' + jrisk.hi; verdictTextEn = (verdictTextEn || verdictText.replace(/\*\*/g, '').replace(/^[^\w]+/, '')) + ' ' + jrisk.en; }
+    }
     diag.verdict = verdictText;
     diag.verdictEn = verdictTextEn || verdictText.replace(/\*\*/g, '').replace(/^[^\w]+/, '');
     appendMessage('bot', verdictText);
