@@ -379,7 +379,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-f</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-g</div>
         </div>
     </div>
 
@@ -659,7 +659,7 @@
                 </div>
                 <div>
                     <label style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">Observation Date <span style="font-weight:400; color:var(--text-muted);">(when it was observed — can differ from the logging date)</span></label>
-                    <input type="text" id="logObsDate" class="search-input glass-panel" style="width:100%; margin-top:5px; cursor:pointer;" readonly placeholder="📅 Select date" onclick="toggleLogObsCalendar()">
+                    <input type="text" id="logObsDate" class="search-input glass-panel" style="width:100%; margin-top:5px; cursor:pointer;" readonly placeholder="📅 DD-MM-YYYY" onclick="toggleLogObsCalendar()">
                     <div id="logObsCal" class="glass-panel" style="display:none; margin-top:8px; padding:12px; border-radius:14px; border:1px solid var(--glass-border);"></div>
                 </div>
                 <div>
@@ -957,6 +957,11 @@
 
         // ===== Calendar date picker (tap a day to select; no typing/deleting needed) =====
         let logObsCalSel = '', logObsCalView = null;
+        function logObsFmt(iso) { if (!iso) return ''; const p = iso.split('-'); return p[2] + '-' + p[1] + '-' + p[0]; }
+        function logObsCalJump() {
+            const m = parseInt(document.getElementById('logObsCalMonth').value), y = parseInt(document.getElementById('logObsCalYear').value);
+            if (!isNaN(y) && y >= 1990 && y <= 2100) { logObsCalView = new Date(y, m, 1); renderLogObsCalendar(); }
+        }
         function toggleLogObsCalendar() {
             let cal = document.getElementById('logObsCal');
             if (cal.style.display === 'block') { cal.style.display = 'none'; return; }
@@ -971,7 +976,7 @@
         }
         function logObsCalPick(iso) {
             logObsCalSel = iso;
-            document.getElementById('logObsDate').value = iso;
+            document.getElementById('logObsDate').value = logObsFmt(iso);
             document.getElementById('logObsCal').style.display = 'none';
         }
         function renderLogObsCalendar() {
@@ -980,10 +985,14 @@
             const firstDow = new Date(y, m, 1).getDay();
             const days = new Date(y, m + 1, 0).getDate();
             const t = new Date(); const todayIso = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
-            let h = `<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                <button type="button" class="btn-slate" style="padding:6px 12px;" onclick="logObsCalNav(-1)"><i class="fas fa-chevron-left"></i></button>
-                <b>${monthNames[m]} ${y}</b>
-                <button type="button" class="btn-slate" style="padding:6px 12px;" onclick="logObsCalNav(1)"><i class="fas fa-chevron-right"></i></button></div>
+            let monthOpts = monthNames.map((n, i) => `<option value="${i}" ${i === m ? 'selected' : ''}>${n}</option>`).join('');
+            let h = `<div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-bottom:8px;">
+                <button type="button" class="btn-slate" style="padding:6px 9px;" onclick="logObsCalNav(-12)">«</button>
+                <button type="button" class="btn-slate" style="padding:6px 11px;" onclick="logObsCalNav(-1)">‹</button>
+                <select id="logObsCalMonth" style="flex:1; min-width:0; padding:6px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid var(--glass-border);" onchange="logObsCalJump()">${monthOpts}</select>
+                <input id="logObsCalYear" type="number" style="width:78px; padding:6px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid var(--glass-border);" value="${y}" min="1990" max="2100" onchange="logObsCalJump()">
+                <button type="button" class="btn-slate" style="padding:6px 11px;" onclick="logObsCalNav(1)">›</button>
+                <button type="button" class="btn-slate" style="padding:6px 9px;" onclick="logObsCalNav(12)">»</button></div>
                 <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center; font-size:0.8rem;">`;
             ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => h += `<div style="color:var(--text-muted); font-weight:700;">${d}</div>`);
             for (let i = 0; i < firstDow; i++) h += '<div></div>';
@@ -999,7 +1008,7 @@
         function openLogObservationModal() {
             // Observation date default aaj ki date (user chahe to badal sakta hai)
             let _t = new Date(); logObsCalSel = _t.getFullYear() + '-' + String(_t.getMonth()+1).padStart(2,'0') + '-' + String(_t.getDate()).padStart(2,'0');
-            document.getElementById('logObsDate').value = logObsCalSel;
+            document.getElementById('logObsDate').value = logObsFmt(logObsCalSel);
             document.getElementById('logObsCal').style.display = 'none';
 
             // Department dropdown — Thickness + Abnormality dono se unique depts
@@ -1067,7 +1076,7 @@
             let empId = document.getElementById('logObsEmpId').value.trim();
             if (!empId) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Please enter Employee ID.</span>'; return; }
 
-            let obsDate = document.getElementById('logObsDate').value;
+            let obsDate = logObsCalSel;
             if (!obsDate) { document.getElementById('logObsStatus').innerHTML = '<span style="color:var(--red);">Please enter Observation Date.</span>'; return; }
 
             let conveyor = document.getElementById('logObsConveyor').value.trim();
