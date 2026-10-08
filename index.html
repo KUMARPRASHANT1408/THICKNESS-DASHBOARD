@@ -252,13 +252,14 @@
         .landing-header { text-align: center; }
         .landing-header h1 { font-size: 1.8rem; font-weight: 800; background: linear-gradient(90deg, var(--teal), var(--blue)); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .landing-header p { color: var(--text-muted); margin-top: 6px; }
-        .app-card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; max-width: 1000px; width: 100%; }
+        .app-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 25px; max-width: 1000px; width: 100%; }
         @media (max-width: 768px) { .app-card-grid { grid-template-columns: 1fr; } }
         .app-card { cursor: pointer; padding: 35px 25px; border-radius: 20px; text-align: center; transition: 0.3s; border: 1px solid var(--glass-border); }
         .app-card:hover { transform: translateY(-6px); box-shadow: 0 12px 30px rgba(14,165,233,0.25); }
-        .app-card .app-icon { font-size: 2.5rem; margin-bottom: 18px; width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-left: auto; margin-right: auto; }
-        .app-card.card-thk .app-icon { background: rgba(14,165,233,0.15); color: var(--teal); }
-        .app-card.card-abn .app-icon { background: rgba(225,29,72,0.15); color: var(--red); }
+        .app-card .app-icon { font-size: 2.5rem; margin-bottom: 18px; width: 84px; height: 84px; border-radius: 24px; display: flex; align-items: center; justify-content: center; margin-left: auto; margin-right: auto; }
+        .app-card .app-icon svg { width: 52px; height: 52px; }
+        .app-card.card-thk .app-icon { background: linear-gradient(135deg, #0ea5e9, #6366f1); color: #fff; box-shadow: 0 8px 20px rgba(14,165,233,0.35); }
+        .app-card.card-abn .app-icon { background: linear-gradient(135deg, #f59e0b, #e11d48); color: #fff; box-shadow: 0 8px 20px rgba(225,29,72,0.35); }
         .app-card.card-bot .app-icon { background: rgba(139,92,246,0.15); color: var(--purple); }
         .app-card h3 { font-size: 1.15rem; margin-bottom: 8px; }
         .app-card p { font-size: 0.85rem; color: var(--text-muted); }
@@ -361,16 +362,16 @@
         </div>
         <div class="app-card-grid">
             <div class="app-card card-thk glass-panel" onclick="openThicknessApp()">
-                <div class="app-icon"><i class="fas fa-ruler-combined"></i></div>
+                <div class="app-icon"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="38" width="52" height="8" rx="4" fill="rgba(255,255,255,0.25)"/><rect x="6" y="46" width="52" height="5" rx="2.5" opacity="0.6"/><path d="M32 8v24"/><path d="M24 14l8-6 8 6"/><path d="M24 32l8 6 8-6"/><path d="M14 20h8M14 26h5M42 20h8M45 26h5" opacity="0.7"/></svg></div>
                 <h3>Thickness App</h3>
                 <p>Belt thickness, wear rate & life analytics dashboard</p>
             </div>
             <div class="app-card card-abn glass-panel" onclick="openAbnormalityApp()">
-                <div class="app-icon"><i class="fas fa-triangle-exclamation"></i></div>
+                <div class="app-icon"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 6L8 16v16c0 14 10 22 24 26 14-4 24-12 24-26V16L32 6z" fill="rgba(255,255,255,0.2)"/><path d="M32 20v14"/><circle cx="32" cy="43" r="1.5" fill="currentColor"/><path d="M14 36h7l3-5 4 9 3-6h5" opacity="0.0"/></svg></div>
                 <h3>Abnormality App</h3>
                 <p>Open/closed abnormalities, categories & action plans</p>
             </div>
-            <div class="app-card card-bot glass-panel" onclick="openBeltInspectorApp()">
+            <div class="app-card card-bot glass-panel" id="card-bot" onclick="openBeltInspectorApp()">
                 <div class="app-icon"><i class="fas fa-robot"></i></div>
                 <h3>RTG Belt Inspector</h3>
                 <p>Chat with the bot for full diagnosis & recommendations</p>
@@ -785,6 +786,7 @@
             document.getElementById('kpi-card-thk-backlog').style.display = currentRole === 'admin' ? 'block' : 'none';
             document.getElementById('abn-admin-charts').style.display = currentRole === 'admin' ? 'grid' : 'none';
             document.getElementById('admin-schedule-kpi').style.display = currentRole === 'admin' ? 'block' : 'none';
+            document.getElementById('card-bot').style.display = isAdmin ? '' : 'none';
         }
 
         function finalizeLogin(roleText, badgeColor) {
