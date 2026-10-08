@@ -416,7 +416,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-n</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 08-Oct-o</div>
         </div>
     </div>
 
@@ -2878,7 +2878,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             });
             S.abp = abp.map(r => ({ fy: String(r.FY || '').replace(/\D/g, '') * 1, dept: nd(r.Dept), conv: key(r.Conveyor), name: r.Conveyor, cat: r.Category, len: num(r.Length), grade: r.Grade, type: r.Type, next: pdmy(r.NextCBM), plan: num(r.PlannedMtrs), cls: r.Class, reason: r.Reason, remarks: r.Remarks }));
             S.thk = {};
-            thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']) }; });
+            thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']), nextCbm: parseDateCustom(r[Object.keys(r).find(k => /^Next Prediction\s*\(CBM\)/i.test(k))]) }; });
             const fys = new Set(Object.keys(FY_TARGET).map(Number)); S.daily.forEach(x => fys.add(x.fy));
             const arr = Array.from(fys).sort((a, b) => b - a); const sel = el('sbcFy'); const cur = sel.value;
             sel.innerHTML = arr.map(f => `<option value="${f}">FY'${f}</option>`).join(''); sel.value = cur && arr.includes(+cur) ? cur : (arr.includes(27) ? 27 : arr[0]);
@@ -2896,6 +2896,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const all = Array(12).fill(0); let last = -1, minD = null, maxD = null;
         rows.forEach(x => { const k = dm[x.dept] ? x.dept : 'OTHER'; dm[k][x.mi] += x.m; all[x.mi] += x.m; if (!minD || x.date < minD) minD = x.date; if (!maxD || x.date > maxD) maxD = x.date; });
         if (maxD) last = mi(maxD);
+        const now = new Date(); if (fyOf(now) === fy) last = Math.max(last, mi(now));
         const total = all.reduce((a, b) => a + b, 0);
         return { rows, dm, all, last, total, minD, maxD };
     }
@@ -2932,12 +2933,18 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         let plan = null;
         if (showPlan) {
             const pl = abp.filter(a => a.cls === 'Planned' && a.type === 'Fabric'), av = abp.filter(a => a.cls === 'Avoid');
-            let thkM = 0; Object.keys(S.thk).forEach(k => { const t = S.thk[k]; const fyStart = new Date(2000 + fy - 1, 3, 1); if (repKeys.has(k)) return; if (t.lastRep && t.lastRep >= fyStart) return; thkM += t.len; });
-            plan = { target: T * TOTAL_KM, consumed: st.total, balance: Math.max(0, T * TOTAL_KM - st.total), thk: thkM, fab: pl.reduce((a, b) => a + b.plan, 0), steel: abp.filter(a => a.cls === 'Planned' && a.type === 'Steel').reduce((a, b) => a + b.plan, 0), bucket: abp.filter(a => a.cls === 'Planned' && a.type === 'Bucket').reduce((a, b) => a + b.plan, 0), avoid: av.reduce((a, b) => a + b.len, 0), reasons: REASONS.map(r => av.filter(a => a.reason === r[0]).reduce((x, y) => x + y.len, 0)) };
-            h += `<div class="sbc-grid2"><div class="glass-panel sbc-panel"><h3>SBC (m/km) - Target vs Plan</h3><div class="sbc-chart"><canvas id="sbcPlanA"></canvas></div></div>
-                <div class="glass-panel sbc-panel"><h3>Length (m) - Target vs Plan</h3><div class="sbc-chart"><canvas id="sbcPlanB"></canvas></div></div></div>
+            let thkM = 0; Object.keys(S.thk).forEach(k => { const t = S.thk[k]; const fyStart = new Date(2000 + fy - 1, 3, 1); if (repKeys.has(k)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > new Date(2000 + fy, 2, 31)) return; thkM += t.len; });
+            const R = st.rows.filter(x => x.type === 'R'), P = st.rows.filter(x => x.type === 'P'); const plSet = new Set(pl.map(a => a.conv));
+            const doneFab = R.filter(x => plSet.has(x.conv)).reduce((q, x) => q + x.m, 0); const pendFab = pl.filter(a => !repKeys.has(a.conv)).reduce((q, a) => q + a.plan, 0);
+            const stDone = R.filter(x => isSB(x.conv) && S.thk[x.conv].grade.includes('STEEL')).reduce((q, x) => q + x.m, 0); const bkDone = R.filter(x => isSB(x.conv) && S.thk[x.conv].grade.includes('BUCKET')).reduce((q, x) => q + x.m, 0);
+            const steelPlan = abp.filter(a => a.cls === 'Planned' && a.type === 'Steel').reduce((q, a) => q + a.plan, 0), bucketPlan = abp.filter(a => a.cls === 'Planned' && a.type === 'Bucket').reduce((q, a) => q + a.plan, 0);
+            const unplM = unplannedRows(fy, new Set(abp.filter(a => a.cls === 'Planned' && a.conv).map(a => a.conv)), abp).reduce((q, x) => q + x.m, 0); const pieceM = P.reduce((q, x) => q + x.m, 0);
+            const avoidRep = av.filter(a => repKeys.has(a.conv)).reduce((q, a) => q + a.len, 0); const avoidTot = av.reduce((q, a) => q + a.len, 0);
+            plan = { target: T * TOTAL_KM, consumed: st.total, balance: Math.max(0, T * TOTAL_KM - st.total), thk: thkM, fab: pl.reduce((a, b) => a + b.plan, 0), steel: steelPlan, bucket: bucketPlan, avoid: avoidTot, doneFab, pendFab, stDone, bkDone, unplM, pieceM, avoidRep, other: Math.max(0, st.total - doneFab - stDone - bkDone - unplM - pieceM), reasons: REASONS.map(r => av.filter(a => a.reason === r[0]).reduce((x, y) => x + y.len, 0)) };
+            h += `<div class="sbc-grid2"><div class="glass-panel sbc-panel"><h3>SBC (m/km) - Target vs Plan vs Actual</h3><div class="sbc-chart"><canvas id="sbcPlanA"></canvas></div></div>
+                <div class="glass-panel sbc-panel"><h3>Length (m) - Target vs Plan vs Actual</h3><div class="sbc-chart"><canvas id="sbcPlanB"></canvas></div></div></div>
                 <div class="glass-panel sbc-panel"><h3>Belts that can be avoided - reason wise</h3><div class="sbc-chart" style="height:280px"><canvas id="sbcAvoid"></canvas></div>
-                <div class="sbc-note">Plan source: abp.csv (ABP list). Steel cord aur bucket belts ka sirf total plan hai (belt-wise list nahi).</div></div>`;
+                <div class="sbc-note">Plan = abp.csv (ABP list); actual = daily report. List ka belt daily me mila to green (actual m), nahi mila to pending; daily ka jo belt list me nahi wo Unplanned. Steel cord / bucket ka sirf total plan hai.</div></div>`;
         }
         // dept tables
         const val = (m, km) => S.mode === 'sbc' ? (m ? f1(m / km) : '-') : (m ? fmt(m) : '-');
@@ -2974,9 +2981,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         sbcChips(); window.sbcRenderList();
     };
 
+    function isSB(c) { const t = S.thk[c]; return !!t && (t.grade.includes('STEEL') || t.grade.includes('BUCKET')); }
     function unplannedRows(fy, plannedSet, abp) {
         const pre = new Set(abp.filter(a => a.cls === 'Replaced').map(a => a.conv));
-        return S.daily.filter(x => x.fy === fy && x.type === 'R' && !plannedSet.has(x.conv) && !pre.has(x.conv));
+        return S.daily.filter(x => x.fy === fy && x.type === 'R' && !plannedSet.has(x.conv) && !pre.has(x.conv) && !isSB(x.conv));
     }
 
     function tcol() { return { tick: '#cbd5e1', grid: 'rgba(148,163,184,0.15)' }; }
@@ -2994,11 +3002,19 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.tick } } }, scales: { x: { ticks: { color: c.tick }, grid: { color: c.grid } }, y: { beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid }, title: { display: true, text: S.mode === 'sbc' ? 'Monthly m/km' : 'Monthly m', color: c.tick } }, y1: { beginAtZero: true, position: 'right', ticks: { color: c.tick }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Cumulative', color: c.tick } } } } });
     }
     function drawPlan(p, T) {
-        const labels = ["FY target", 'Consumed till date', 'Balance', 'As per Thickness monitoring', 'Planned RTG (Fabric)', 'Planned RTG (Steel Cord)', 'Planned RTG (Bucket)', 'Can be avoided'];
-        const vals = [p.target, p.consumed, p.balance, p.thk, p.fab, p.steel, p.bucket, p.avoid];
-        const colors = ['#38bdf8', '#f59e0b', '#10b981', '#a78bfa', '#0ea5e9', '#64748b', '#94a3b8', '#ef4444'];
+        const labels = ['FY target', 'Consumed till date (daily)', 'Balance', 'As per Thickness monitoring', 'Planned RTG (Fabric)', 'Planned RTG (Steel Cord)', 'Planned RTG (Bucket)', 'Can be avoided'];
+        const z = [0, 0, 0, 0, 0, 0, 0, 0]; const set = (i, v) => { const a = z.slice(); Object.keys(i).forEach(k => a[k] = i[k]); return a; };
+        const DS = [
+            ['FY target / Balance / Thickness', set({ 0: p.target, 2: p.balance, 3: p.thk }), ['#38bdf8', 0, '#10b981', '#a78bfa', 0, 0, 0, 0]],
+            ['Planned belts - replaced (daily actual)', set({ 1: p.doneFab + p.stDone + p.bkDone, 4: p.doneFab, 5: p.stDone, 6: p.bkDone }), '#10b981'],
+            ['Planned - pending', set({ 4: p.pendFab, 5: Math.max(0, p.steel - p.stDone), 6: Math.max(0, p.bucket - p.bkDone) }), '#f59e0b'],
+            ['Unplanned replacement (daily)', set({ 1: p.unplM }), '#ef4444'],
+            ['Piece addition (daily)', set({ 1: p.pieceM }), '#a78bfa'],
+            ['Other consumption', set({ 1: p.other }), '#64748b'],
+            ['Avoidable - still to be avoided', set({ 7: Math.max(0, p.avoid - p.avoidRep) }), '#38bdf8'],
+            ['Avoidable - replaced anyway', set({ 7: p.avoidRep }), '#b91c1c']];
         const c = tcol();
-        const mk = (id, k, dec) => new Chart(el(id), { type: 'bar', data: { labels, datasets: [{ data: vals.map(v => v * k), backgroundColor: colors }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: x => (dec ? f1(x.raw) : fmt(x.raw)) } } }, scales: { x: { ticks: { color: c.tick, maxRotation: 60, minRotation: 40, font: { size: 10 } }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid } } } }, plugins: [{ id: 'lbl', afterDatasetsDraw(ch) { const ctx = ch.ctx; ctx.save(); ctx.fillStyle = '#e2e8f0'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ch.getDatasetMeta(0).data.forEach((b, i) => { const v = ch.data.datasets[0].data[i]; ctx.fillText(dec ? f1(v) : fmt(v), b.x, b.y - 4); }); ctx.restore(); } }] });
+        const mk = (id, k, dec) => new Chart(el(id), { type: 'bar', data: { labels, datasets: DS.map(d => ({ label: d[0], data: d[1].map(v => v * k), backgroundColor: Array.isArray(d[2]) ? d[2].map(x => x || 'rgba(0,0,0,0)') : d[2], stack: 's' })) }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.tick, boxWidth: 10, font: { size: 10 } } }, tooltip: { filter: x => x.raw > 0, callbacks: { label: x => x.dataset.label + ': ' + (dec ? f1(x.raw) : fmt(x.raw)) } } }, scales: { x: { stacked: true, ticks: { color: c.tick, maxRotation: 60, minRotation: 40, font: { size: 10 } }, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid } } } }, plugins: [{ id: 'lbl', afterDatasetsDraw(ch) { const ctx = ch.ctx; ctx.save(); ctx.fillStyle = '#e2e8f0'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; labels.forEach((l, i) => { let tot = 0, top = null; ch.data.datasets.forEach((d, di) => { const v = d.data[i]; if (v > 0) { tot += v; const y = ch.getDatasetMeta(di).data[i].y; top = top === null ? y : Math.min(top, y); const bx = ch.getDatasetMeta(di).data[i].x; ctx._bx = bx; } }); if (top !== null) ctx.fillText(dec ? f1(tot) : fmt(tot), ctx._bx, top - 4); }); ctx.restore(); } }] });
         S.charts.pa = mk('sbcPlanA', 1 / TOTAL_KM, true); S.charts.pb = mk('sbcPlanB', 1, false);
         S.charts.av = new Chart(el('sbcAvoid'), { type: 'bar', data: { labels: REASONS.map(r => r[1]), datasets: [{ label: 'Avoidable length (m)', data: p.reasons, backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#a78bfa', '#64748b'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: x => fmt(x.raw) + ' m  (' + f1(x.raw / TOTAL_KM) + ' m/km)' } } }, scales: { x: { ticks: { color: c.tick }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid } } } } });
     }
@@ -3013,7 +3029,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const L = S.list; let head = [], rows = [], tm = 0;
         if (L === 'upcoming' || L === 'planned') {
             let r = abp.filter(a => a.cls === 'Planned' && a.type === 'Fabric' && a.conv && df(a)); if (L === 'upcoming') r = r.filter(a => !repMap[a.conv]); r.sort((a, b) => (a.next || 0) - (b.next || 0));
-            head = ['Dept', 'Conveyor', 'Cat', 'Length m', 'Planned m', 'Grade', 'Next CBM', 'Status']; r.forEach(a => { tm += a.plan; rows.push([a.dept, a.name, a.cat, fmt(a.len), fmt(a.plan), a.grade, dstr(a.next), status(a)]); });
+            head = ['Dept', 'Conveyor', 'Cat', 'Length m', 'Planned m', 'Actual m (daily)', 'Grade', 'Next CBM', 'Status']; r.forEach(a => { tm += a.plan; const ac = (repMap[a.conv] || []).reduce((q, x) => q + x.m, 0); rows.push([a.dept, a.name, a.cat, fmt(a.len), fmt(a.plan), ac ? fmt(ac) : '-', a.grade, dstr(a.next), status(a)]); });
         } else if (L === 'avoid') {
             const r = abp.filter(a => a.cls === 'Avoid' && df(a)); head = ['Dept', 'Conveyor', 'Cat', 'Length m', 'Grade', 'Reason', 'Next CBM', 'Status'];
             r.forEach(a => { tm += a.len; rows.push([a.dept, a.name, a.cat, fmt(a.len), a.grade, (REASONS.find(x => x[0] === a.reason) || [0, a.reason])[1], dstr(a.next), repMap[a.conv] ? '<span class="sbc-pill" style="background:rgba(239,68,68,.2);color:#fca5a5">Replaced anyway</span>' : 'Avoid']); });
