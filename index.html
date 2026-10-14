@@ -1869,7 +1869,7 @@
         // =========================================================================
         // AI CALL VIA GOOGLE APPS SCRIPT PROXY (API key website me nahi hai)
         // =========================================================================
-        const CHAT_PROXY_URL = "__PROXY__";
+        const CHAT_PROXY_URL = "https://script.google.com/macros/s/AKfycbw2OXawBda9LGT5cz8W4_YzWZ5stgJLsXyzeYVKnBG1DD6DLnunI3sJcUMC_YI4ZfRh4Q/exec";
         function callAI(messages, signal) {
             if (!CHAT_PROXY_URL || CHAT_PROXY_URL.indexOf('script.google.com') < 0) return Promise.reject(new Error('proxy not set'));
             return fetch(CHAT_PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ messages: messages }), signal: signal });
