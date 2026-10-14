@@ -16,18 +16,22 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download latest Thickness CSV from Google Sheet
+        continue-on-error: true
         run: |
           curl -fL "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9FGXXTFb7_k0QCC1kAYkxj3xjh9nBQ0ceQ3Nu-xtWjWhbR01Tx8lmJCGCCtfXkPR7SW2Za7DLrcSE/pub?gid=0&single=true&output=csv" -o data.csv
 
       - name: Download latest Abnormality CSV from Google Sheet
+        continue-on-error: true
         run: |
           curl -fL "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWKjd9swnkqU7NLBWL_RP7J5KTumUQslWnJ3GZyglyYZRt9xJy6WqvJa7ST297K4F4w01K24xJ5cvN/pub?gid=0&single=true&output=csv" -o abn.csv
 
       - name: Download latest Daily Report CSV from Google Sheet
+        continue-on-error: true
         run: |
           curl -fL "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWKjd9swnkqU7NLBWL_RP7J5KTumUQslWnJ3GZyglyYZRt9xJy6WqvJa7ST297K4F4w01K24xJ5cvN/pub?gid=180698764&single=true&output=csv" -o daily.csv
 
       - name: Download latest Patching CSV from Google Sheet
+        continue-on-error: true
         run: |
           curl -fL "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWKjd9swnkqU7NLBWL_RP7J5KTumUQslWnJ3GZyglyYZRt9xJy6WqvJa7ST297K4F4w01K24xJ5cvN/pub?gid=2017604099&single=true&output=csv" -o patching.csv
 
