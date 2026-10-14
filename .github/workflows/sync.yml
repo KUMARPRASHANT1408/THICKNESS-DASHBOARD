@@ -1,39 +1,87 @@
-name: Sync Google Sheet Data
+// ===================================================================
+// RTG -> Gmail se Google Sheet (auto) [Daily Report + SBC + Patching]
+// Har run par: us subject ki SABSE NAYI mail ka CSV attachment uthata hai,
+// sheet tab ko poora replace karta hai (CSV hi poora snapshot hai),
+// phir us subject ki saari mails Trash me daal deta hai.
+// Values TEXT format me likhi jaati hain, taaki published CSV bilkul wahi aaye jo mail me thi
+// (dates ka format na badle).
+// ===================================================================
 
-on:
-  schedule:
-    - cron: '*/30 * * * *'
-  workflow_dispatch:
+// ---- SETTINGS: mail ke subject (Power Automate ke subject se EXACT same) ----
+var DAILY_SUBJECT = "AUTO_UPDATE_DAILYREPORT";
+var SBC_SUBJECT = "AUTO_UPDATE_SBC";
+var PATCHING_SUBJECT = "AUTO_UPDATE_RTG_PATCHING";
 
-permissions:
-  contents: write # Yeh line git push permission allow karegi
+// ---- SETTINGS: Google Sheet ke tab ke naam (pehle se bana lo, spelling same) ----
+var DAILY_SHEET = "Daily Report";
+var SBC_SHEET = "SBC";
+var PATCHING_SHEET = "Patching";
 
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+// Safety: CSV me ye headers hone chahiye, warna sheet overwrite NAHI hogi
+var DAILY_HEADERS = ["Conveyor", "Final Replacement Date", "Rejoint date1", "Piece Addition date1"];
+var SBC_HEADERS = ["Department", "Conveyor", "Replacement FY'27", "Piece Addition FY'27"];
+var PATCHING_HEADERS = ["Conveyor", "Total Joint", "Patching count since last replacement"];
 
-      - name: Download latest Thickness CSV from Google Sheet
-        run: |
-          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9FGXXTFb7_k0QCC1kAYkxj3xjh9nBQ0ceQ3Nu-xtWjWhbR01Tx8lmJCGCCtfXkPR7SW2Za7DLrcSE/pub?gid=0&single=true&output=csv" -o data.csv
+// ---- In 3 functions par trigger lagao (ya neeche resetTriggers() ek baar chala do) ----
+function fetchDailyReportFromGmail() { fetchCsvToSheet_(DAILY_SUBJECT, DAILY_SHEET, DAILY_HEADERS); }
+function fetchSbcFromGmail() { fetchCsvToSheet_(SBC_SUBJECT, SBC_SHEET, SBC_HEADERS); }
+function fetchPatchingFromGmail() { fetchCsvToSheet_(PATCHING_SUBJECT, PATCHING_SHEET, PATCHING_HEADERS); }
 
-      - name: Download latest Abnormality CSV from Google Sheet
-        run: |
-          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWKjd9swnkqU7NLBWL_RP7J5KTumUQslWnJ3GZyglyYZRt9xJy6WqvJa7ST297K4F4w01K24xJ5cvN/pub?gid=0&single=true&output=csv" -o abn.csv
+// ---- Common logic ----
+function fetchCsvToSheet_(subject, sheetName, requiredHeaders) {
+  var threads = GmailApp.search('subject:"' + subject + '" has:attachment');
+  if (threads.length === 0) { Logger.log(sheetName + ": koi naya email nahi mila."); return; }
 
-      - name: Download latest Daily Report CSV from Google Sheet
-        run: |
-          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWKjd9swnkqU7NLBWL_RP7J5KTumUQslWnJ3GZyglyYZRt9xJy6WqvJa7ST297K4F4w01K24xJ5cvN/pub?gid=193430657&single=true&output=csv" -o daily.csv
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) { Logger.log("Tab '" + sheetName + "' nahi mila. Naam check karo."); return; }
 
-      - name: Download latest Patching CSV from Google Sheet
-        run: |
-          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWKjd9swnkqU7NLBWL_RP7J5KTumUQslWnJ3GZyglyYZRt9xJy6WqvJa7ST297K4F4w01K24xJ5cvN/pub?gid=2017604099&single=true&output=csv" -o patching.csv
+  // Sab matching mails me se SABSE NAYI mail
+  var latest = null;
+  threads.forEach(function (t) {
+    t.getMessages().forEach(function (m) { if (!latest || m.getDate() > latest.getDate()) latest = m; });
+  });
 
-      - name: Commit and push if data changed
-        run: |
-          git config --global user.name 'GitHub Actions Bot'
-          git config --global user.email 'actions@github.com'
-          git add data.csv abn.csv daily.csv patching.csv
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-sync latest CSV data from Google Sheet" && git push)
+  var csvBlob = null;
+  latest.getAttachments().forEach(function (a) { if (!csvBlob && /\.csv$/i.test(a.getName())) csvBlob = a; });
+  if (!csvBlob) { Logger.log(sheetName + ": latest mail me CSV attachment nahi mila."); return; }
+
+  var text = csvBlob.getDataAsString("UTF-8").replace(/^﻿/, "");
+  var rows = Utilities.parseCsv(text);
+  if (rows.length < 2) { Logger.log(sheetName + ": CSV khaali hai, sheet touch nahi ki."); return; }
+
+  var header = rows[0].map(function (h) { return String(h).trim(); });
+  var missing = requiredHeaders.filter(function (h) { return header.indexOf(h) === -1; });
+  if (missing.length > 0) {
+    Logger.log(sheetName + ": ye columns CSV me nahi mile -> " + missing.join(", ") + ". Sheet touch nahi ki.");
+    return;
+  }
+
+  // Saari rows ko barabar width karo
+  var maxCols = 0;
+  rows.forEach(function (r) { if (r.length > maxCols) maxCols = r.length; });
+  rows = rows.map(function (r) { while (r.length < maxCols) r.push(""); return r; });
+
+  sheet.clearContents();
+  var range = sheet.getRange(1, 1, rows.length, maxCols);
+  range.setNumberFormat("@"); // plain text -> values jaisi aayi waisi hi rahengi
+  range.setValues(rows);
+  Logger.log(sheetName + ": " + (rows.length - 1) + " rows likh di gayi.");
+
+  threads.forEach(function (t) { t.moveToTrash(); });
+  Logger.log(sheetName + ": mail(s) Trash me bhej di.");
+}
+
+// ---- EK BAAR chalao: Daily/SBC/Patching ke purane triggers hata ke 3 naye (har 1 ghante) lagata hai ----
+// Abnormality (fetchAbnormalityCSVFromGmail) aur doGet/doPost ke triggers ko NAHI chhedta.
+function resetTriggers() {
+  var mine = ["fetchDailyReportFromGmail", "fetchSbcFromGmail", "fetchPatchingFromGmail",
+              "fetchDailyReportAndPatching", "fetchDailyFromGmail"]; // purane possible naam bhi
+  var removed = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (mine.indexOf(t.getHandlerFunction()) > -1) { ScriptApp.deleteTrigger(t); removed++; }
+  });
+  ["fetchDailyReportFromGmail", "fetchSbcFromGmail", "fetchPatchingFromGmail"].forEach(function (n) {
+    ScriptApp.newTrigger(n).timeBased().everyHours(1).create();
+  });
+  Logger.log("Reset ho gaya. " + removed + " purane triggers hataye, 3 naye lagaye.");
+}
