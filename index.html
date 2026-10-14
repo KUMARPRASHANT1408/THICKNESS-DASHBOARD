@@ -421,7 +421,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 14-Oct-b</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 14-Oct-c</div>
         </div>
     </div>
 
@@ -1837,7 +1837,7 @@
                 loadLoggedObservations();
                 document.getElementById('tabs-menu').style.display = 'none'; // tab-bar nahi chahiye, navigation ab landing page se hoti hai
             } else {
-                alert('Abnormality data abhi load ho raha hai — ek-do second ruk kar dobara try karo.');
+                alert('Abnormality data is still loading - please try again in a few seconds.');
                 document.getElementById('mainDashboard').style.display = 'none';
                 document.getElementById('landingPage').style.display = 'flex';
             }
@@ -2886,7 +2886,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                     if (pv) S.daily.push(Object.assign({ type: 'P', m: pv, date: null }, base));
                 });
             });
-            el('sbcLoading').innerText = S.monthly.length ? '' : 'sbc.csv nahi mili ya khaali hai (Google Sheet ke SBC tab / sync check karo).';
+            el('sbcLoading').innerText = S.monthly.length ? '' : 'sbc.csv not found or empty (check the SBC tab in Google Sheet / sync).';
             S.abp = abp.map(r => ({ fy: String(r.FY || '').replace(/\D/g, '') * 1, dept: nd(r.Dept), conv: key(r.Conveyor), name: r.Conveyor, cat: r.Category, len: num(r.Length), grade: r.Grade, type: r.Type, next: pdmy(r.NextCBM), plan: num(r.PlannedMtrs), cls: r.Class, reason: r.Reason, remarks: r.Remarks }));
             S.thk = {};
             thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']), nextCbm: parseDateCustom(r[Object.keys(r).find(k => /^Next Prediction\s*\(CBM\)/i.test(k))]), minThk: (r['MIN THICKNESS'] || '').trim(), top: (r['TOP'] || '').trim(), lastThk: parseDateCustom(r['Last Thickness Date']), cWear: (v => v ? v.toFixed(3) : '')(num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))])), predLife: num(r['Predicted Life (in Months) (Actual)']) ? f1(num(r['Predicted Life (in Months) (Actual)'])) : '', crit: (r['Criticality'] || '').trim() }; });
@@ -2954,12 +2954,12 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         Object.values(S.charts).forEach(c => { try { c.destroy(); } catch (e) {} }); S.charts = {}; S.M = M;
         const sbcT = st.total / TOTAL_KM; const ratio = sbcT / T; const projS = M.proj / TOTAL_KM; let h = '';
         // ---- banners ----
-        if (sbcT > T) h += `<div class="sbc-banner red"><i class="fas fa-triangle-exclamation"></i> TARGET EXCEEDED: FY'${fy} SBC ${f1(sbcT)} target ${T} se upar hai (${f1(sbcT - T)} m/km = ${fmt((sbcT - T) * TOTAL_KM)} m zyada).</div>`;
-        else if (ratio > 0.8) h += `<div class="sbc-banner amber"><i class="fas fa-circle-exclamation"></i> FY'${fy} target ka ${Math.round(ratio * 100)}% use ho gaya (${f1(sbcT)} / ${T}). Sirf ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m) bacha hai.</div>`;
-        else h += `<div class="sbc-banner green"><i class="fas fa-circle-check"></i> FY'${fy} target ka ${Math.round(ratio * 100)}% use hua (${f1(sbcT)} / ${T}). Balance ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m).</div>`;
-        if (M.abp.length && projS > T) h += `<div class="sbc-banner red"><i class="fas fa-forward"></i> Agar bache hue saare planned belts March tak replace hue to SBC ${f1(projS)} ho jayega - target ${T} se ${f1(projS - T)} m/km (${fmt(M.proj - T * TOTAL_KM)} m) zyada.</div>`;
-        if (st.minD && st.minD > new Date(2000 + fy - 1, 3, 11)) h += `<div class="sbc-banner amber"><i class="fas fa-database"></i> Partial data: FY'${fy} ka data ${dstr(st.minD)} se hai - actual SBC isse zyada hoga.</div>`;
-        if (!st.rows.length) h += `<div class="sbc-banner amber">Is FY ke liye SBC sheet me data nahi mila.</div>`;
+        if (sbcT > T) h += `<div class="sbc-banner red"><i class="fas fa-triangle-exclamation"></i> TARGET EXCEEDED: FY'${fy} SBC ${f1(sbcT)} is above target ${T} (by ${f1(sbcT - T)} m/km = ${fmt((sbcT - T) * TOTAL_KM)} m).</div>`;
+        else if (ratio > 0.8) h += `<div class="sbc-banner amber"><i class="fas fa-circle-exclamation"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} / ${T}). Only ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m) left.</div>`;
+        else h += `<div class="sbc-banner green"><i class="fas fa-circle-check"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} / ${T}). Balance ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m).</div>`;
+        if (M.abp.length && projS > T) h += `<div class="sbc-banner red"><i class="fas fa-forward"></i> If all remaining planned belts are replaced by March, SBC will reach ${f1(projS)} - ${f1(projS - T)} m/km (${fmt(M.proj - T * TOTAL_KM)} m) above target ${T}.</div>`;
+        if (st.minD && st.minD > new Date(2000 + fy - 1, 3, 11)) h += `<div class="sbc-banner amber"><i class="fas fa-database"></i> Partial data: FY'${fy} data is available from ${dstr(st.minD)} only - actual SBC will be higher.</div>`;
+        if (!st.rows.length) h += `<div class="sbc-banner amber">No data found in the SBC sheet for this FY.</div>`;
         // ---- KPIs ----
         h += `<div class="sbc-kpis">
             <div class="glass-panel sbc-kpi"><b>${T}</b><span>FY target (m/km) = ${fmt(T * TOTAL_KM)} m</span></div>
@@ -2967,22 +2967,22 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             <div class="glass-panel sbc-kpi"><b>${fmt(st.total)}</b><span>Metres consumed</span></div>
             <div class="glass-panel sbc-kpi"><b>${f1(Math.max(0, T - sbcT))}</b><span>Balance SBC</span></div>
             <div class="glass-panel sbc-kpi"><b>${fmt(Math.max(0, T * TOTAL_KM - st.total))}</b><span>Balance metres</span></div>
-            ${M.abp.length ? `<div class="glass-panel sbc-kpi"><b class="${clsFor(projS / T)}">${f1(projS)}</b><span>March tak (plan pura hua to)</span></div>` : ''}</div>`;
+            ${M.abp.length ? `<div class="glass-panel sbc-kpi"><b class="${clsFor(projS / T)}">${f1(projS)}</b><span>By March (if plan completed)</span></div>` : ''}</div>`;
         // ---- main chart ----
         h += `<div class="glass-panel sbc-panel"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;"><h3 style="margin:0;flex:1;">Month-wise ${S.mode === 'sbc' ? 'SBC (m/km)' : 'Consumption (m)'} - FY'${fy}</h3>
             <button class="sbc-chip ${S.mode === 'sbc' ? 'on' : ''}" onclick="sbcSetMode('sbc')">SBC</button><button class="sbc-chip ${S.mode === 'm' ? 'on' : ''}" onclick="sbcSetMode('m')">Metres</button></div>
             <div class="sbc-chart"><canvas id="sbcMain"></canvas></div>
-            <div class="sbc-note">Bar colour: <span class="sbc-g">green</span> &le;80% of target, <span class="sbc-y">yellow</span> 80-100%, <span class="sbc-r">red</span> &gt;100% ${fy === 27 ? '(monthly target)' : '(annual target / 12)'}. Cumulative line aur annual target right axis par.</div></div>`;
+            <div class="sbc-note">Bar colour: <span class="sbc-g">green</span> &le;80% of target, <span class="sbc-y">yellow</span> 80-100%, <span class="sbc-r">red</span> &gt;100% ${fy === 27 ? '(monthly target)' : '(annual target / 12)'}. Cumulative line and annual target on right axis.</div></div>`;
         // ---- question graphs ----
         if (M.abp.length) {
-            const card = (id, n, title, sub, hgt) => `<div class="glass-panel sbc-panel" id="card-${id}"><h3><span class="sbc-qn">${n}</span> ${title}</h3><div class="sbc-note" style="margin:0 0 8px">${sub}</div><div class="sbc-chart" style="height:${hgt || 280}px"><canvas id="${id}"></canvas></div><div class="sbc-tap"><i class="fas fa-hand-pointer"></i> Kisi bhi bar par tap karo - neeche uski list khulegi</div></div>`;
+            const card = (id, n, title, sub, hgt) => `<div class="glass-panel sbc-panel" id="card-${id}"><h3><span class="sbc-qn">${n}</span> ${title}</h3><div class="sbc-note" style="margin:0 0 8px">${sub}</div><div class="sbc-chart" style="height:${hgt || 280}px"><canvas id="${id}"></canvas></div><div class="sbc-tap"><i class="fas fa-hand-pointer"></i> Tap any bar to open its belt list below</div></div>`;
             h += `<div class="sbc-grid2">
-                ${card('gCons', 1, 'Ab tak jo consume hua - kisme gaya?', `Total ${fmt(st.total)} m (${f1(sbcT)} SBC). Planned = ABP list wale belts, Unplanned = ABP me nahi the.`)}
-                ${card('gProj', 2, 'March tak SBC kahan pahunchega?', `Ab tak ${f1(sbcT)} + bache planned belts ${f1((M.pendFab + M.pendSteel + M.pendBucket) / TOTAL_KM)} = <b class="${clsFor(projS / T)}">${f1(projS)}</b> (target ${T}).`)}
-                ${card('gDept', 3, 'Unplanned replacement - department wise', `${M.C.unplanned.length + M.C.avoidRep.length} belts / ${fmt(M.sum(M.C.unplanned) + M.sum(M.C.avoidRep))} m unplanned. Dept par tap karo - belts dikhenge.`, 320)}
-                ${card('gThk', 4, 'Thickness ke hisaab se is FY due belts', `${M.pl.length + M.av.length + M.pre.length} belts due the. RTG ne ${M.pl.length + M.pre.length} plan kiye, ${M.av.length} avoid kiye ja sakte hain.`)}
-                ${card('gSb', 5, 'Steel cord & Bucket - plan vs consumed', `Plan: Steel ${fmt(M.steelPlan)} m, Bucket ${fmt(M.bucketPlan)} m (sirf total plan hai, belt-wise nahi).`)}
-                ${card('gWhy', 6, 'Belts kyun avoid kiye ja sakte hain?', `${M.av.length} belts / ${fmt(M.sum(M.av, a => a.len))} m - reason wise. Laal = avoid list me tha phir bhi replace ho gaya.`)}
+                ${card('gCons', 1, 'Consumption till date - where did it go?', `Total ${fmt(st.total)} m (${f1(sbcT)} SBC). Planned = belts in ABP list, Unplanned = belts not in ABP.`)}
+                ${card('gProj', 2, 'Where will SBC reach by March?', `Till date ${f1(sbcT)} + remaining planned belts ${f1((M.pendFab + M.pendSteel + M.pendBucket) / TOTAL_KM)} = <b class="${clsFor(projS / T)}">${f1(projS)}</b> (target ${T}).`)}
+                ${card('gDept', 3, 'Unplanned replacement - department wise', `${M.C.unplanned.length + M.C.avoidRep.length} belts / ${fmt(M.sum(M.C.unplanned) + M.sum(M.C.avoidRep))} m unplanned. Tap a department to see the belts.`, 320)}
+                ${card('gThk', 4, 'Belts due this FY as per thickness', `${M.pl.length + M.av.length + M.pre.length} belts due. RTG planned ${M.pl.length + M.pre.length}, ${M.av.length} can be avoided.`)}
+                ${card('gSb', 5, 'Steel cord & Bucket - plan vs consumed', `Plan: Steel ${fmt(M.steelPlan)} m, Bucket ${fmt(M.bucketPlan)} m (total plan only, not belt-wise).`)}
+                ${card('gWhy', 6, 'Why can these belts be avoided?', `${M.av.length} belts / ${fmt(M.sum(M.av, a => a.len))} m - reason wise. Red = in avoid list but still replaced.`)}
             </div>`;
             h += `<div class="glass-panel sbc-panel" id="sbcDetail" style="display:none;"></div>`;
         }
@@ -3057,33 +3057,33 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     function drawQ(M) {
         const s = M.sum, C = M.C;
         // 1. consumption split
-        const g1 = [['planned', 'Planned (ABP) replaced', s(C.planned), CL.green], ['unplanned', 'Unplanned (ABP me nahi tha)', s(C.unplanned), CL.red], ['avoidRep', 'Avoid list me tha, phir bhi replace', s(C.avoidRep), CL.darkred], ['sb', 'Steel cord / Bucket replacement', s(C.sb), CL.blue], ['pa', 'Piece addition', s(C.pa), CL.purple]];
-        if (M.other > 1) g1.push(['other', 'Baaki (belt match nahi hua)', M.other, CL.grey]);
+        const g1 = [['planned', 'Planned (ABP) replaced', s(C.planned), CL.green], ['unplanned', 'Unplanned (not in ABP)', s(C.unplanned), CL.red], ['avoidRep', 'In avoid list, still replaced', s(C.avoidRep), CL.darkred], ['sb', 'Steel cord / Bucket replacement', s(C.sb), CL.blue], ['pa', 'Piece addition', s(C.pa), CL.purple]];
+        if (M.other > 1) g1.push(['other', 'Other (no belt match)', M.other, CL.grey]);
         qchart('gCons', { horiz: true, labels: g1.map(x => x[1]), ds: [{ label: 'Consumed', data: g1.map(x => x[2]), color: g1.map(x => x[3]) }] }, i => 'cons:' + g1[i][0]);
         // 2. projection
         const T = M.T * TOTAL_KM, done = M.st.total;
-        qchart('gProj', { labels: ['FY target', 'Ab tak consumed', 'March tak (projected)'], tip: v => ml(v), ds: [
+        qchart('gProj', { labels: ['FY target', 'Consumed till date', 'Projected by March'], tip: v => ml(v), ds: [
             { label: 'Target', data: [T, 0, 0], color: CL.blue },
             { label: 'Consumed till date', data: [0, done, done], color: CL.teal },
-            { label: 'Bache planned fabric belts', data: [0, 0, M.pendFab], color: CL.amber },
-            { label: 'Bacha steel cord plan', data: [0, 0, M.pendSteel], color: '#fb923c' },
-            { label: 'Bacha bucket plan', data: [0, 0, M.pendBucket], color: '#facc15' }] },
+            { label: 'Remaining planned fabric belts', data: [0, 0, M.pendFab], color: CL.amber },
+            { label: 'Remaining steel cord plan', data: [0, 0, M.pendSteel], color: '#fb923c' },
+            { label: 'Remaining bucket plan', data: [0, 0, M.pendBucket], color: '#facc15' }] },
             (i, d) => i === 0 ? null : (d >= 2 ? 'proj:pend' : 'cons:all'), v => `${fmt(v)} m · ${f1(v / TOTAL_KM)}`);
         // 3. unplanned by dept
         const un = C.unplanned, ar = C.avoidRep; const dl = DEPTS.map(d => d[0]).filter(n => un.some(x => x.dept === n) || ar.some(x => x.dept === n));
         const dd = dl.map(n => ({ n, a: un.filter(x => x.dept === n), b: ar.filter(x => x.dept === n) })).sort((p, q) => (s(q.a) + s(q.b)) - (s(p.a) + s(p.b)));
-        qchart('gDept', { horiz: true, labels: dd.map(x => x.n), ds: [{ label: 'Unplanned (ABP me nahi)', data: dd.map(x => s(x.a)), color: CL.red }, { label: 'Avoid list wale replace', data: dd.map(x => s(x.b)), color: CL.darkred }] },
+        qchart('gDept', { horiz: true, labels: dd.map(x => x.n), ds: [{ label: 'Unplanned (not in ABP)', data: dd.map(x => s(x.a)), color: CL.red }, { label: 'Avoid-list belts replaced', data: dd.map(x => s(x.b)), color: CL.darkred }] },
             i => 'dept:' + dd[i].n, (v, i) => `${fmt(v)} m · ${dd[i].a.length + dd[i].b.length} belts`);
         // 4. thickness due
         const lenS = arr => s(arr, a => a.len);
         const preDone = M.pre;
-        const g4l = ['RTG planned', 'Avoid kiye ja sakte'];
+        const g4l = ['RTG planned', 'Can be avoided'];
         const g4 = [
-            { label: 'Replace ho gaye', data: [lenS(M.plDone) + lenS(preDone), 0], color: CL.green, k: ['thk:plDone', null] },
+            { label: 'Replaced', data: [lenS(M.plDone) + lenS(preDone), 0], color: CL.green, k: ['thk:plDone', null] },
             { label: 'Pending', data: [lenS(M.plPend), 0], color: CL.amber, k: ['thk:plPend', null] },
-            { label: 'Abhi tak avoid', data: [0, lenS(M.avStill)], color: CL.blue, k: [null, 'thk:avStill'] },
-            { label: 'Phir bhi replace hua', data: [0, lenS(M.avRep)], color: CL.darkred, k: [null, 'thk:avRep'] }];
-        if (M.fresh.length) { g4l.push('Naye due (ABP me nahi)'); g4.forEach(d => { d.data.push(0); d.k.push(null); }); g4.push({ label: 'Naye due', data: [0, 0, lenS(M.fresh)], color: CL.purple, k: [null, null, 'thk:fresh'] }); }
+            { label: 'Still avoided', data: [0, lenS(M.avStill)], color: CL.blue, k: [null, 'thk:avStill'] },
+            { label: 'Replaced anyway', data: [0, lenS(M.avRep)], color: CL.darkred, k: [null, 'thk:avRep'] }];
+        if (M.fresh.length) { g4l.push('Newly due (not in ABP)'); g4.forEach(d => { d.data.push(0); d.k.push(null); }); g4.push({ label: 'Newly due', data: [0, 0, lenS(M.fresh)], color: CL.purple, k: [null, null, 'thk:fresh'] }); }
         const cnt = [M.pl.length + M.pre.length, M.av.length, M.fresh.length];
         qchart('gThk', { labels: g4l, ds: g4 }, (i, d) => g4[d].k[i] || ['thk:plAll', 'thk:avAll', 'thk:fresh'][i], (v, i) => `${cnt[i]} belts · ${fmt(v)} m`);
         // 5. steel & bucket
@@ -3097,7 +3097,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const rn = r => (REASONS.find(x => x[0] === r) || [0, r || 'Others'])[1];
         const byR = r => M.av.filter(a => (a.reason || 'OTHERS') === r);
         const rr = rs.map(r => ({ r, still: byR(r).filter(a => !M.repMap[a.conv]), rep: byR(r).filter(a => M.repMap[a.conv]) })).filter(x => x.still.length + x.rep.length).sort((p, q) => lenS(q.still.concat(q.rep)) - lenS(p.still.concat(p.rep)));
-        qchart('gWhy', { horiz: true, labels: rr.map(x => rn(x.r)), ds: [{ label: 'Abhi tak avoid', data: rr.map(x => lenS(x.still)), color: CL.blue }, { label: 'Phir bhi replace hua', data: rr.map(x => lenS(x.rep)), color: CL.darkred }] },
+        qchart('gWhy', { horiz: true, labels: rr.map(x => rn(x.r)), ds: [{ label: 'Still avoided', data: rr.map(x => lenS(x.still)), color: CL.blue }, { label: 'Replaced anyway', data: rr.map(x => lenS(x.rep)), color: CL.darkred }] },
             i => 'why:' + rr[i].r, (v, i) => `${rr[i].still.length + rr[i].rep.length} belts · ${fmt(v)} m`);
     }
 
@@ -3111,29 +3111,29 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const repRows = (arr, note) => ({ head: ['Date', 'Dept', 'Conveyor', 'Metres', 'Type', 'Min thk', 'Note'], rows: arr.slice().sort((a, b) => (a.date || 0) - (b.date || 0)).map(x => [dstr(x.date), x.dept, x.name, fmt(x.m), x.kind || '', thkTxt(x.conv), note(x)]), tm: s(arr) });
         const abpRows = (arr, st) => ({ head: ['Dept', 'Conveyor', 'Cat', 'Length m', 'Planned m', 'Grade', 'Next CBM', 'Min thk', 'Status / Reason'], rows: arr.slice().sort((a, b) => (a.next || 0) - (b.next || 0)).map(a => [a.dept, a.name, a.cat, fmt(a.len), a.plan ? fmt(a.plan) : '-', a.grade, dstr(a.next), thkTxt(a.conv), st(a)]), tm: s(arr, a => a.len) });
         const doneTxt = a => { const r = M.repMap[a.conv]; if (!r) return P_PEND(); const d = r.map(x => x.date).filter(Boolean).sort((p, q) => q - p)[0]; return P_DONE('Done' + (d ? ' ' + dstr(d) : '') + ' · ' + fmt(s(r)) + ' m'); };
-        const noteU = x => M.abpBy[x.conv] && M.abpBy[x.conv].cls === 'Avoid' ? P_RED('Avoid list me tha: ' + rn(M.abpBy[x.conv].reason)) : P_RED('ABP me nahi');
+        const noteU = x => M.abpBy[x.conv] && M.abpBy[x.conv].cls === 'Avoid' ? P_RED('Was in avoid list: ' + rn(M.abpBy[x.conv].reason)) : P_RED('Not in ABP');
         let o;
         if (kind === 'cons') {
-            if (arg === 'planned') o = Object.assign(repRows(M.C.planned, x => P_DONE(M.abpBy[x.conv] && M.abpBy[x.conv].cls === 'Replaced' ? 'ABP (pehle hi replace)' : 'ABP planned')), { t: 'Planned (ABP) belts jo replace ho gaye' });
-            else if (arg === 'unplanned') o = Object.assign(repRows(M.C.unplanned, noteU), { t: 'Unplanned replacement - ABP list me nahi the' });
-            else if (arg === 'avoidRep') o = Object.assign(repRows(M.C.avoidRep, noteU), { t: 'Avoid list wale belts jo phir bhi replace hue' });
+            if (arg === 'planned') o = Object.assign(repRows(M.C.planned, x => P_DONE(M.abpBy[x.conv] && M.abpBy[x.conv].cls === 'Replaced' ? 'ABP (replaced before plan)' : 'ABP planned')), { t: 'Planned (ABP) belts replaced' });
+            else if (arg === 'unplanned') o = Object.assign(repRows(M.C.unplanned, noteU), { t: 'Unplanned replacement - not in ABP list' });
+            else if (arg === 'avoidRep') o = Object.assign(repRows(M.C.avoidRep, noteU), { t: 'Avoid-list belts replaced anyway' });
             else if (arg === 'sb') o = Object.assign(repRows(M.C.sb, x => P_BLUE(M.isSteel(x.conv) ? 'Steel cord' : 'Bucket')), { t: 'Steel cord / Bucket replacement' });
             else if (arg === 'pa') o = Object.assign(repRows(M.C.pa, x => M.isSteel(x.conv) ? P_BLUE('Steel cord') : (M.isBucket(x.conv) ? P_BLUE('Bucket') : '')), { t: 'Piece addition (belt-wise)' });
-            else if (arg === 'other') o = { t: 'Baaki consumption', head: ['Note'], rows: [[`${fmt(M.other)} m SBC sheet ke monthly total me hai par belt-wise replacement / piece addition me match nahi hua (date / conveyor name ka fark).`]], tm: M.other };
-            else o = Object.assign(repRows(M.C.planned.concat(M.C.unplanned, M.C.avoidRep, M.C.sb, M.C.pa), x => x.kind === 'Piece addition' ? P_BLUE('Piece addition') : (M.C.planned.includes(x) ? P_DONE('Planned') : (M.C.sb.includes(x) ? P_BLUE('Steel/Bucket') : noteU(x)))), { t: 'Ab tak ka saara consumption' });
+            else if (arg === 'other') o = { t: 'Other consumption', head: ['Note'], rows: [[`${fmt(M.other)} m is in the SBC sheet monthly total but could not be matched to a belt-wise replacement / piece addition (date or conveyor name mismatch).`]], tm: M.other };
+            else o = Object.assign(repRows(M.C.planned.concat(M.C.unplanned, M.C.avoidRep, M.C.sb, M.C.pa), x => x.kind === 'Piece addition' ? P_BLUE('Piece addition') : (M.C.planned.includes(x) ? P_DONE('Planned') : (M.C.sb.includes(x) ? P_BLUE('Steel/Bucket') : noteU(x)))), { t: 'All consumption till date' });
         } else if (kind === 'proj') {
-            o = Object.assign(abpRows(M.plPend, a => P_PEND('Pending')), { t: 'Bache hue planned belts (March tak hone hain)' }); o.tm = s(M.plPend, M.planM);
-            o.extra = `+ Steel cord plan bacha ${fmt(M.pendSteel)} m, Bucket plan bacha ${fmt(M.pendBucket)} m (belt-wise list nahi hai).`;
+            o = Object.assign(abpRows(M.plPend, a => P_PEND('Pending')), { t: 'Remaining planned belts (due by March)' }); o.tm = s(M.plPend, M.planM);
+            o.extra = `+ Steel cord plan remaining ${fmt(M.pendSteel)} m, Bucket plan remaining ${fmt(M.pendBucket)} m (no belt-wise list).`;
         } else if (kind === 'dept') {
             const arr = M.C.unplanned.concat(M.C.avoidRep).filter(x => x.dept === arg); o = Object.assign(repRows(arr, noteU), { t: `${arg} - unplanned replacement` });
         } else if (kind === 'thk') {
-            const map = { plDone: [M.plDone.concat(M.pre), 'RTG planned - replace ho gaye', doneTxt], plPend: [M.plPend, 'RTG planned - pending', doneTxt], plAll: [M.pl.concat(M.pre), 'RTG planned - saare', doneTxt],
-                avStill: [M.avStill, 'Avoid kiye ja sakte - abhi tak avoid', a => P_BLUE(rn(a.reason))], avRep: [M.avRep, 'Avoid ho sakte the - phir bhi replace', a => P_RED('Replaced · ' + rn(a.reason))], avAll: [M.av, 'Avoid kiye ja sakte - saare', a => M.repMap[a.conv] ? P_RED('Replaced · ' + rn(a.reason)) : P_BLUE(rn(a.reason))] };
-            if (arg === 'fresh') o = { t: 'Thickness ke hisaab se naye due - ABP me nahi hain', head: ['Dept', 'Conveyor', 'Length m', 'Next CBM', 'Min thk'], rows: M.fresh.slice().sort((a, b) => a.next - b.next).map(a => [a.dept, a.name, fmt(a.len), dstr(a.next), thkTxt(a.conv)]), tm: s(M.fresh, a => a.len) };
+            const map = { plDone: [M.plDone.concat(M.pre), 'RTG planned - replaced', doneTxt], plPend: [M.plPend, 'RTG planned - pending', doneTxt], plAll: [M.pl.concat(M.pre), 'RTG planned - all', doneTxt],
+                avStill: [M.avStill, 'Can be avoided - still avoided', a => P_BLUE(rn(a.reason))], avRep: [M.avRep, 'Could be avoided - replaced anyway', a => P_RED('Replaced · ' + rn(a.reason))], avAll: [M.av, 'Can be avoided - all', a => M.repMap[a.conv] ? P_RED('Replaced · ' + rn(a.reason)) : P_BLUE(rn(a.reason))] };
+            if (arg === 'fresh') o = { t: 'Newly due as per thickness - not in ABP', head: ['Dept', 'Conveyor', 'Length m', 'Next CBM', 'Min thk'], rows: M.fresh.slice().sort((a, b) => a.next - b.next).map(a => [a.dept, a.name, fmt(a.len), dstr(a.next), thkTxt(a.conv)]), tm: s(M.fresh, a => a.len) };
             else { const m = map[arg]; o = Object.assign(abpRows(m[0], m[2]), { t: m[1] }); }
         } else if (kind === 'sb') {
             const st = arg === 'steel'; const arr = (st ? M.steelRep.concat(M.steelPa) : M.bucketRep.concat(M.bucketPa));
-            o = Object.assign(repRows(arr, x => ''), { t: (st ? 'Steel cord' : 'Bucket') + ' - consumption' }); const pp = st ? M.steelPlan : M.bucketPlan, uu = s(arr); o.extra = `Plan ${fmt(pp)} m · consumed ${fmt(uu)} m · ${uu > pp ? '<b class="sbc-r">plan se ' + fmt(uu - pp) + ' m zyada</b>' : 'plan bacha ' + fmt(pp - uu) + ' m'}`;
+            o = Object.assign(repRows(arr, x => ''), { t: (st ? 'Steel cord' : 'Bucket') + ' - consumption' }); const pp = st ? M.steelPlan : M.bucketPlan, uu = s(arr); o.extra = `Plan ${fmt(pp)} m · consumed ${fmt(uu)} m · ${uu > pp ? '<b class="sbc-r">' + fmt(uu - pp) + ' m over plan</b>' : 'plan remaining ' + fmt(pp - uu) + ' m'}`;
         } else if (kind === 'why') {
             const arr = M.av.filter(a => (a.reason || 'OTHERS') === arg); o = { t: 'Avoid reason: ' + rn(arg), head: ['Dept', 'Conveyor', 'Cat', 'Length m', 'Grade', 'Next CBM', 'Min thk', 'Status', 'Remarks'], rows: arr.map(a => [a.dept, a.name, a.cat, fmt(a.len), a.grade, dstr(a.next), thkTxt(a.conv), M.repMap[a.conv] ? P_RED('Replaced anyway') : P_BLUE('Avoid'), a.remarks || '-']), tm: s(arr, a => a.len) };
         }
@@ -3144,11 +3144,11 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const p = el('sbcDetail'); p.style.display = 'block';
         p.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px"><h3 style="margin:0;flex:1"><i class="fas fa-list"></i> ${o.t}</h3>
             <button class="sbc-chip" onclick="sbcListCsv()"><i class="fas fa-download"></i> CSV</button>
-            <button class="sbc-chip on" onclick="sbcBack()"><i class="fas fa-arrow-up"></i> Graph par wapas</button>
+            <button class="sbc-chip on" onclick="sbcBack()"><i class="fas fa-arrow-up"></i> Back to graph</button>
             <button class="sbc-chip" onclick="sbcCloseList()"><i class="fas fa-xmark"></i></button></div>
             <div class="sbc-note" style="margin:0 0 8px">${o.rows.length} belts · ${fmt(o.tm)} m · ${f1(o.tm / TOTAL_KM)} SBC${o.extra ? ' · ' + o.extra : ''}</div>
-            <div class="sbc-tablewrap"><table class="sbc-table"><thead><tr>${o.head.map(x => `<th style="text-align:left">${x}</th>`).join('')}</tr></thead><tbody>${o.rows.map(r => `<tr>${r.map(c => `<td style="text-align:left">${c}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${o.head.length}">Koi record nahi</td></tr>`}</tbody></table></div>
-            <div style="text-align:center;margin-top:10px"><button class="sbc-chip on" onclick="sbcBack()"><i class="fas fa-arrow-up"></i> Graph par wapas</button></div>`;
+            <div class="sbc-tablewrap"><table class="sbc-table"><thead><tr>${o.head.map(x => `<th style="text-align:left">${x}</th>`).join('')}</tr></thead><tbody>${o.rows.map(r => `<tr>${r.map(c => `<td style="text-align:left">${c}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${o.head.length}">No records</td></tr>`}</tbody></table></div>
+            <div style="text-align:center;margin-top:10px"><button class="sbc-chip on" onclick="sbcBack()"><i class="fas fa-arrow-up"></i> Back to graph</button></div>`;
         if (!quiet) setTimeout(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
     };
     window.sbcBack = function () { const c = el(S.from || 'sbcMain'); (c || el('sbcScreen')).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
@@ -3178,19 +3178,19 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             if (a.conv) seen.add(a.conv);
             if (a.type !== 'Fabric' && a.cls === 'Planned') {
                 const st = a.type === 'Steel'; const used = st ? s(M.steelRep) : s(M.bucketRep), pa = st ? s(M.steelPa) : s(M.bucketPa), tot = used + pa;
-                stt = tot > a.plan ? 'Plan exceeded' : (tot >= a.plan ? 'Plan consumed' : 'Planned - Pending'); rem = `Plan ${fmt(a.plan)} m; replaced ${fmt(used)} m; piece addition ${fmt(pa)} m; ${tot > a.plan ? 'plan se ' + fmt(tot - a.plan) + ' m zyada' : 'bacha ' + fmt(a.plan - tot) + ' m'}`;
+                stt = tot > a.plan ? 'Plan exceeded' : (tot >= a.plan ? 'Plan consumed' : 'Planned - Pending'); rem = `Plan ${fmt(a.plan)} m; replaced ${fmt(used)} m; piece addition ${fmt(pa)} m; ${tot > a.plan ? fmt(tot - a.plan) + ' m over plan' : 'remaining ' + fmt(a.plan - tot) + ' m'}`;
             } else if (a.cls === 'Planned') { stt = rm ? 'Planned - Replaced' : 'Planned - Pending'; rem = rm ? `Replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m (planned ${fmt(a.plan)} m)` : `Pending - next CBM ${dz(a.next)}`; }
-            else if (a.cls === 'Avoid') { stt = rm ? 'Could be avoided - but Replaced' : 'Can be avoided'; rem = rm ? `Avoid list me tha (${rn(a.reason)}) phir bhi replace hua${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : `Abhi tak avoid - ${rn(a.reason)}`; }
-            else if (a.cls === 'Replaced') { stt = 'Already replaced (before plan)'; rem = rm ? `Replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : 'ABP banne se pehle replace'; }
+            else if (a.cls === 'Avoid') { stt = rm ? 'Could be avoided - but Replaced' : 'Can be avoided'; rem = rm ? `In avoid list (${rn(a.reason)}) but replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : `Still avoided - ${rn(a.reason)}`; }
+            else if (a.cls === 'Replaced') { stt = 'Already replaced (before plan)'; rem = rm ? `Replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : 'Replaced before ABP was made'; }
             else stt = a.cls;
             rows.push([`FY${fy}`, a.dept, a.name, a.cat, a.len, a.grade, a.type, dz(a.next), a.plan, a.cls, rn(a.reason), a.remarks, stt, dz(d), rm || '', pm || '', rem].concat(a.conv ? thkCols(a.conv) : Array(8).fill('')).concat(a.conv ? abnCols(a.conv) : ['', '']));
         });
         // ABP ke bahar: unplanned replacement / steel-bucket / piece addition / naye due
         const extra = (c, stt, rem, len) => { const t = S.thk[c] || {}; const r = (M.repMap[c] || [])[0] || (M.paMap[c] || [])[0] || {}; rows.push([`FY${fy}`, t.dept || r.dept || '', t.name || r.name || c, '', len || t.len || '', t.grade || '', '', '', '', 'Not in ABP', '', '', stt, dz(lastD(c)), s(M.repMap[c] || []) || '', s(M.paMap[c] || []) || '', rem].concat(thkCols(c), abnCols(c))); seen.add(c); };
-        M.C.unplanned.forEach(x => extra(x.conv, 'Unplanned - Replaced (not in ABP)', `Replaced${x.date ? ' on ' + dz(x.date) : ''}, ${fmt(x.m)} m - ABP list me nahi tha`));
-        M.C.sb.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, M.isSteel(x.conv) ? 'Steel cord - Replaced' : 'Bucket - Replaced', `Replaced${x.date ? ' on ' + dz(x.date) : ''}, ${fmt(x.m)} m (total plan ke against)`); });
+        M.C.unplanned.forEach(x => extra(x.conv, 'Unplanned - Replaced (not in ABP)', `Replaced${x.date ? ' on ' + dz(x.date) : ''}, ${fmt(x.m)} m - not in ABP list`));
+        M.C.sb.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, M.isSteel(x.conv) ? 'Steel cord - Replaced' : 'Bucket - Replaced', `Replaced${x.date ? ' on ' + dz(x.date) : ''}, ${fmt(x.m)} m (against total plan)`); });
         M.C.pa.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, 'Piece addition only', `Piece addition ${fmt(x.m)} m`); });
-        M.fresh.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, 'Due by thickness - not in ABP', `Thickness ke hisaab se next CBM ${dz(x.next)} - ABP me nahi hai`, x.len); });
+        M.fresh.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, 'Due by thickness - not in ABP', `Next CBM as per thickness ${dz(x.next)} - not in ABP`, x.len); });
         // summary
         rows.push([]); rows.push(['SUMMARY']);
         [['FY target (m/km)', M.T], ['Consumed till date (m)', Math.round(M.st.total)], ['SBC till date', f1(M.st.total / TOTAL_KM)], ['Balance (m)', Math.round(Math.max(0, M.T * TOTAL_KM - M.st.total))],
