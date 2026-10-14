@@ -353,6 +353,7 @@
         .sbc-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; }
         .sbc-pill { padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
         .sbc-qn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--teal); color: #fff; font-size: 0.75rem; margin-right: 4px; }
+        .sbc-png { padding: 4px 10px; font-size: 0.7rem; margin: 0; white-space: nowrap; }
         .sbc-tap { font-size: 0.72rem; color: var(--teal); margin-top: 6px; text-align: center; }
         #sbcDetail { scroll-margin-top: 10px; border: 1px solid var(--teal); }
         details.sbc-panel summary { cursor: pointer; font-size: 0.95rem; }
@@ -421,7 +422,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 14-Oct-c</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 14-Oct-d</div>
         </div>
     </div>
 
@@ -2833,7 +2834,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     const MON = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
     const GREEN = '#10b981', YELLOW = '#f59e0b', RED = '#ef4444';
     const REASONS = [['HIGHWEARRATE', 'High wear rate'], ['B/C CATEGORY LONG BELT', 'Long B/C category belts'], ['JAN-MAR 2027', "Falling Jan-Mar'27"], ['SKIRT DAMAGE', 'Damaged at skirt area'], ['OTHERS', 'Others']];
-    const S = { daily: [], abp: [], thk: {}, abn: {}, mode: 'sbc', charts: {}, loaded: false, detail: null };
+    const S = { daily: [], abp: [], thk: {}, abn: {}, ev: {}, cfg: {}, mode: 'sbc', charts: {}, loaded: false, detail: null };
 
     const key = s => String(s || '').trim().toUpperCase().replace(/\s+/g, '');
     function nd(d) {
@@ -2865,7 +2866,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (typeof currentRole === 'undefined' || currentRole !== 'admin') return;
         el('landingPage').style.display = 'none'; el('sbcScreen').style.display = 'block'; window.scrollTo(0, 0); el('sbcScreen').scrollTop = 0;
         el('sbcLoading').style.display = 'block'; el('sbcLoading').innerText = 'Loading data...';
-        Promise.all([get('./sbc.csv'), get('./abp.csv'), get('./data.csv'), get('./abn.csv')]).then(([sbc, abp, thk, abn]) => {
+        Promise.all([get('./sbc.csv'), get('./abp.csv'), get('./data.csv'), get('./abn.csv'), get('./daily.csv')]).then(([sbc, abp, thk, abn, dly]) => {
             // sbc.csv = Google Sheet "SBC" tab: main table (Department, Conveyor, Replacement/Piece Addition FY'25-27) + flat pivot (Dept., Conv. Name, Clean Month, FY'25-27)
             const MONN = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
             const FYL = [[25, "FY'25"], [26, "FY'26"], [27, "FY'27"]];
@@ -2889,7 +2890,11 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             el('sbcLoading').innerText = S.monthly.length ? '' : 'sbc.csv not found or empty (check the SBC tab in Google Sheet / sync).';
             S.abp = abp.map(r => ({ fy: String(r.FY || '').replace(/\D/g, '') * 1, dept: nd(r.Dept), conv: key(r.Conveyor), name: r.Conveyor, cat: r.Category, len: num(r.Length), grade: r.Grade, type: r.Type, next: pdmy(r.NextCBM), plan: num(r.PlannedMtrs), cls: r.Class, reason: r.Reason, remarks: r.Remarks }));
             S.thk = {};
-            thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']), nextCbm: parseDateCustom(r[Object.keys(r).find(k => /^Next Prediction\s*\(CBM\)/i.test(k))]), minThk: (r['MIN THICKNESS'] || '').trim(), top: (r['TOP'] || '').trim(), lastThk: parseDateCustom(r['Last Thickness Date']), cWear: (v => v ? v.toFixed(3) : '')(num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))])), predLife: num(r['Predicted Life (in Months) (Actual)']) ? f1(num(r['Predicted Life (in Months) (Actual)'])) : '', crit: (r['Criticality'] || '').trim() }; });
+            thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']), nextCbm: parseDateCustom(r[Object.keys(r).find(k => /^Next Prediction\s*\(CBM\)/i.test(k))]), minThk: (r['MIN THICKNESS'] || '').trim(), top: (r['TOP'] || '').trim(), lastThk: parseDateCustom(r['Last Thickness Date']), cWear: (v => v ? v.toFixed(3) : '')(num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))])), predLife: num(r['Predicted Life (in Months) (Actual)']) ? f1(num(r['Predicted Life (in Months) (Actual)'])) : '', crit: (r['Criticality'] || '').trim(), cat: String(r['CATEGORY'] || '').trim().toUpperCase(), pWearN: num(r[Object.keys(r).find(k => /^Planned Wear Rate/i.test(k))]), cWearN: num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))]), e1: String(r['Thickness EDGE 1'] || '').trim(), ctr: String(r['CENTER2'] || '').trim(), e2: String(r['Thickness EDGE 2'] || '').trim() }; });
+            // Daily Report: har replacement / piece addition ki date, metres, joint, vendor
+            S.ev = {}; dly.forEach(r => { const c = key(r['Conveyor']); if (!c) return; const L = S.ev[c] = S.ev[c] || [];
+                const fd = pdmy(r['Final Replacement Date']); if (fd && fd.getFullYear() > 2000) L.push({ type: 'R', date: fd, m: num(r['Cosnumption'] || r['Consumption']), joint: String(r['Type of joint'] || '').trim(), vendor: String(r['Vendor'] || '').trim() });
+                for (let i = 1; i <= 8; i++) { const d = pdmy(r['Piece Addition date' + i]); if (d && d.getFullYear() > 2000) L.push({ type: 'P', date: d, m: num(r['PA consumption' + i]), joint: String(r['Type of PA Joint' + i] || '').trim(), vendor: String(r['PA vendor' + i] || '').trim() }); } });
             S.abn = {}; abn.forEach(r => { const c = key(r['NO.']); if (!c || /close/i.test(r['Status'] || '')) return; (S.abn[c] = S.abn[c] || []).push({ date: parseDateCustom(r['Abnormality Date']), issue: String(r['Major Abnormality'] || '').trim(), rec: String(r['recommendation'] || '').trim() }); });
             const fys = new Set(Object.keys(FY_TARGET).map(Number)); S.monthly.forEach(x => fys.add(x.fy));
             const arr = Array.from(fys).sort((a, b) => b - a); const sel = el('sbcFy'); const cur = sel.value;
@@ -2945,8 +2950,19 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const pendFab = sum(plPend, planM), pendSteel = Math.max(0, steelPlan - steelUsed), pendBucket = Math.max(0, bucketPlan - bucketUsed);
         const proj = st.total + pendFab + pendSteel + pendBucket;
         // thickness se naye due belts jo ABP me hai hi nahi
-        const fresh = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (abpBy[c] || repMap[c] || isSteel(c) || isBucket(c)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; fresh.push({ conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm }); });
-        return { fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, avRep, avStill, steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, pendSteel, pendBucket, steelUsed, bucketUsed, proj, fresh, planM, sum, abpBy, isSteel, isBucket };
+        const fresh = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (abpBy[c] || repMap[c] || isSteel(c) || isBucket(c) || /NOT\s*EXIST/.test(t.grade)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; fresh.push({ conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm }); });
+        // Thickness ke hisaab se is FY due (abhi tak replace nahi) - jo RTG plan me nahi, wo avoidable
+        const fyEv = c => (S.ev[c] || []).filter(e => fyOf(e.date) === fy);
+        const nz = v => v !== '' && !isNaN(parseFloat(v));
+        const thkReason = c => { const t = S.thk[c];
+            if (nz(t.e1) && nz(t.ctr) && nz(t.e2) && Math.min(+t.e1, +t.e2) + 1 <= +t.ctr) return 'EDGE';
+            if (t.pWearN > 0 && t.cWearN > t.pWearN * 1.2) return 'WEAR';
+            if ((t.cat === 'B' || t.cat === 'C') && t.len > 90) return 'LONG';
+            if (t.nextCbm && mi(t.nextCbm) >= 9) return 'JANMAR';
+            return 'OTHER'; };
+        const due = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (isSteel(c) || isBucket(c) || repMap[c] || /NOT\s*EXIST/.test(t.grade)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; due.push(c); });
+        const avoidT = due.filter(c => !plSet.has(c) && !preSet.has(c)).map(c => { const t = S.thk[c]; return { conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm, cat: t.cat, grade: t.grade, reason: thkReason(c), inAbp: avSet.has(c) }; });
+        return { fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, avRep, avStill, steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, pendSteel, pendBucket, steelUsed, bucketUsed, proj, fresh, planM, sum, abpBy, isSteel, isBucket };
     }
 
     window.sbcRender = function () {
@@ -2969,20 +2985,21 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             <div class="glass-panel sbc-kpi"><b>${fmt(Math.max(0, T * TOTAL_KM - st.total))}</b><span>Balance metres</span></div>
             ${M.abp.length ? `<div class="glass-panel sbc-kpi"><b class="${clsFor(projS / T)}">${f1(projS)}</b><span>By March (if plan completed)</span></div>` : ''}</div>`;
         // ---- main chart ----
-        h += `<div class="glass-panel sbc-panel"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;"><h3 style="margin:0;flex:1;">Month-wise ${S.mode === 'sbc' ? 'SBC (m/km)' : 'Consumption (m)'} - FY'${fy}</h3>
+        TITLES.sbcMain = `Month-wise ${S.mode === 'sbc' ? 'SBC (m/km)' : 'Consumption (m)'} - FY'${fy}`;
+        h += `<div class="glass-panel sbc-panel" id="card-sbcMain"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;"><h3 style="margin:0;flex:1;">${TITLES.sbcMain}</h3><button class="sbc-chip sbc-png" onclick="sbcPng('sbcMain')" title="Download PNG"><i class="fas fa-image"></i> PNG</button>
             <button class="sbc-chip ${S.mode === 'sbc' ? 'on' : ''}" onclick="sbcSetMode('sbc')">SBC</button><button class="sbc-chip ${S.mode === 'm' ? 'on' : ''}" onclick="sbcSetMode('m')">Metres</button></div>
             <div class="sbc-chart"><canvas id="sbcMain"></canvas></div>
-            <div class="sbc-note">Bar colour: <span class="sbc-g">green</span> &le;80% of target, <span class="sbc-y">yellow</span> 80-100%, <span class="sbc-r">red</span> &gt;100% ${fy === 27 ? '(monthly target)' : '(annual target / 12)'}. Cumulative line and annual target on right axis.</div></div>`;
+            <div class="sbc-note">Bar colour: <span class="sbc-g">green</span> &le;80% of target, <span class="sbc-y">yellow</span> 80-100%, <span class="sbc-r">red</span> &gt;100% ${fy === 27 ? '(monthly target)' : '(annual target / 12)'}. Cumulative line and annual target on right axis. <span style="color:var(--teal)"><i class="fas fa-hand-pointer"></i> Tap a month bar to see which conveyors consumed belt that month.</span></div></div>`;
         // ---- question graphs ----
         if (M.abp.length) {
-            const card = (id, n, title, sub, hgt) => `<div class="glass-panel sbc-panel" id="card-${id}"><h3><span class="sbc-qn">${n}</span> ${title}</h3><div class="sbc-note" style="margin:0 0 8px">${sub}</div><div class="sbc-chart" style="height:${hgt || 280}px"><canvas id="${id}"></canvas></div><div class="sbc-tap"><i class="fas fa-hand-pointer"></i> Tap any bar to open its belt list below</div></div>`;
+            const card = (id, n, title, sub, hgt) => { TITLES[id] = n + '. ' + title + ` (FY'${fy})`; return `<div class="glass-panel sbc-panel" id="card-${id}"><div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px"><h3 style="margin:0;flex:1"><span class="sbc-qn">${n}</span> ${title}</h3><button class="sbc-chip sbc-png" onclick="sbcPng('${id}')" title="Download PNG"><i class="fas fa-image"></i> PNG</button></div><div class="sbc-note" style="margin:0 0 8px">${sub}</div><div class="sbc-chart" style="height:${hgt || 280}px"><canvas id="${id}"></canvas></div><div class="sbc-tap"><i class="fas fa-hand-pointer"></i> Tap any bar to open its belt list below</div></div>`; };
             h += `<div class="sbc-grid2">
                 ${card('gCons', 1, 'Consumption till date - where did it go?', `Total ${fmt(st.total)} m (${f1(sbcT)} SBC). Planned = belts in ABP list, Unplanned = belts not in ABP.`)}
                 ${card('gProj', 2, 'Where will SBC reach by March?', `Till date ${f1(sbcT)} + remaining planned belts ${f1((M.pendFab + M.pendSteel + M.pendBucket) / TOTAL_KM)} = <b class="${clsFor(projS / T)}">${f1(projS)}</b> (target ${T}).`)}
                 ${card('gDept', 3, 'Unplanned replacement - department wise', `${M.C.unplanned.length + M.C.avoidRep.length} belts / ${fmt(M.sum(M.C.unplanned) + M.sum(M.C.avoidRep))} m unplanned. Tap a department to see the belts.`, 320)}
                 ${card('gThk', 4, 'Belts due this FY as per thickness', `${M.pl.length + M.av.length + M.pre.length} belts due. RTG planned ${M.pl.length + M.pre.length}, ${M.av.length} can be avoided.`)}
                 ${card('gSb', 5, 'Steel cord & Bucket - plan vs consumed', `Plan: Steel ${fmt(M.steelPlan)} m, Bucket ${fmt(M.bucketPlan)} m (total plan only, not belt-wise).`)}
-                ${card('gWhy', 6, 'Why can these belts be avoided?', `${M.av.length} belts / ${fmt(M.sum(M.av, a => a.len))} m - reason wise. Red = in avoid list but still replaced.`)}
+                ${card('gWhy', 6, 'Why can these belts be avoided? (as per current thickness)', `${M.avoidT.length} belts / ${fmt(M.sum(M.avoidT, a => a.len))} m are due this FY as per latest thickness but not in RTG plan. Reason worked out from the latest readings.`, 300)}
             </div>`;
             h += `<div class="glass-panel sbc-panel" id="sbcDetail" style="display:none;"></div>`;
         }
@@ -3011,6 +3028,20 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         return S.daily.filter(x => x.fy === fy && x.type === 'R' && !plannedSet.has(x.conv) && !pre.has(x.conv) && !isSB(x.conv));
     }
 
+    function mk(id, cfg) { S.cfg[id] = cfg; return new Chart(el(id), cfg); }
+    // graph ko fixed size par dobara banao (PNG / PDF ke liye) - title + background ke saath
+    function chartImg(id, w, h, title) {
+        const cfg = S.cfg[id]; if (!cfg) return '';
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.style.cssText = `position:fixed;left:-20000px;top:0;width:${w}px;height:${h}px;`; document.body.appendChild(cv);
+        const bg = getComputedStyle(el('sbcScreen')).backgroundColor || '#0f172a';
+        const o = Object.assign({}, cfg.options, { responsive: false, maintainAspectRatio: false, animation: false, devicePixelRatio: 2, onHover: null, onClick: null, scales: JSON.parse(JSON.stringify(cfg.options.scales || {})) });
+        o.plugins = Object.assign({}, cfg.options.plugins, { tooltip: { enabled: false }, title: { display: !!title, text: title, color: '#f1f5f9', font: { size: 15, weight: 'bold' }, padding: { bottom: 12 } } });
+        let url = '';
+        try { const ch = new Chart(cv, { type: cfg.type, data: JSON.parse(JSON.stringify(cfg.data)), options: o, plugins: (cfg.plugins || []).concat([{ id: 'bgfill', beforeDraw(c) { const x = c.ctx; x.save(); x.fillStyle = bg; x.fillRect(0, 0, c.width, c.height); x.restore(); } }]) }); url = ch.toBase64Image('image/png', 1); ch.destroy(); } catch (e) { console.error(e); }
+        cv.remove(); return url;
+    }
+    const TITLES = {};
+    window.sbcPng = function (id) { const u = chartImg(id, 1400, 620, TITLES[id] || ''); if (!u) return; const a = document.createElement('a'); a.href = u; a.download = `SBC_${(TITLES[id] || id).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 50)}_FY${fyNow()}.png`; document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 300); };
     function tcol() { return { tick: '#cbd5e1', grid: 'rgba(148,163,184,0.15)' }; }
     function drawMain(fy, st, T) {
         const k = S.mode === 'sbc' ? 1 / TOTAL_KM : 1; const mt = fy === 27 ? M_TARGET_27 : Array(12).fill(T / 12);
@@ -3018,15 +3049,17 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const data = st.all.map((v, i) => i > st.last ? null : v * k); const cum = st.all.map((v, i) => i > st.last ? null : sumRange(st.all, i) * k);
         const cols = st.all.map((v, i) => colorFor((v / TOTAL_KM) / mt[i]));
         const c = tcol();
-        S.charts.main = new Chart(el('sbcMain'), { data: { labels, datasets: [
+        S.charts.main = mk('sbcMain', { data: { labels, datasets: [
             { type: 'bar', label: S.mode === 'sbc' ? 'Monthly SBC' : 'Monthly metres', data, backgroundColor: cols, yAxisID: 'y', order: 3 },
             { type: 'line', label: 'Monthly target', data: mt.map(v => v * (S.mode === 'sbc' ? 1 : TOTAL_KM)), borderColor: '#38bdf8', borderDash: [5, 4], pointRadius: 2, stepped: true, yAxisID: 'y', order: 2, hidden: false },
             { type: 'line', label: 'Cumulative', data: cum, borderColor: '#e2e8f0', backgroundColor: '#e2e8f0', pointRadius: 3, tension: 0.2, yAxisID: 'y1', order: 1 },
             { type: 'line', label: `Annual target (${S.mode === 'sbc' ? T : fmt(T * TOTAL_KM)})`, data: Array(12).fill(T * (S.mode === 'sbc' ? 1 : TOTAL_KM)), borderColor: RED, borderDash: [8, 4], pointRadius: 0, yAxisID: 'y1', order: 0 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.tick } } }, scales: { x: { ticks: { color: c.tick }, grid: { color: c.grid } }, y: { beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid }, title: { display: true, text: S.mode === 'sbc' ? 'Monthly m/km' : 'Monthly m', color: c.tick } }, y1: { beginAtZero: true, position: 'right', ticks: { color: c.tick }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Cumulative', color: c.tick } } } } });
+            options: { responsive: true, maintainAspectRatio: false, onHover: (e, els) => { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; }, onClick: (e, els) => { if (!els.length) return; const i = els[0].index; if (i > st.last) return; S.from = 'card-sbcMain'; sbcShow('mon:' + i); }, plugins: { legend: { labels: { color: c.tick } } }, scales: { x: { ticks: { color: c.tick }, grid: { color: c.grid } }, y: { beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid }, title: { display: true, text: S.mode === 'sbc' ? 'Monthly m/km' : 'Monthly m', color: c.tick } }, y1: { beginAtZero: true, position: 'right', ticks: { color: c.tick }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Cumulative', color: c.tick } } } } });
     }
 
     // ---- 6 question graphs ----
+    const TR = [['EDGE', 'Edge wear (skirt damage) - repair skirt'], ['WEAR', 'High wear rate - fix root cause'], ['LONG', 'Long B/C belt (>90 m) - piece addition'], ['JANMAR', 'Due Jan-Mar - can shift to next FY'], ['OTHER', 'Other - review case by case']];
+    const TR_RULE = { EDGE: 'Lowest edge reading is 1 mm or more below centre', WEAR: 'Current wear rate > 1.2 x planned wear rate', LONG: 'Category B/C and length > 90 m', JANMAR: 'Next CBM falls in Jan-Mar', OTHER: 'None of the above' };
     const CL = { green: '#10b981', amber: '#f59e0b', red: '#ef4444', darkred: '#b91c1c', blue: '#38bdf8', purple: '#a78bfa', grey: '#64748b', teal: '#14b8a6' };
     const ml = m => `${fmt(m)} m · ${f1(m / TOTAL_KM)} SBC`;
     // bar ke end par value likhne ka plugin (stack ka total)
@@ -3046,7 +3079,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const ax = { ticks: { color: c.tick, font: { size: 11 } }, grid: { color: c.grid }, beginAtZero: true, stacked: true };
         const cat = { ticks: { color: c.tick, font: { size: 11 }, autoSkip: false }, grid: { display: false }, stacked: true };
         if (cfg.maxV) ax.suggestedMax = cfg.maxV;
-        S.charts[id] = new Chart(el(id), { type: 'bar', data: { labels: cfg.labels, datasets: cfg.ds.map(d => ({ label: d.label, data: d.data, backgroundColor: d.color, borderRadius: 4, maxBarThickness: 46, stack: d.stack || 's' })) },
+        S.charts[id] = mk(id, { type: 'bar', data: { labels: cfg.labels, datasets: cfg.ds.map(d => ({ label: d.label, data: d.data, backgroundColor: d.color, borderRadius: 4, maxBarThickness: 46, stack: d.stack || 's' })) },
             options: { indexAxis: horiz ? 'y' : 'x', responsive: true, maintainAspectRatio: false, layout: { padding: { right: horiz ? 10 : 0, top: 18 } },
                 plugins: { legend: { display: cfg.ds.length > 1, labels: { color: c.tick, boxWidth: 10, font: { size: 11 } } }, tooltip: { filter: x => x.raw > 0, callbacks: { label: x => `${x.dataset.label}: ${cfg.tip ? cfg.tip(x.raw) : ml(x.raw)}` } } },
                 scales: horiz ? { x: ax, y: cat } : { x: cat, y: ax },
@@ -3092,13 +3125,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             { label: 'Replacement', data: [s(M.steelRep), s(M.bucketRep)], color: CL.blue, stack: 'used' },
             { label: 'Piece addition', data: [s(M.steelPa), s(M.bucketPa)], color: CL.purple, stack: 'used' }] },
             i => 'sb:' + (i === 0 ? 'steel' : 'bucket'), v => fmt(v) + ' m');
-        // 6. avoid reasons
-        const rs = REASONS.map(r => r[0]).concat(M.av.map(a => a.reason || 'OTHERS').filter((x, i, a) => a.indexOf(x) === i && !REASONS.some(r => r[0] === x)));
-        const rn = r => (REASONS.find(x => x[0] === r) || [0, r || 'Others'])[1];
-        const byR = r => M.av.filter(a => (a.reason || 'OTHERS') === r);
-        const rr = rs.map(r => ({ r, still: byR(r).filter(a => !M.repMap[a.conv]), rep: byR(r).filter(a => M.repMap[a.conv]) })).filter(x => x.still.length + x.rep.length).sort((p, q) => lenS(q.still.concat(q.rep)) - lenS(p.still.concat(p.rep)));
-        qchart('gWhy', { horiz: true, labels: rr.map(x => rn(x.r)), ds: [{ label: 'Still avoided', data: rr.map(x => lenS(x.still)), color: CL.blue }, { label: 'Replaced anyway', data: rr.map(x => lenS(x.rep)), color: CL.darkred }] },
-            i => 'why:' + rr[i].r, (v, i) => `${rr[i].still.length + rr[i].rep.length} belts · ${fmt(v)} m`);
+        // 6. avoidable as per latest thickness, reason wise
+        const rr = TR.map(r => ({ r: r[0], n: r[1], a: M.avoidT.filter(x => x.reason === r[0]) })).filter(x => x.a.length).sort((p, q) => lenS(q.a) - lenS(p.a));
+        qchart('gWhy', { horiz: true, labels: rr.map(x => x.n), ds: [{ label: 'In ABP avoid list', data: rr.map(x => lenS(x.a.filter(a => a.inAbp))), color: CL.blue }, { label: 'Not in ABP (newly due)', data: rr.map(x => lenS(x.a.filter(a => !a.inAbp))), color: CL.purple }] },
+            i => 'why:' + rr[i].r, (v, i) => `${rr[i].a.length} belts · ${fmt(v)} m`);
     }
 
     // ---- click karne par list ----
@@ -3108,7 +3138,14 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const M = S.M, s = M.sum; const [kind, arg] = k.split(':');
         const rn = r => (REASONS.find(x => x[0] === r) || [0, r || 'Others'])[1];
         const thkTxt = c => { const t = S.thk[c]; return t && t.minThk !== '' ? t.minThk + ' mm' : '-'; };
-        const repRows = (arr, note) => ({ head: ['Date', 'Dept', 'Conveyor', 'Metres', 'Type', 'Min thk', 'Note'], rows: arr.slice().sort((a, b) => (a.date || 0) - (b.date || 0)).map(x => [dstr(x.date), x.dept, x.name, fmt(x.m), x.kind || '', thkTxt(x.conv), note(x)]), tm: s(arr) });
+        const jv = e => [e.joint, e.vendor].filter(Boolean).join(' / ') || '-';
+        // har belt ke Daily Report wale events (date, metres, joint, vendor) - na mile to SBC sheet ka total
+        const repRows = (arr, note) => { const rows = []; let tm = 0;
+            arr.forEach(x => { const ty = x.kind === 'Piece addition' ? 'P' : 'R'; const ev = M.fyEv(x.conv).filter(e => e.type === ty);
+                if (ev.length) ev.forEach(e => { const m = e.m || (ev.length === 1 ? x.m : 0); tm += m; rows.push({ d: e.date, r: [dstr(e.date), x.dept, x.name, fmt(m), x.kind || '', jv(e), thkTxt(x.conv), note(x)] }); });
+                else { tm += x.m; rows.push({ d: x.date, r: [x.date ? dstr(x.date) : '<span class="sbc-note">not in Daily Report</span>', x.dept, x.name, fmt(x.m), x.kind || '', '-', thkTxt(x.conv), note(x)] }); } });
+            rows.sort((a, b) => (a.d || 9e15) - (b.d || 9e15));
+            return { head: ['Date', 'Dept', 'Conveyor', 'Metres', 'Type', 'Joint / Vendor', 'Min thk', 'Note'], rows: rows.map(x => x.r), tm, n: arr.length }; };
         const abpRows = (arr, st) => ({ head: ['Dept', 'Conveyor', 'Cat', 'Length m', 'Planned m', 'Grade', 'Next CBM', 'Min thk', 'Status / Reason'], rows: arr.slice().sort((a, b) => (a.next || 0) - (b.next || 0)).map(a => [a.dept, a.name, a.cat, fmt(a.len), a.plan ? fmt(a.plan) : '-', a.grade, dstr(a.next), thkTxt(a.conv), st(a)]), tm: s(arr, a => a.len) });
         const doneTxt = a => { const r = M.repMap[a.conv]; if (!r) return P_PEND(); const d = r.map(x => x.date).filter(Boolean).sort((p, q) => q - p)[0]; return P_DONE('Done' + (d ? ' ' + dstr(d) : '') + ' · ' + fmt(s(r)) + ' m'); };
         const noteU = x => M.abpBy[x.conv] && M.abpBy[x.conv].cls === 'Avoid' ? P_RED('Was in avoid list: ' + rn(M.abpBy[x.conv].reason)) : P_RED('Not in ABP');
@@ -3135,7 +3172,18 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const st = arg === 'steel'; const arr = (st ? M.steelRep.concat(M.steelPa) : M.bucketRep.concat(M.bucketPa));
             o = Object.assign(repRows(arr, x => ''), { t: (st ? 'Steel cord' : 'Bucket') + ' - consumption' }); const pp = st ? M.steelPlan : M.bucketPlan, uu = s(arr); o.extra = `Plan ${fmt(pp)} m · consumed ${fmt(uu)} m · ${uu > pp ? '<b class="sbc-r">' + fmt(uu - pp) + ' m over plan</b>' : 'plan remaining ' + fmt(pp - uu) + ' m'}`;
         } else if (kind === 'why') {
-            const arr = M.av.filter(a => (a.reason || 'OTHERS') === arg); o = { t: 'Avoid reason: ' + rn(arg), head: ['Dept', 'Conveyor', 'Cat', 'Length m', 'Grade', 'Next CBM', 'Min thk', 'Status', 'Remarks'], rows: arr.map(a => [a.dept, a.name, a.cat, fmt(a.len), a.grade, dstr(a.next), thkTxt(a.conv), M.repMap[a.conv] ? P_RED('Replaced anyway') : P_BLUE('Avoid'), a.remarks || '-']), tm: s(arr, a => a.len) };
+            const arr = M.avoidT.filter(a => a.reason === arg).sort((a, b) => a.next - b.next); const tn = (TR.find(x => x[0] === arg) || [0, arg])[1];
+            o = { t: 'Avoidable as per thickness: ' + tn, head: ['Dept', 'Conveyor', 'Cat', 'Length m', 'Grade', 'Next CBM', 'Min thk', 'Edge1 / Centre / Edge2 (mm)', 'Wear rate current / planned', 'ABP'],
+                rows: arr.map(a => { const t = S.thk[a.conv]; return [a.dept, a.name, a.cat, fmt(a.len), a.grade, dstr(a.next), thkTxt(a.conv), [t.e1, t.ctr, t.e2].map(v => v === '' ? '-' : v).join(' / '), (t.cWearN ? t.cWearN.toFixed(3) : '-') + ' / ' + (t.pWearN ? t.pWearN.toFixed(3) : '-'), a.inAbp ? P_BLUE('In avoid list') : pill('Not in ABP', 'rgba(167,139,250,.2)', '#c4b5fd')]; }), tm: s(arr, a => a.len) };
+            o.extra = 'Rule: ' + TR_RULE[arg];
+        } else if (kind === 'mon') {
+            const i = +arg, fy = M.fy; const g = {}; M.st.rows.filter(x => x.mi === i).forEach(x => { const q = g[x.conv] = g[x.conv] || { conv: x.conv, name: x.name, dept: x.dept, m: 0 }; q.m += x.m; });
+            const cls = c => M.C.planned.some(x => x.conv === c) ? P_DONE('Planned (ABP)') : M.C.avoidRep.some(x => x.conv === c) ? P_RED('Avoid list - replaced') : M.C.unplanned.some(x => x.conv === c) ? P_RED('Unplanned') : M.C.sb.some(x => x.conv === c) ? P_BLUE(M.isSteel(c) ? 'Steel cord' : 'Bucket') : '';
+            const arr = Object.values(g).sort((a, b) => b.m - a.m);
+            o = { t: `${MON[i]}'${String(i < 9 ? fy - 1 : fy).padStart(2, '0')} - conveyors that consumed belt`, head: ['Dept', 'Conveyor', 'Metres (SBC sheet)', 'Activity (Daily Report)', 'Joint / Vendor', 'Class', 'Min thk'],
+                rows: arr.map(x => { const ev = M.fyEv(x.conv).filter(e => mi(e.date) === i); const act = ev.length ? ev.map(e => (e.type === 'R' ? 'Replacement ' : 'Piece addition ') + dstr(e.date) + (e.m ? ' (' + fmt(e.m) + ' m)' : '')).join('<br>') : '-';
+                    const isPA = ev.length && ev.every(e => e.type === 'P'); const c2 = isPA ? (M.isSteel(x.conv) ? P_BLUE('Steel cord PA') : M.isBucket(x.conv) ? P_BLUE('Bucket PA') : pill('Piece addition', 'rgba(167,139,250,.2)', '#c4b5fd')) : (cls(x.conv) || (M.paMap[x.conv] ? pill('Piece addition', 'rgba(167,139,250,.2)', '#c4b5fd') : '-'));
+                    return [x.dept, x.name, fmt(x.m), act, ev.length ? ev.map(jv).join('<br>') : '-', c2, thkTxt(x.conv)]; }), tm: s(arr) };
         }
         return o;
     }
@@ -3146,14 +3194,14 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             <button class="sbc-chip" onclick="sbcListCsv()"><i class="fas fa-download"></i> CSV</button>
             <button class="sbc-chip on" onclick="sbcBack()"><i class="fas fa-arrow-up"></i> Back to graph</button>
             <button class="sbc-chip" onclick="sbcCloseList()"><i class="fas fa-xmark"></i></button></div>
-            <div class="sbc-note" style="margin:0 0 8px">${o.rows.length} belts · ${fmt(o.tm)} m · ${f1(o.tm / TOTAL_KM)} SBC${o.extra ? ' · ' + o.extra : ''}</div>
+            <div class="sbc-note" style="margin:0 0 8px">${o.n != null ? o.n : o.rows.length} belts${o.n != null && o.n !== o.rows.length ? ' (' + o.rows.length + ' entries)' : ''} · ${fmt(o.tm)} m · ${f1(o.tm / TOTAL_KM)} SBC${o.extra ? ' · ' + o.extra : ''}</div>
             <div class="sbc-tablewrap"><table class="sbc-table"><thead><tr>${o.head.map(x => `<th style="text-align:left">${x}</th>`).join('')}</tr></thead><tbody>${o.rows.map(r => `<tr>${r.map(c => `<td style="text-align:left">${c}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${o.head.length}">No records</td></tr>`}</tbody></table></div>
             <div style="text-align:center;margin-top:10px"><button class="sbc-chip on" onclick="sbcBack()"><i class="fas fa-arrow-up"></i> Back to graph</button></div>`;
         if (!quiet) setTimeout(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
     };
     window.sbcBack = function () { const c = el(S.from || 'sbcMain'); (c || el('sbcScreen')).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     window.sbcCloseList = function () { S.detail = null; el('sbcDetail').style.display = 'none'; window.sbcBack(); };
-    const strip = v => String(v == null ? '' : v).replace(/<[^>]*>/g, '').replace(/&amp;/g, '&');
+    const strip = v => String(v == null ? '' : v).replace(/<br\s*\/?>/gi, ' | ').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&');
     function csvDownload(rows, name) {
         const q = v => { const t = String(v == null ? '' : v); return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
         const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
@@ -3166,12 +3214,15 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (!S.loaded) return; const fy = fyNow(); const M = model(fy); const s = M.sum;
         const dz = d => d ? dstr(d) : ''; const rn = r => r ? (REASONS.find(x => x[0] === r) || [0, r])[1] : '';
         const head = ['FY', 'Dept', 'Conveyor', 'Category', 'Length (m)', 'Grade', 'Type', 'Next CBM (ABP)', 'Planned Mtrs', 'ABP Class', 'Avoid Reason', 'ABP Remarks',
-            'STATUS', 'Replacement Date', 'Replaced Mtrs (FY)', 'Piece Addition Mtrs (FY)', 'Status Remarks',
+            'STATUS', 'Replacement Date', 'Replaced Mtrs (FY)', 'Piece Addition Mtrs (FY)', 'Status Remarks', 'Activity in FY (Daily Report)', 'Avoidable as per thickness (reason)',
             'Min Thickness (mm)', 'Top Cover (mm)', 'Last Thickness Date', 'Current Wear Rate (mm/month)', 'Predicted Life (months)', 'Next CBM (thickness)', 'Last Belt Replacement', 'Criticality',
             'Open Abnormalities', 'Open Abnormality Details'];
         const lastD = c => { const r = M.repMap[c]; if (!r) return null; return r.map(x => x.date).filter(Boolean).sort((a, b) => b - a)[0] || null; };
         const thkCols = c => { const t = S.thk[c] || {}; return [t.minThk, t.top, dz(t.lastThk), t.cWear, t.predLife, dz(t.nextCbm), dz(t.lastRep), t.crit].map(v => v == null || v === '-' ? '' : v); };
         const abnCols = c => { const a = (S.abn[c] || []); return [a.length || '', a.map(x => `${dz(x.date)}: ${x.issue}${x.rec ? ' (' + x.rec + ')' : ''}`).join(' | ')]; };
+        const actTxt = c => M.fyEv(c).sort((a, b) => a.date - b.date).map(e => `${e.type === 'R' ? 'Replacement' : 'Piece addition'} ${dz(e.date)}${e.m ? ' ' + Math.round(e.m) + ' m' : ''}${e.joint ? ' ' + e.joint : ''}${e.vendor ? ' (' + e.vendor + ')' : ''}`).join(' | ');
+        const avT = {}; M.avoidT.forEach(a => avT[a.conv] = (TR.find(x => x[0] === a.reason) || [0, a.reason])[1]);
+        const xc = c => c ? [actTxt(c), avT[c] || ''] : ['', ''];
         const rows = [head]; const seen = new Set();
         M.abp.forEach(a => {
             const rm = a.conv ? s(M.repMap[a.conv] || []) : 0, pm = a.conv ? s(M.paMap[a.conv] || []) : 0, d = a.conv ? lastD(a.conv) : null; let stt = '', rem = '';
@@ -3183,10 +3234,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             else if (a.cls === 'Avoid') { stt = rm ? 'Could be avoided - but Replaced' : 'Can be avoided'; rem = rm ? `In avoid list (${rn(a.reason)}) but replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : `Still avoided - ${rn(a.reason)}`; }
             else if (a.cls === 'Replaced') { stt = 'Already replaced (before plan)'; rem = rm ? `Replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : 'Replaced before ABP was made'; }
             else stt = a.cls;
-            rows.push([`FY${fy}`, a.dept, a.name, a.cat, a.len, a.grade, a.type, dz(a.next), a.plan, a.cls, rn(a.reason), a.remarks, stt, dz(d), rm || '', pm || '', rem].concat(a.conv ? thkCols(a.conv) : Array(8).fill('')).concat(a.conv ? abnCols(a.conv) : ['', '']));
+            rows.push([`FY${fy}`, a.dept, a.name, a.cat, a.len, a.grade, a.type, dz(a.next), a.plan, a.cls, rn(a.reason), a.remarks, stt, dz(d), rm || '', pm || '', rem].concat(xc(a.conv), a.conv ? thkCols(a.conv) : Array(8).fill('')).concat(a.conv ? abnCols(a.conv) : ['', '']));
         });
         // ABP ke bahar: unplanned replacement / steel-bucket / piece addition / naye due
-        const extra = (c, stt, rem, len) => { const t = S.thk[c] || {}; const r = (M.repMap[c] || [])[0] || (M.paMap[c] || [])[0] || {}; rows.push([`FY${fy}`, t.dept || r.dept || '', t.name || r.name || c, '', len || t.len || '', t.grade || '', '', '', '', 'Not in ABP', '', '', stt, dz(lastD(c)), s(M.repMap[c] || []) || '', s(M.paMap[c] || []) || '', rem].concat(thkCols(c), abnCols(c))); seen.add(c); };
+        const extra = (c, stt, rem, len) => { const t = S.thk[c] || {}; const r = (M.repMap[c] || [])[0] || (M.paMap[c] || [])[0] || {}; rows.push([`FY${fy}`, t.dept || r.dept || '', t.name || r.name || c, '', len || t.len || '', t.grade || '', '', '', '', 'Not in ABP', '', '', stt, dz(lastD(c)), s(M.repMap[c] || []) || '', s(M.paMap[c] || []) || '', rem].concat(xc(c), thkCols(c), abnCols(c))); seen.add(c); };
         M.C.unplanned.forEach(x => extra(x.conv, 'Unplanned - Replaced (not in ABP)', `Replaced${x.date ? ' on ' + dz(x.date) : ''}, ${fmt(x.m)} m - not in ABP list`));
         M.C.sb.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, M.isSteel(x.conv) ? 'Steel cord - Replaced' : 'Bucket - Replaced', `Replaced${x.date ? ' on ' + dz(x.date) : ''}, ${fmt(x.m)} m (against total plan)`); });
         M.C.pa.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, 'Piece addition only', `Piece addition ${fmt(x.m)} m`); });
@@ -3202,9 +3253,22 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     // ---- export ----
     function pdf(node, name) {
         const bg = getComputedStyle(el('sbcScreen')).backgroundColor;
-        return html2pdf().set({ margin: 6, filename: name, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, backgroundColor: bg, useCORS: true, scrollY: 0 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }, pagebreak: { mode: ['css', 'legacy'], avoid: ['.sbc-panel', '.sbc-banner'] } }).from(node).save();
+        return html2pdf().set({ margin: 6, filename: name, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, backgroundColor: bg, useCORS: true, scrollY: 0 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }, pagebreak: { mode: ['css', 'legacy'], avoid: ['img', '.sbc-panel', '.sbc-banner', '.sbc-kpis', 'tr'] } }).from(node).save();
     }
-    window.sbcExport = function () { if (!S.loaded) return; pdf(el('sbcReportInner'), `SBC_Report_FY${fyNow()}.pdf`); };
+    window.sbcExport = function () {
+        if (!S.loaded || !S.M) return; const fy = fyNow(); const M = S.M; const W = 1060;
+        const bg = getComputedStyle(el('sbcScreen')).backgroundColor; const inner = el('sbcReportInner');
+        const img = (id, h) => { const u = chartImg(id, W, h, TITLES[id] || ''); return u ? `<img src="${u}" style="width:${W}px;height:${h}px;display:block;margin:0 0 12px">` : ''; };
+        const sub = id => { const c = el('card-' + id); const n = c && c.querySelector('.sbc-note'); return n ? `<div class="sbc-note" style="margin:0 0 4px">${n.innerHTML}</div>` : ''; };
+        const br = '<div class="html2pdf__page-break"></div>';
+        const banners = Array.from(inner.querySelectorAll('.sbc-banner')).map(b => b.outerHTML).join('');
+        const kpis = (inner.querySelector('.sbc-kpis') || { outerHTML: '' }).outerHTML;
+        let h = `<h2 style="margin:0 0 4px">SBC - Specific Belt Consumption, FY'${fy}</h2><div class="sbc-note" style="margin-bottom:10px">Generated ${dstr(new Date())} · Total ${TOTAL_KM} km · Target ${M.T} m/km</div>${banners}${kpis}${img('sbcMain', 340)}`;
+        [['gCons', 'gProj'], ['gDept', 'gThk'], ['gSb', 'gWhy']].forEach(p => { if (!S.cfg[p[0]]) return; h += br; p.forEach(id => { if (S.cfg[id]) h += sub(id) + img(id, 310); }); });
+        const det = inner.querySelector('details'); if (det) h += br + '<h3 style="margin:0 0 8px">Detailed tables</h3>' + Array.from(det.querySelectorAll('.sbc-tablewrap')).map(x => x.outerHTML).join('<div style="height:14px"></div>');
+        const div = document.createElement('div'); div.style.cssText = `position:absolute;left:-10000px;top:0;width:${W + 40}px;padding:20px;background:${bg};color:#f8fafc;`; div.innerHTML = h; el('sbcScreen').appendChild(div);
+        pdf(div, `SBC_Report_FY${fy}.pdf`).then(() => div.remove()).catch(() => div.remove());
+    };
     window.sbcExportDept = function (dept) {
         if (!dept || !S.loaded) return; const fy = fyNow(); const T = target(fy); const st = stats(fy); const abp = S.abp.filter(a => a.fy === fy); const km = KM[dept];
         const cons = st.dm[dept].reduce((a, b) => a + b, 0); const sb = cons / km; const repKeys = new Set(st.reps.map(x => x.conv));
@@ -3212,7 +3276,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const up = abp.filter(a => a.cls === 'Planned' && a.dept === dept && a.conv && !repKeys.has(a.conv)).sort((a, b) => (a.next || 0) - (b.next || 0));
         const av = abp.filter(a => a.cls === 'Avoid' && a.dept === dept); const un = unplannedRows(fy, planned, abp).filter(x => x.dept === dept);
         const tbl = (head, rows) => `<table class="sbc-table"><thead><tr>${head.map(h => `<th style="text-align:left">${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td style="text-align:left">${c}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${head.length}">None</td></tr>`}</tbody></table>`;
-        const img = S.charts.main ? `<img src="${S.charts.main.toBase64Image()}" style="width:100%;max-height:300px;object-fit:contain">` : '';
+        const mu = chartImg('sbcMain', 1060, 320, 'Plant month-wise SBC - FY\'' + fy); const img = mu ? `<img src="${mu}" style="width:1060px;height:320px;display:block">` : '';
         const div = document.createElement('div'); div.style.cssText = 'position:absolute;left:-10000px;top:0;width:1100px;padding:16px;background:' + getComputedStyle(el('sbcScreen')).backgroundColor + ';color:#f8fafc;';
         div.innerHTML = `<h2 style="margin:0 0 4px">${dept} - Specific Belt Consumption awareness report, FY'${fy}</h2><div class="sbc-note" style="margin-bottom:10px">Generated ${dstr(new Date())}. Plant target ${T} m/km (total ${TOTAL_KM} km). ${dept} length: ${km} km.</div>
         <div class="sbc-kpis"><div class="sbc-kpi glass-panel"><b>${fmt(cons)} m</b><span>Consumed</span></div><div class="sbc-kpi glass-panel"><b class="${clsFor(sb / T)}">${f1(sb)}</b><span>${dept} SBC (m/km)</span></div><div class="sbc-kpi glass-panel"><b>${up.length}</b><span>Planned belts pending</span></div><div class="sbc-kpi glass-panel"><b>${un.length}</b><span>Unplanned replaced (${fmt(un.reduce((a, b) => a + b.m, 0))} m)</span></div></div>
