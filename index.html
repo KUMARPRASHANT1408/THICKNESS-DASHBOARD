@@ -352,7 +352,12 @@
         .sbc-chip.on { background: var(--teal); color: #fff; border-color: var(--teal); }
         .sbc-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; }
         .sbc-pill { padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
-        @media (max-width: 600px) { .sbc-grid2 { grid-template-columns: 1fr; } #sbcScreen { padding: 12px; } }
+        .sbc-qn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--teal); color: #fff; font-size: 0.75rem; margin-right: 4px; }
+        .sbc-tap { font-size: 0.72rem; color: var(--teal); margin-top: 6px; text-align: center; }
+        #sbcDetail { scroll-margin-top: 10px; border: 1px solid var(--teal); }
+        details.sbc-panel summary { cursor: pointer; font-size: 0.95rem; }
+        .sbc-grid2 .sbc-panel { margin-bottom: 0; } .sbc-grid2 { margin-bottom: 14px; }
+        @media (max-width: 600px) { .sbc-grid2 { grid-template-columns: 1fr; } .sbc-kpi b { font-size: 1.2rem; } #sbcScreen { padding: 12px; } }
 </style>
 </head>
 <body>
@@ -416,7 +421,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 14-Oct-a</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 14-Oct-b</div>
         </div>
     </div>
 
@@ -772,17 +777,12 @@
             <button class="btn-slate" onclick="closeSbcApp()"><i class="fas fa-arrow-left"></i> Home</button>
             <h2><i class="fas fa-chart-line" style="color:#f59e0b"></i> SBC - Specific Belt Consumption</h2>
             <select id="sbcFy" class="sbc-sel" onchange="sbcRender()"></select>
-            <button class="btn-slate" onclick="sbcExport()"><i class="fas fa-file-pdf"></i> Export Report</button>
+            <button class="btn-slate" onclick="sbcExportCsv()"><i class="fas fa-file-csv"></i> Export Report (CSV)</button>
+            <button class="btn-slate" onclick="sbcExport()"><i class="fas fa-file-pdf"></i> PDF</button>
             <select id="sbcDeptExp" class="sbc-sel" onchange="sbcExportDept(this.value); this.value='';"><option value="">Dept report PDF...</option></select>
         </div>
         <div id="sbcLoading" class="sbc-note">Loading data...</div>
         <div id="sbcReport"></div>
-        <div class="glass-panel sbc-panel" id="sbcListPanel" style="display:none;">
-            <h3><i class="fas fa-list"></i> Belt Lists (Admin)</h3>
-            <div id="sbcChips"></div>
-            <select id="sbcListDept" class="sbc-sel" onchange="sbcRenderList()" style="margin-bottom:10px;"></select>
-            <div class="sbc-tablewrap" id="sbcListWrap"></div>
-        </div>
       </div>
     </div>
 
@@ -2833,7 +2833,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     const MON = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
     const GREEN = '#10b981', YELLOW = '#f59e0b', RED = '#ef4444';
     const REASONS = [['HIGHWEARRATE', 'High wear rate'], ['B/C CATEGORY LONG BELT', 'Long B/C category belts'], ['JAN-MAR 2027', "Falling Jan-Mar'27"], ['SKIRT DAMAGE', 'Damaged at skirt area'], ['OTHERS', 'Others']];
-    const S = { daily: [], abp: [], thk: {}, mode: 'sbc', list: 'upcoming', charts: {}, loaded: false };
+    const S = { daily: [], abp: [], thk: {}, abn: {}, mode: 'sbc', charts: {}, loaded: false, detail: null };
 
     const key = s => String(s || '').trim().toUpperCase().replace(/\s+/g, '');
     function nd(d) {
@@ -2865,7 +2865,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (typeof currentRole === 'undefined' || currentRole !== 'admin') return;
         el('landingPage').style.display = 'none'; el('sbcScreen').style.display = 'block'; window.scrollTo(0, 0); el('sbcScreen').scrollTop = 0;
         el('sbcLoading').style.display = 'block'; el('sbcLoading').innerText = 'Loading data...';
-        Promise.all([get('./sbc.csv'), get('./abp.csv'), get('./data.csv')]).then(([sbc, abp, thk]) => {
+        Promise.all([get('./sbc.csv'), get('./abp.csv'), get('./data.csv'), get('./abn.csv')]).then(([sbc, abp, thk, abn]) => {
             // sbc.csv = Google Sheet "SBC" tab: main table (Department, Conveyor, Replacement/Piece Addition FY'25-27) + flat pivot (Dept., Conv. Name, Clean Month, FY'25-27)
             const MONN = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
             const FYL = [[25, "FY'25"], [26, "FY'26"], [27, "FY'27"]];
@@ -2889,7 +2889,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             el('sbcLoading').innerText = S.monthly.length ? '' : 'sbc.csv nahi mili ya khaali hai (Google Sheet ke SBC tab / sync check karo).';
             S.abp = abp.map(r => ({ fy: String(r.FY || '').replace(/\D/g, '') * 1, dept: nd(r.Dept), conv: key(r.Conveyor), name: r.Conveyor, cat: r.Category, len: num(r.Length), grade: r.Grade, type: r.Type, next: pdmy(r.NextCBM), plan: num(r.PlannedMtrs), cls: r.Class, reason: r.Reason, remarks: r.Remarks }));
             S.thk = {};
-            thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']), nextCbm: parseDateCustom(r[Object.keys(r).find(k => /^Next Prediction\s*\(CBM\)/i.test(k))]) }; });
+            thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']), nextCbm: parseDateCustom(r[Object.keys(r).find(k => /^Next Prediction\s*\(CBM\)/i.test(k))]), minThk: (r['MIN THICKNESS'] || '').trim(), top: (r['TOP'] || '').trim(), lastThk: parseDateCustom(r['Last Thickness Date']), cWear: (v => v ? v.toFixed(3) : '')(num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))])), predLife: num(r['Predicted Life (in Months) (Actual)']) ? f1(num(r['Predicted Life (in Months) (Actual)'])) : '', crit: (r['Criticality'] || '').trim() }; });
+            S.abn = {}; abn.forEach(r => { const c = key(r['NO.']); if (!c || /close/i.test(r['Status'] || '')) return; (S.abn[c] = S.abn[c] || []).push({ date: parseDateCustom(r['Abnormality Date']), issue: String(r['Major Abnormality'] || '').trim(), rec: String(r['recommendation'] || '').trim() }); });
             const fys = new Set(Object.keys(FY_TARGET).map(Number)); S.monthly.forEach(x => fys.add(x.fy));
             const arr = Array.from(fys).sort((a, b) => b - a); const sel = el('sbcFy'); const cur = sel.value;
             sel.innerHTML = arr.map(f => `<option value="${f}">FY'${f}</option>`).join(''); sel.value = cur && arr.includes(+cur) ? cur : (arr.includes(27) ? 27 : arr[0]);
@@ -2899,7 +2900,6 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     };
     window.closeSbcApp = function () { el('sbcScreen').style.display = 'none'; el('landingPage').style.display = 'flex'; };
     window.sbcSetMode = function (m) { S.mode = m; window.sbcRender(); };
-    window.sbcSetList = function (l) { S.list = l; sbcChips(); window.sbcRenderList(); };
 
     function stats(fy) {
         const rows = S.monthly.filter(x => x.fy === fy);
@@ -2914,83 +2914,95 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     }
     const sumRange = (a, n) => a.slice(0, n + 1).reduce((x, y) => x + y, 0);
 
+    // ================= MODEL: sab numbers ek jagah =================
+    function model(fy) {
+        const st = stats(fy); const T = target(fy); const abp = S.abp.filter(a => a.fy === fy);
+        const fyStart = new Date(2000 + fy - 1, 3, 1), fyEnd = new Date(2000 + fy, 2, 31);
+        const sum = (arr, f) => arr.reduce((q, x) => q + (f ? f(x) : x.m), 0);
+        const repMap = {}; st.reps.forEach(x => (repMap[x.conv] = repMap[x.conv] || []).push(x));
+        const paMap = {}; st.pas.forEach(x => (paMap[x.conv] = paMap[x.conv] || []).push(x));
+        const one = (map, c) => { const r = map[c]; const ds = r.map(x => x.date).filter(Boolean).sort((a, b) => b - a); return { conv: c, name: r[0].name, dept: r[0].dept, m: sum(r), date: ds[0] || null }; };
+        const grade = c => (S.thk[c] && S.thk[c].grade) || '';
+        const isSteel = c => grade(c).includes('STEEL'), isBucket = c => grade(c).includes('BUCKET');
+        const pl = abp.filter(a => a.cls === 'Planned' && a.type === 'Fabric' && a.conv);
+        const av = abp.filter(a => a.cls === 'Avoid' && a.conv);
+        const pre = abp.filter(a => a.cls === 'Replaced' && a.conv);
+        const abpBy = {}; abp.forEach(a => { if (a.conv) abpBy[a.conv] = a; });
+        const plSet = new Set(pl.map(a => a.conv)), avSet = new Set(av.map(a => a.conv)), preSet = new Set(pre.map(a => a.conv));
+        const C = { planned: [], unplanned: [], avoidRep: [], sb: [], pa: [] };
+        Object.keys(repMap).forEach(c => { const r = one(repMap, c); r.kind = 'Replacement';
+            if (isSteel(c) || isBucket(c)) C.sb.push(r); else if (plSet.has(c) || preSet.has(c)) C.planned.push(r); else if (avSet.has(c)) C.avoidRep.push(r); else C.unplanned.push(r); });
+        Object.keys(paMap).forEach(c => { const r = one(paMap, c); r.kind = 'Piece addition'; C.pa.push(r); });
+        const known = sum(C.planned) + sum(C.unplanned) + sum(C.avoidRep) + sum(C.sb) + sum(C.pa);
+        const other = st.total - known;
+        const planM = a => a.plan || a.len;
+        const plDone = pl.filter(a => repMap[a.conv]), plPend = pl.filter(a => !repMap[a.conv]);
+        const avRep = av.filter(a => repMap[a.conv]), avStill = av.filter(a => !repMap[a.conv]);
+        const steelPlan = sum(abp.filter(a => a.cls === 'Planned' && a.type === 'Steel'), a => a.plan), bucketPlan = sum(abp.filter(a => a.cls === 'Planned' && a.type === 'Bucket'), a => a.plan);
+        const steelRep = C.sb.filter(r => isSteel(r.conv)), bucketRep = C.sb.filter(r => isBucket(r.conv));
+        const steelPa = C.pa.filter(r => isSteel(r.conv)), bucketPa = C.pa.filter(r => isBucket(r.conv));
+        const steelUsed = sum(steelRep) + sum(steelPa), bucketUsed = sum(bucketRep) + sum(bucketPa);
+        const pendFab = sum(plPend, planM), pendSteel = Math.max(0, steelPlan - steelUsed), pendBucket = Math.max(0, bucketPlan - bucketUsed);
+        const proj = st.total + pendFab + pendSteel + pendBucket;
+        // thickness se naye due belts jo ABP me hai hi nahi
+        const fresh = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (abpBy[c] || repMap[c] || isSteel(c) || isBucket(c)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; fresh.push({ conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm }); });
+        return { fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, avRep, avStill, steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, pendSteel, pendBucket, steelUsed, bucketUsed, proj, fresh, planM, sum, abpBy, isSteel, isBucket };
+    }
+
     window.sbcRender = function () {
-        if (!S.loaded) return; const fy = fyNow(); const st = stats(fy); const T = target(fy);
-        Object.values(S.charts).forEach(c => { try { c.destroy(); } catch (e) {} }); S.charts = {};
-        const sbcT = st.total / TOTAL_KM; const ratio = sbcT / T; let h = '';
-        // banners
-        if (sbcT > T) h += `<div class="sbc-banner red"><i class="fas fa-triangle-exclamation"></i> TARGET EXCEEDED: FY'${fy} SBC ${f1(sbcT)} is above target ${T} (by ${f1(sbcT - T)} m/km = ${fmt((sbcT - T) * TOTAL_KM)} m).</div>`;
-        else if (ratio > 0.8) h += `<div class="sbc-banner amber"><i class="fas fa-circle-exclamation"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} of ${T}). Only ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m) left.</div>`;
-        else h += `<div class="sbc-banner green"><i class="fas fa-circle-check"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} of ${T}). Balance ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m).</div>`;
-        const over = DEPTS.filter(d => st.dm[d[0]].reduce((a, b) => a + b, 0) / d[1] > T).map(d => `${d[0]} (${f1(st.dm[d[0]].reduce((a, b) => a + b, 0) / d[1])})`);
-        if (over.length) h += `<div class="sbc-banner red"><i class="fas fa-triangle-exclamation"></i> Departments above the ${T} SBC target (on own km): ${over.join(', ')}</div>`;
-        if (st.minD && st.minD > new Date(2000 + fy - 1, 3, 11)) h += `<div class="sbc-banner amber"><i class="fas fa-database"></i> Partial data: FY'${fy} ka daily report ${dstr(st.minD)} se available hai, uske pehle ka data missing hai - actual SBC isse zyada hoga.</div>`;
-        if (!st.rows.length) h += `<div class="sbc-banner amber">Is FY ke liye daily report me Belt Replacement / Piece Addition ka data nahi mila.</div>`;
-        // KPIs
+        if (!S.loaded) return; const fy = fyNow(); const M = model(fy); const st = M.st; const T = M.T;
+        Object.values(S.charts).forEach(c => { try { c.destroy(); } catch (e) {} }); S.charts = {}; S.M = M;
+        const sbcT = st.total / TOTAL_KM; const ratio = sbcT / T; const projS = M.proj / TOTAL_KM; let h = '';
+        // ---- banners ----
+        if (sbcT > T) h += `<div class="sbc-banner red"><i class="fas fa-triangle-exclamation"></i> TARGET EXCEEDED: FY'${fy} SBC ${f1(sbcT)} target ${T} se upar hai (${f1(sbcT - T)} m/km = ${fmt((sbcT - T) * TOTAL_KM)} m zyada).</div>`;
+        else if (ratio > 0.8) h += `<div class="sbc-banner amber"><i class="fas fa-circle-exclamation"></i> FY'${fy} target ka ${Math.round(ratio * 100)}% use ho gaya (${f1(sbcT)} / ${T}). Sirf ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m) bacha hai.</div>`;
+        else h += `<div class="sbc-banner green"><i class="fas fa-circle-check"></i> FY'${fy} target ka ${Math.round(ratio * 100)}% use hua (${f1(sbcT)} / ${T}). Balance ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m).</div>`;
+        if (M.abp.length && projS > T) h += `<div class="sbc-banner red"><i class="fas fa-forward"></i> Agar bache hue saare planned belts March tak replace hue to SBC ${f1(projS)} ho jayega - target ${T} se ${f1(projS - T)} m/km (${fmt(M.proj - T * TOTAL_KM)} m) zyada.</div>`;
+        if (st.minD && st.minD > new Date(2000 + fy - 1, 3, 11)) h += `<div class="sbc-banner amber"><i class="fas fa-database"></i> Partial data: FY'${fy} ka data ${dstr(st.minD)} se hai - actual SBC isse zyada hoga.</div>`;
+        if (!st.rows.length) h += `<div class="sbc-banner amber">Is FY ke liye SBC sheet me data nahi mila.</div>`;
+        // ---- KPIs ----
         h += `<div class="sbc-kpis">
-            <div class="glass-panel sbc-kpi"><b>${T}</b><span>FY Target (m/km)</span></div>
+            <div class="glass-panel sbc-kpi"><b>${T}</b><span>FY target (m/km) = ${fmt(T * TOTAL_KM)} m</span></div>
             <div class="glass-panel sbc-kpi"><b class="${clsFor(ratio)}">${f1(sbcT)}</b><span>SBC till date</span></div>
             <div class="glass-panel sbc-kpi"><b>${fmt(st.total)}</b><span>Metres consumed</span></div>
             <div class="glass-panel sbc-kpi"><b>${f1(Math.max(0, T - sbcT))}</b><span>Balance SBC</span></div>
             <div class="glass-panel sbc-kpi"><b>${fmt(Math.max(0, T * TOTAL_KM - st.total))}</b><span>Balance metres</span></div>
-            <div class="glass-panel sbc-kpi"><b>${TOTAL_KM}</b><span>Total km</span></div></div>`;
-        // main chart
+            ${M.abp.length ? `<div class="glass-panel sbc-kpi"><b class="${clsFor(projS / T)}">${f1(projS)}</b><span>March tak (plan pura hua to)</span></div>` : ''}</div>`;
+        // ---- main chart ----
         h += `<div class="glass-panel sbc-panel"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;"><h3 style="margin:0;flex:1;">Month-wise ${S.mode === 'sbc' ? 'SBC (m/km)' : 'Consumption (m)'} - FY'${fy}</h3>
             <button class="sbc-chip ${S.mode === 'sbc' ? 'on' : ''}" onclick="sbcSetMode('sbc')">SBC</button><button class="sbc-chip ${S.mode === 'm' ? 'on' : ''}" onclick="sbcSetMode('m')">Metres</button></div>
             <div class="sbc-chart"><canvas id="sbcMain"></canvas></div>
             <div class="sbc-note">Bar colour: <span class="sbc-g">green</span> &le;80% of target, <span class="sbc-y">yellow</span> 80-100%, <span class="sbc-r">red</span> &gt;100% ${fy === 27 ? '(monthly target)' : '(annual target / 12)'}. Cumulative line aur annual target right axis par.</div></div>`;
-        // plan graphs
-        const abp = S.abp.filter(a => a.fy === fy); const showPlan = abp.length > 0;
-        const repKeys = new Set(st.reps.map(x => x.conv));
-        let plan = null;
-        if (showPlan) {
-            const pl = abp.filter(a => a.cls === 'Planned' && a.type === 'Fabric'), av = abp.filter(a => a.cls === 'Avoid');
-            let thkM = 0; Object.keys(S.thk).forEach(k => { const t = S.thk[k]; const fyStart = new Date(2000 + fy - 1, 3, 1); if (repKeys.has(k)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > new Date(2000 + fy, 2, 31)) return; thkM += t.len; });
-            const R = st.reps, P = st.pas; const plSet = new Set(pl.map(a => a.conv));
-            const doneFab = R.filter(x => plSet.has(x.conv)).reduce((q, x) => q + x.m, 0); const pendFab = pl.filter(a => !repKeys.has(a.conv)).reduce((q, a) => q + a.plan, 0);
-            const stDone = R.filter(x => isSB(x.conv) && S.thk[x.conv].grade.includes('STEEL')).reduce((q, x) => q + x.m, 0); const bkDone = R.filter(x => isSB(x.conv) && S.thk[x.conv].grade.includes('BUCKET')).reduce((q, x) => q + x.m, 0);
-            const steelPlan = abp.filter(a => a.cls === 'Planned' && a.type === 'Steel').reduce((q, a) => q + a.plan, 0), bucketPlan = abp.filter(a => a.cls === 'Planned' && a.type === 'Bucket').reduce((q, a) => q + a.plan, 0);
-            const unplM = unplannedRows(fy, new Set(abp.filter(a => a.cls === 'Planned' && a.conv).map(a => a.conv)), abp).reduce((q, x) => q + x.m, 0); const pieceM = P.reduce((q, x) => q + x.m, 0);
-            const avoidRep = av.filter(a => repKeys.has(a.conv)).reduce((q, a) => q + a.len, 0); const avoidTot = av.reduce((q, a) => q + a.len, 0);
-            plan = { target: T * TOTAL_KM, consumed: st.total, balance: Math.max(0, T * TOTAL_KM - st.total), thk: thkM, fab: pl.reduce((a, b) => a + b.plan, 0), steel: steelPlan, bucket: bucketPlan, avoid: avoidTot, doneFab, pendFab, stDone, bkDone, unplM, pieceM, avoidRep, other: Math.max(0, st.total - doneFab - stDone - bkDone - unplM - pieceM), reasons: REASONS.map(r => av.filter(a => a.reason === r[0]).reduce((x, y) => x + y.len, 0)) };
-            h += `<div class="sbc-grid2"><div class="glass-panel sbc-panel"><h3>SBC (m/km) - Target vs Plan vs Actual</h3><div class="sbc-chart"><canvas id="sbcPlanA"></canvas></div></div>
-                <div class="glass-panel sbc-panel"><h3>Length (m) - Target vs Plan vs Actual</h3><div class="sbc-chart"><canvas id="sbcPlanB"></canvas></div></div></div>
-                <div class="glass-panel sbc-panel"><h3>Belts that can be avoided - reason wise</h3><div class="sbc-chart" style="height:280px"><canvas id="sbcAvoid"></canvas></div>
-                <div class="sbc-note">Plan = abp.csv (ABP list); actual = SBC sheet (daily report se). List ka belt SBC sheet me replace hua mila to green (actual m), nahi mila to pending; jo belt list me nahi wo Unplanned. Steel cord / bucket ka sirf total plan hai.</div></div>`;
+        // ---- question graphs ----
+        if (M.abp.length) {
+            const card = (id, n, title, sub, hgt) => `<div class="glass-panel sbc-panel" id="card-${id}"><h3><span class="sbc-qn">${n}</span> ${title}</h3><div class="sbc-note" style="margin:0 0 8px">${sub}</div><div class="sbc-chart" style="height:${hgt || 280}px"><canvas id="${id}"></canvas></div><div class="sbc-tap"><i class="fas fa-hand-pointer"></i> Kisi bhi bar par tap karo - neeche uski list khulegi</div></div>`;
+            h += `<div class="sbc-grid2">
+                ${card('gCons', 1, 'Ab tak jo consume hua - kisme gaya?', `Total ${fmt(st.total)} m (${f1(sbcT)} SBC). Planned = ABP list wale belts, Unplanned = ABP me nahi the.`)}
+                ${card('gProj', 2, 'March tak SBC kahan pahunchega?', `Ab tak ${f1(sbcT)} + bache planned belts ${f1((M.pendFab + M.pendSteel + M.pendBucket) / TOTAL_KM)} = <b class="${clsFor(projS / T)}">${f1(projS)}</b> (target ${T}).`)}
+                ${card('gDept', 3, 'Unplanned replacement - department wise', `${M.C.unplanned.length + M.C.avoidRep.length} belts / ${fmt(M.sum(M.C.unplanned) + M.sum(M.C.avoidRep))} m unplanned. Dept par tap karo - belts dikhenge.`, 320)}
+                ${card('gThk', 4, 'Thickness ke hisaab se is FY due belts', `${M.pl.length + M.av.length + M.pre.length} belts due the. RTG ne ${M.pl.length + M.pre.length} plan kiye, ${M.av.length} avoid kiye ja sakte hain.`)}
+                ${card('gSb', 5, 'Steel cord & Bucket - plan vs consumed', `Plan: Steel ${fmt(M.steelPlan)} m, Bucket ${fmt(M.bucketPlan)} m (sirf total plan hai, belt-wise nahi).`)}
+                ${card('gWhy', 6, 'Belts kyun avoid kiye ja sakte hain?', `${M.av.length} belts / ${fmt(M.sum(M.av, a => a.len))} m - reason wise. Laal = avoid list me tha phir bhi replace ho gaya.`)}
+            </div>`;
+            h += `<div class="glass-panel sbc-panel" id="sbcDetail" style="display:none;"></div>`;
         }
-        // dept tables
+        // ---- detailed tables (collapsed) ----
         const val = (m, km) => S.mode === 'sbc' ? (m ? f1(m / km) : '-') : (m ? fmt(m) : '-');
-        const cols = (fn) => MON.map((mm, i) => fn(i)).join('');
         const depRows = DEPTS.map(d => ({ n: d[0], km: d[1], a: st.dm[d[0]] })); if (st.dm.OTHER.some(v => v)) depRows.push({ n: 'Other', km: 0, a: st.dm.OTHER });
-        h += `<div class="glass-panel sbc-panel"><h3>Department-wise month-wise ${S.mode === 'sbc' ? 'SBC' : 'metres'}</h3><div class="sbc-tablewrap"><table class="sbc-table"><thead><tr><th>Dept</th><th>km</th>${MON.map(m => `<th>${m}</th>`).join('')}<th>Total m</th><th>SBC</th></tr></thead><tbody>`;
+        h += `<details class="glass-panel sbc-panel"><summary><b>Detailed tables</b> - department-wise month-wise ${S.mode === 'sbc' ? 'SBC' : 'metres'} &amp; plan status</summary><div class="sbc-tablewrap" style="margin-top:10px"><table class="sbc-table"><thead><tr><th>Dept</th><th>km</th>${MON.map(m => `<th>${m}</th>`).join('')}<th>Total m</th><th>SBC</th></tr></thead><tbody>`;
         depRows.forEach(r => { const tot = r.a.reduce((x, y) => x + y, 0); const sb = r.km ? tot / r.km : 0; h += `<tr><td>${r.n}</td><td>${r.km || '-'}</td>${r.a.map((v, i) => `<td>${i > st.last ? '' : val(v, r.km || 1)}</td>`).join('')}<td>${fmt(tot)}</td><td class="${r.km ? clsFor(sb / T) : ''}">${r.km ? f1(sb) : '-'}</td></tr>`; });
-        h += `<tr class="tot"><td>TOTAL</td><td>${TOTAL_KM}</td>${st.all.map((v, i) => `<td>${i > st.last ? '' : val(v, TOTAL_KM)}</td>`).join('')}<td>${fmt(st.total)}</td><td class="${clsFor(ratio)}">${f1(sbcT)}</td></tr></tbody></table></div></div>`;
-        h += `<div class="glass-panel sbc-panel"><h3>Cumulative ${S.mode === 'sbc' ? 'SBC' : 'metres'} (dept-wise)</h3><div class="sbc-tablewrap"><table class="sbc-table"><thead><tr><th>Dept</th>${MON.map(m => `<th>${m}</th>`).join('')}</tr></thead><tbody>`;
-        depRows.forEach(r => { h += `<tr><td>${r.n}</td>${r.a.map((v, i) => { if (i > st.last) return '<td></td>'; const c = sumRange(r.a, i); const cl = S.mode === 'sbc' && r.km ? clsFor(c / r.km / T) : ''; return `<td class="${cl}">${val(c, r.km || 1)}</td>`; }).join('')}</tr>`; });
-        h += `<tr class="tot"><td>TOTAL</td>${st.all.map((v, i) => { if (i > st.last) return '<td></td>'; const c = sumRange(st.all, i); return `<td class="${S.mode === 'sbc' ? clsFor(c / TOTAL_KM / T) : ''}">${val(c, TOTAL_KM)}</td>`; }).join('')}</tr></tbody></table></div></div>`;
-        // dept plan status
-        if (showPlan) {
-            const planned = new Set(abp.filter(a => a.cls === 'Planned' && a.conv).map(a => a.conv));
-            h += `<div class="glass-panel sbc-panel"><h3>Department-wise plan status (ABP)</h3><div class="sbc-tablewrap"><table class="sbc-table"><thead><tr><th>Dept</th><th>Consumed m</th><th>SBC</th><th>Planned belts</th><th>Done</th><th>Remaining planned (belts / m)</th><th>Can be avoided (belts / m)</th><th>Unplanned replaced (belts / m)</th><th>SBC if remaining plan done</th></tr></thead><tbody>`;
-            const tt = { c: 0, pn: 0, dn: 0, rn: 0, rm: 0, an: 0, am: 0, un: 0, um: 0 };
-            DEPTS.forEach(d => {
-                const n = d[0]; const cons = st.dm[n].reduce((a, b) => a + b, 0);
-                const pl = abp.filter(a => a.cls === 'Planned' && a.dept === n && a.conv); const done = pl.filter(a => repKeys.has(a.conv)); const rem = pl.filter(a => !repKeys.has(a.conv));
-                const rm = rem.reduce((a, b) => a + b.plan, 0); const av = abp.filter(a => a.cls === 'Avoid' && a.dept === n && !repKeys.has(a.conv)); const am = av.reduce((a, b) => a + b.len, 0);
-                const un = unplannedRows(fy, planned, abp).filter(x => (nd(x.dept) || '') === n); const um = un.reduce((a, b) => a + b.m, 0);
-                tt.c += cons; tt.pn += pl.length; tt.dn += done.length; tt.rn += rem.length; tt.rm += rm; tt.an += av.length; tt.am += am; tt.un += un.length; tt.um += um;
-                const proj = (cons + rm) / d[1];
-                h += `<tr><td>${n}</td><td>${fmt(cons)}</td><td>${f1(cons / d[1])}</td><td>${pl.length}</td><td>${done.length}</td><td>${rem.length} / ${fmt(rm)}</td><td>${av.length} / ${fmt(am)}</td><td class="${um > 0 ? 'sbc-y' : ''}">${un.length} / ${fmt(um)}</td><td class="${clsFor(proj / T)}">${f1(proj)}</td></tr>`;
-            });
-            const projAll = (tt.c + tt.rm + plan.steel + plan.bucket) / TOTAL_KM;
-            h += `<tr class="tot"><td>TOTAL</td><td>${fmt(tt.c)}</td><td>${f1(tt.c / TOTAL_KM)}</td><td>${tt.pn}</td><td>${tt.dn}</td><td>${tt.rn} / ${fmt(tt.rm)}</td><td>${tt.an} / ${fmt(tt.am)}</td><td>${tt.un} / ${fmt(tt.um)}</td><td class="${clsFor(projAll / T)}">${f1(projAll)}</td></tr></tbody></table></div>
-                <div class="sbc-note">Unplanned replacement = daily report me Belt Replacement jo ABP planned list me nahi tha. Har unplanned replacement plan ke metres kha leta hai aur baaki planned belts ko avoid karne ka room kam kar deta hai. Total projection me steel cord + bucket planned metres bhi jode gaye hain.</div></div>`;
+        h += `<tr class="tot"><td>TOTAL</td><td>${TOTAL_KM}</td>${st.all.map((v, i) => `<td>${i > st.last ? '' : val(v, TOTAL_KM)}</td>`).join('')}<td>${fmt(st.total)}</td><td class="${clsFor(ratio)}">${f1(sbcT)}</td></tr></tbody></table></div>`;
+        if (M.abp.length) {
+            h += `<div class="sbc-tablewrap" style="margin-top:14px"><table class="sbc-table"><thead><tr><th>Dept</th><th>Consumed m</th><th>SBC</th><th>Planned belts</th><th>Done</th><th>Pending (belts / m)</th><th>Unplanned (belts / m)</th><th>SBC if plan done</th></tr></thead><tbody>`;
+            const unAll = M.C.unplanned.concat(M.C.avoidRep);
+            DEPTS.forEach(d => { const n = d[0]; const cons = st.dm[n].reduce((a, b) => a + b, 0); const p = M.pl.filter(a => a.dept === n); const pd = M.plPend.filter(a => a.dept === n); const pm = M.sum(pd, M.planM); const un = unAll.filter(x => x.dept === n);
+                h += `<tr><td>${n}</td><td>${fmt(cons)}</td><td>${f1(cons / d[1])}</td><td>${p.length}</td><td>${p.length - pd.length}</td><td>${pd.length} / ${fmt(pm)}</td><td class="${un.length ? 'sbc-y' : ''}">${un.length} / ${fmt(M.sum(un))}</td><td class="${clsFor((cons + pm) / d[1] / T)}">${f1((cons + pm) / d[1])}</td></tr>`; });
+            h += `</tbody></table></div>`;
         }
+        h += `</details>`;
         el('sbcReport').innerHTML = `<div id="sbcReportInner">${h}</div>`;
-        drawMain(fy, st, T); if (plan) drawPlan(plan, T);
-        el('sbcListPanel').style.display = showPlan || st.rows.length ? 'block' : 'none';
-        const ls = el('sbcListDept'); const cd = ls.value || 'All'; ls.innerHTML = '<option>All</option>' + DEPTS.map(d => `<option>${d[0]}</option>`).join(''); ls.value = cd;
-        sbcChips(); window.sbcRenderList();
+        drawMain(fy, st, T); if (M.abp.length) drawQ(M);
+        if (S.detail) sbcShow(S.detail, true);
     };
 
     function isSB(c) { const t = S.thk[c]; return !!t && (t.grade.includes('STEEL') || t.grade.includes('BUCKET')); }
@@ -3013,50 +3025,178 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             { type: 'line', label: `Annual target (${S.mode === 'sbc' ? T : fmt(T * TOTAL_KM)})`, data: Array(12).fill(T * (S.mode === 'sbc' ? 1 : TOTAL_KM)), borderColor: RED, borderDash: [8, 4], pointRadius: 0, yAxisID: 'y1', order: 0 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.tick } } }, scales: { x: { ticks: { color: c.tick }, grid: { color: c.grid } }, y: { beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid }, title: { display: true, text: S.mode === 'sbc' ? 'Monthly m/km' : 'Monthly m', color: c.tick } }, y1: { beginAtZero: true, position: 'right', ticks: { color: c.tick }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Cumulative', color: c.tick } } } } });
     }
-    function drawPlan(p, T) {
-        const labels = ['FY target', 'Consumed till date (daily)', 'Balance', 'As per Thickness monitoring', 'Planned RTG (Fabric)', 'Planned RTG (Steel Cord)', 'Planned RTG (Bucket)', 'Can be avoided'];
-        const z = [0, 0, 0, 0, 0, 0, 0, 0]; const set = (i, v) => { const a = z.slice(); Object.keys(i).forEach(k => a[k] = i[k]); return a; };
-        const DS = [
-            ['FY target / Balance / Thickness', set({ 0: p.target, 2: p.balance, 3: p.thk }), ['#38bdf8', 0, '#10b981', '#a78bfa', 0, 0, 0, 0]],
-            ['Planned belts - replaced (daily actual)', set({ 1: p.doneFab + p.stDone + p.bkDone, 4: p.doneFab, 5: p.stDone, 6: p.bkDone }), '#10b981'],
-            ['Planned - pending', set({ 4: p.pendFab, 5: Math.max(0, p.steel - p.stDone), 6: Math.max(0, p.bucket - p.bkDone) }), '#f59e0b'],
-            ['Unplanned replacement (daily)', set({ 1: p.unplM }), '#ef4444'],
-            ['Piece addition (daily)', set({ 1: p.pieceM }), '#a78bfa'],
-            ['Other consumption', set({ 1: p.other }), '#64748b'],
-            ['Avoidable - still to be avoided', set({ 7: Math.max(0, p.avoid - p.avoidRep) }), '#38bdf8'],
-            ['Avoidable - replaced anyway', set({ 7: p.avoidRep }), '#b91c1c']];
-        const c = tcol();
-        const mk = (id, k, dec) => new Chart(el(id), { type: 'bar', data: { labels, datasets: DS.map(d => ({ label: d[0], data: d[1].map(v => v * k), backgroundColor: Array.isArray(d[2]) ? d[2].map(x => x || 'rgba(0,0,0,0)') : d[2], stack: 's' })) }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.tick, boxWidth: 10, font: { size: 10 } } }, tooltip: { filter: x => x.raw > 0, callbacks: { label: x => x.dataset.label + ': ' + (dec ? f1(x.raw) : fmt(x.raw)) } } }, scales: { x: { stacked: true, ticks: { color: c.tick, maxRotation: 60, minRotation: 40, font: { size: 10 } }, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid } } } }, plugins: [{ id: 'lbl', afterDatasetsDraw(ch) { const ctx = ch.ctx; ctx.save(); ctx.fillStyle = '#e2e8f0'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; labels.forEach((l, i) => { let tot = 0, top = null; ch.data.datasets.forEach((d, di) => { const v = d.data[i]; if (v > 0) { tot += v; const y = ch.getDatasetMeta(di).data[i].y; top = top === null ? y : Math.min(top, y); const bx = ch.getDatasetMeta(di).data[i].x; ctx._bx = bx; } }); if (top !== null) ctx.fillText(dec ? f1(tot) : fmt(tot), ctx._bx, top - 4); }); ctx.restore(); } }] });
-        S.charts.pa = mk('sbcPlanA', 1 / TOTAL_KM, true); S.charts.pb = mk('sbcPlanB', 1, false);
-        S.charts.av = new Chart(el('sbcAvoid'), { type: 'bar', data: { labels: REASONS.map(r => r[1]), datasets: [{ label: 'Avoidable length (m)', data: p.reasons, backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#a78bfa', '#64748b'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: x => fmt(x.raw) + ' m  (' + f1(x.raw / TOTAL_KM) + ' m/km)' } } }, scales: { x: { ticks: { color: c.tick }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: c.tick }, grid: { color: c.grid } } } } });
+
+    // ---- 6 question graphs ----
+    const CL = { green: '#10b981', amber: '#f59e0b', red: '#ef4444', darkred: '#b91c1c', blue: '#38bdf8', purple: '#a78bfa', grey: '#64748b', teal: '#14b8a6' };
+    const ml = m => `${fmt(m)} m · ${f1(m / TOTAL_KM)} SBC`;
+    // bar ke end par value likhne ka plugin (stack ka total)
+    function endLabels(fmtFn) {
+        return { id: 'endlbl', afterDatasetsDraw(ch) {
+            const ctx = ch.ctx, horiz = ch.options.indexAxis === 'y'; ctx.save(); ctx.fillStyle = '#e2e8f0'; ctx.font = '600 11px sans-serif';
+            ch.data.labels.forEach((l, i) => { const g = {};
+                ch.data.datasets.forEach((d, di) => { const v = d.data[i]; const meta = ch.getDatasetMeta(di); if (!v || meta.hidden) return; const b = meta.data[i]; if (!b) return; const k = d.stack || 's'; const o = g[k] = g[k] || { tot: 0, edge: null, pos: null }; o.tot += v;
+                    if (horiz) { o.edge = o.edge === null ? b.x : Math.max(o.edge, b.x); o.pos = b.y; } else { o.edge = o.edge === null ? b.y : Math.min(o.edge, b.y); o.pos = b.x; } });
+                Object.keys(g).forEach(k => { const o = g[k]; if (o.edge === null || !o.tot) return; const t = fmtFn(o.tot, i, k);
+                    if (horiz) { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(t, Math.min(o.edge + 6, ch.chartArea.right - ctx.measureText(t).width), o.pos); }
+                    else { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(t, o.pos, o.edge - 4); } }); });
+            ctx.restore(); } };
+    }
+    function qchart(id, cfg, keyFn, fmtFn) {
+        const c = tcol(); const horiz = cfg.horiz;
+        const ax = { ticks: { color: c.tick, font: { size: 11 } }, grid: { color: c.grid }, beginAtZero: true, stacked: true };
+        const cat = { ticks: { color: c.tick, font: { size: 11 }, autoSkip: false }, grid: { display: false }, stacked: true };
+        if (cfg.maxV) ax.suggestedMax = cfg.maxV;
+        S.charts[id] = new Chart(el(id), { type: 'bar', data: { labels: cfg.labels, datasets: cfg.ds.map(d => ({ label: d.label, data: d.data, backgroundColor: d.color, borderRadius: 4, maxBarThickness: 46, stack: d.stack || 's' })) },
+            options: { indexAxis: horiz ? 'y' : 'x', responsive: true, maintainAspectRatio: false, layout: { padding: { right: horiz ? 10 : 0, top: 18 } },
+                plugins: { legend: { display: cfg.ds.length > 1, labels: { color: c.tick, boxWidth: 10, font: { size: 11 } } }, tooltip: { filter: x => x.raw > 0, callbacks: { label: x => `${x.dataset.label}: ${cfg.tip ? cfg.tip(x.raw) : ml(x.raw)}` } } },
+                scales: horiz ? { x: ax, y: cat } : { x: cat, y: ax },
+                onHover: (e, els) => { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                onClick: (e, els) => { if (!els.length) return; const k = keyFn(els[0].index, els[0].datasetIndex); if (k) { S.from = 'card-' + id; sbcShow(k); } } },
+            plugins: [endLabels(fmtFn || (v => ml(v)))] });
+    }
+    function drawQ(M) {
+        const s = M.sum, C = M.C;
+        // 1. consumption split
+        const g1 = [['planned', 'Planned (ABP) replaced', s(C.planned), CL.green], ['unplanned', 'Unplanned (ABP me nahi tha)', s(C.unplanned), CL.red], ['avoidRep', 'Avoid list me tha, phir bhi replace', s(C.avoidRep), CL.darkred], ['sb', 'Steel cord / Bucket replacement', s(C.sb), CL.blue], ['pa', 'Piece addition', s(C.pa), CL.purple]];
+        if (M.other > 1) g1.push(['other', 'Baaki (belt match nahi hua)', M.other, CL.grey]);
+        qchart('gCons', { horiz: true, labels: g1.map(x => x[1]), ds: [{ label: 'Consumed', data: g1.map(x => x[2]), color: g1.map(x => x[3]) }] }, i => 'cons:' + g1[i][0]);
+        // 2. projection
+        const T = M.T * TOTAL_KM, done = M.st.total;
+        qchart('gProj', { labels: ['FY target', 'Ab tak consumed', 'March tak (projected)'], tip: v => ml(v), ds: [
+            { label: 'Target', data: [T, 0, 0], color: CL.blue },
+            { label: 'Consumed till date', data: [0, done, done], color: CL.teal },
+            { label: 'Bache planned fabric belts', data: [0, 0, M.pendFab], color: CL.amber },
+            { label: 'Bacha steel cord plan', data: [0, 0, M.pendSteel], color: '#fb923c' },
+            { label: 'Bacha bucket plan', data: [0, 0, M.pendBucket], color: '#facc15' }] },
+            (i, d) => i === 0 ? null : (d >= 2 ? 'proj:pend' : 'cons:all'), v => `${fmt(v)} m · ${f1(v / TOTAL_KM)}`);
+        // 3. unplanned by dept
+        const un = C.unplanned, ar = C.avoidRep; const dl = DEPTS.map(d => d[0]).filter(n => un.some(x => x.dept === n) || ar.some(x => x.dept === n));
+        const dd = dl.map(n => ({ n, a: un.filter(x => x.dept === n), b: ar.filter(x => x.dept === n) })).sort((p, q) => (s(q.a) + s(q.b)) - (s(p.a) + s(p.b)));
+        qchart('gDept', { horiz: true, labels: dd.map(x => x.n), ds: [{ label: 'Unplanned (ABP me nahi)', data: dd.map(x => s(x.a)), color: CL.red }, { label: 'Avoid list wale replace', data: dd.map(x => s(x.b)), color: CL.darkred }] },
+            i => 'dept:' + dd[i].n, (v, i) => `${fmt(v)} m · ${dd[i].a.length + dd[i].b.length} belts`);
+        // 4. thickness due
+        const lenS = arr => s(arr, a => a.len);
+        const preDone = M.pre;
+        const g4l = ['RTG planned', 'Avoid kiye ja sakte'];
+        const g4 = [
+            { label: 'Replace ho gaye', data: [lenS(M.plDone) + lenS(preDone), 0], color: CL.green, k: ['thk:plDone', null] },
+            { label: 'Pending', data: [lenS(M.plPend), 0], color: CL.amber, k: ['thk:plPend', null] },
+            { label: 'Abhi tak avoid', data: [0, lenS(M.avStill)], color: CL.blue, k: [null, 'thk:avStill'] },
+            { label: 'Phir bhi replace hua', data: [0, lenS(M.avRep)], color: CL.darkred, k: [null, 'thk:avRep'] }];
+        if (M.fresh.length) { g4l.push('Naye due (ABP me nahi)'); g4.forEach(d => { d.data.push(0); d.k.push(null); }); g4.push({ label: 'Naye due', data: [0, 0, lenS(M.fresh)], color: CL.purple, k: [null, null, 'thk:fresh'] }); }
+        const cnt = [M.pl.length + M.pre.length, M.av.length, M.fresh.length];
+        qchart('gThk', { labels: g4l, ds: g4 }, (i, d) => g4[d].k[i] || ['thk:plAll', 'thk:avAll', 'thk:fresh'][i], (v, i) => `${cnt[i]} belts · ${fmt(v)} m`);
+        // 5. steel & bucket
+        qchart('gSb', { labels: ['Steel cord', 'Bucket'], ds: [
+            { label: 'Plan (m)', data: [M.steelPlan, M.bucketPlan], color: 'rgba(56,189,248,0.35)', stack: 'plan' },
+            { label: 'Replacement', data: [s(M.steelRep), s(M.bucketRep)], color: CL.blue, stack: 'used' },
+            { label: 'Piece addition', data: [s(M.steelPa), s(M.bucketPa)], color: CL.purple, stack: 'used' }] },
+            i => 'sb:' + (i === 0 ? 'steel' : 'bucket'), v => fmt(v) + ' m');
+        // 6. avoid reasons
+        const rs = REASONS.map(r => r[0]).concat(M.av.map(a => a.reason || 'OTHERS').filter((x, i, a) => a.indexOf(x) === i && !REASONS.some(r => r[0] === x)));
+        const rn = r => (REASONS.find(x => x[0] === r) || [0, r || 'Others'])[1];
+        const byR = r => M.av.filter(a => (a.reason || 'OTHERS') === r);
+        const rr = rs.map(r => ({ r, still: byR(r).filter(a => !M.repMap[a.conv]), rep: byR(r).filter(a => M.repMap[a.conv]) })).filter(x => x.still.length + x.rep.length).sort((p, q) => lenS(q.still.concat(q.rep)) - lenS(p.still.concat(p.rep)));
+        qchart('gWhy', { horiz: true, labels: rr.map(x => rn(x.r)), ds: [{ label: 'Abhi tak avoid', data: rr.map(x => lenS(x.still)), color: CL.blue }, { label: 'Phir bhi replace hua', data: rr.map(x => lenS(x.rep)), color: CL.darkred }] },
+            i => 'why:' + rr[i].r, (v, i) => `${rr[i].still.length + rr[i].rep.length} belts · ${fmt(v)} m`);
     }
 
-    // ---- belt lists ----
-    const CHIPS = [['upcoming', 'Upcoming (planned, pending)'], ['planned', 'All planned'], ['unplanned', 'Unplanned replaced'], ['steel', 'Steel cord piece addition'], ['avoid', 'Can be avoided']];
-    function sbcChips() { el('sbcChips').innerHTML = CHIPS.map(c => `<button class="sbc-chip ${S.list === c[0] ? 'on' : ''}" onclick="sbcSetList('${c[0]}')">${c[1]}</button>`).join(''); }
-    function listData(fy, dept) {
-        const st = stats(fy); const abp = S.abp.filter(a => a.fy === fy); const repMap = {}; st.reps.forEach(x => { (repMap[x.conv] = repMap[x.conv] || []).push(x); });
-        const planned = new Set(abp.filter(a => a.cls === 'Planned' && a.conv).map(a => a.conv)); const df = r => dept === 'All' || r.dept === dept;
-        const status = a => { const r = repMap[a.conv]; return r ? `<span class="sbc-pill" style="background:rgba(16,185,129,.2);color:#6ee7b7">Done${r[r.length - 1].date ? ' ' + dstr(r[r.length - 1].date) : ''}</span>` : '<span class="sbc-pill" style="background:rgba(245,158,11,.2);color:#fcd34d">Pending</span>'; };
-        const L = S.list; let head = [], rows = [], tm = 0;
-        if (L === 'upcoming' || L === 'planned') {
-            let r = abp.filter(a => a.cls === 'Planned' && a.type === 'Fabric' && a.conv && df(a)); if (L === 'upcoming') r = r.filter(a => !repMap[a.conv]); r.sort((a, b) => (a.next || 0) - (b.next || 0));
-            head = ['Dept', 'Conveyor', 'Cat', 'Length m', 'Planned m', 'Actual m (daily)', 'Grade', 'Next CBM', 'Status']; r.forEach(a => { tm += a.plan; const ac = (repMap[a.conv] || []).reduce((q, x) => q + x.m, 0); rows.push([a.dept, a.name, a.cat, fmt(a.len), fmt(a.plan), ac ? fmt(ac) : '-', a.grade, dstr(a.next), status(a)]); });
-        } else if (L === 'avoid') {
-            const r = abp.filter(a => a.cls === 'Avoid' && df(a)); head = ['Dept', 'Conveyor', 'Cat', 'Length m', 'Grade', 'Reason', 'Next CBM', 'Status'];
-            r.forEach(a => { tm += a.len; rows.push([a.dept, a.name, a.cat, fmt(a.len), a.grade, (REASONS.find(x => x[0] === a.reason) || [0, a.reason])[1], dstr(a.next), repMap[a.conv] ? '<span class="sbc-pill" style="background:rgba(239,68,68,.2);color:#fca5a5">Replaced anyway</span>' : 'Avoid']); });
-        } else if (L === 'unplanned') {
-            const r = unplannedRows(fy, planned, abp).filter(x => df(x)).sort((a, b) => a.date - b.date); const avoidSet = new Set(abp.filter(a => a.cls === 'Avoid').map(a => a.conv)); head = ['Date', 'Dept', 'Conveyor', 'Metres', 'Vendor', 'Job', 'Note'];
-            r.forEach(x => { tm += x.m; rows.push([dstr(x.date), x.dept, x.name, fmt(x.m), x.vendor, x.desc, avoidSet.has(x.conv) ? 'Was in avoid list' : 'Not in ABP']); });
-        } else if (L === 'steel') {
-            const r = st.pas.filter(x => S.thk[x.conv] && S.thk[x.conv].grade.includes('STEEL') && df(x)).sort((a, b) => a.date - b.date); head = ['Date', 'Dept', 'Conveyor', 'Metres', 'Vendor', 'Job'];
-            r.forEach(x => { tm += x.m; rows.push([dstr(x.date), x.dept, x.name, fmt(x.m), x.vendor, x.desc]); });
+    // ---- click karne par list ----
+    const pill = (t, bg, fg) => `<span class="sbc-pill" style="background:${bg};color:${fg}">${t}</span>`;
+    const P_DONE = t => pill(t || 'Done', 'rgba(16,185,129,.2)', '#6ee7b7'), P_PEND = t => pill(t || 'Pending', 'rgba(245,158,11,.2)', '#fcd34d'), P_RED = t => pill(t, 'rgba(239,68,68,.2)', '#fca5a5'), P_BLUE = t => pill(t, 'rgba(56,189,248,.2)', '#7dd3fc');
+    function detail(k) {
+        const M = S.M, s = M.sum; const [kind, arg] = k.split(':');
+        const rn = r => (REASONS.find(x => x[0] === r) || [0, r || 'Others'])[1];
+        const thkTxt = c => { const t = S.thk[c]; return t && t.minThk !== '' ? t.minThk + ' mm' : '-'; };
+        const repRows = (arr, note) => ({ head: ['Date', 'Dept', 'Conveyor', 'Metres', 'Type', 'Min thk', 'Note'], rows: arr.slice().sort((a, b) => (a.date || 0) - (b.date || 0)).map(x => [dstr(x.date), x.dept, x.name, fmt(x.m), x.kind || '', thkTxt(x.conv), note(x)]), tm: s(arr) });
+        const abpRows = (arr, st) => ({ head: ['Dept', 'Conveyor', 'Cat', 'Length m', 'Planned m', 'Grade', 'Next CBM', 'Min thk', 'Status / Reason'], rows: arr.slice().sort((a, b) => (a.next || 0) - (b.next || 0)).map(a => [a.dept, a.name, a.cat, fmt(a.len), a.plan ? fmt(a.plan) : '-', a.grade, dstr(a.next), thkTxt(a.conv), st(a)]), tm: s(arr, a => a.len) });
+        const doneTxt = a => { const r = M.repMap[a.conv]; if (!r) return P_PEND(); const d = r.map(x => x.date).filter(Boolean).sort((p, q) => q - p)[0]; return P_DONE('Done' + (d ? ' ' + dstr(d) : '') + ' · ' + fmt(s(r)) + ' m'); };
+        const noteU = x => M.abpBy[x.conv] && M.abpBy[x.conv].cls === 'Avoid' ? P_RED('Avoid list me tha: ' + rn(M.abpBy[x.conv].reason)) : P_RED('ABP me nahi');
+        let o;
+        if (kind === 'cons') {
+            if (arg === 'planned') o = Object.assign(repRows(M.C.planned, x => P_DONE(M.abpBy[x.conv] && M.abpBy[x.conv].cls === 'Replaced' ? 'ABP (pehle hi replace)' : 'ABP planned')), { t: 'Planned (ABP) belts jo replace ho gaye' });
+            else if (arg === 'unplanned') o = Object.assign(repRows(M.C.unplanned, noteU), { t: 'Unplanned replacement - ABP list me nahi the' });
+            else if (arg === 'avoidRep') o = Object.assign(repRows(M.C.avoidRep, noteU), { t: 'Avoid list wale belts jo phir bhi replace hue' });
+            else if (arg === 'sb') o = Object.assign(repRows(M.C.sb, x => P_BLUE(M.isSteel(x.conv) ? 'Steel cord' : 'Bucket')), { t: 'Steel cord / Bucket replacement' });
+            else if (arg === 'pa') o = Object.assign(repRows(M.C.pa, x => M.isSteel(x.conv) ? P_BLUE('Steel cord') : (M.isBucket(x.conv) ? P_BLUE('Bucket') : '')), { t: 'Piece addition (belt-wise)' });
+            else if (arg === 'other') o = { t: 'Baaki consumption', head: ['Note'], rows: [[`${fmt(M.other)} m SBC sheet ke monthly total me hai par belt-wise replacement / piece addition me match nahi hua (date / conveyor name ka fark).`]], tm: M.other };
+            else o = Object.assign(repRows(M.C.planned.concat(M.C.unplanned, M.C.avoidRep, M.C.sb, M.C.pa), x => x.kind === 'Piece addition' ? P_BLUE('Piece addition') : (M.C.planned.includes(x) ? P_DONE('Planned') : (M.C.sb.includes(x) ? P_BLUE('Steel/Bucket') : noteU(x)))), { t: 'Ab tak ka saara consumption' });
+        } else if (kind === 'proj') {
+            o = Object.assign(abpRows(M.plPend, a => P_PEND('Pending')), { t: 'Bache hue planned belts (March tak hone hain)' }); o.tm = s(M.plPend, M.planM);
+            o.extra = `+ Steel cord plan bacha ${fmt(M.pendSteel)} m, Bucket plan bacha ${fmt(M.pendBucket)} m (belt-wise list nahi hai).`;
+        } else if (kind === 'dept') {
+            const arr = M.C.unplanned.concat(M.C.avoidRep).filter(x => x.dept === arg); o = Object.assign(repRows(arr, noteU), { t: `${arg} - unplanned replacement` });
+        } else if (kind === 'thk') {
+            const map = { plDone: [M.plDone.concat(M.pre), 'RTG planned - replace ho gaye', doneTxt], plPend: [M.plPend, 'RTG planned - pending', doneTxt], plAll: [M.pl.concat(M.pre), 'RTG planned - saare', doneTxt],
+                avStill: [M.avStill, 'Avoid kiye ja sakte - abhi tak avoid', a => P_BLUE(rn(a.reason))], avRep: [M.avRep, 'Avoid ho sakte the - phir bhi replace', a => P_RED('Replaced · ' + rn(a.reason))], avAll: [M.av, 'Avoid kiye ja sakte - saare', a => M.repMap[a.conv] ? P_RED('Replaced · ' + rn(a.reason)) : P_BLUE(rn(a.reason))] };
+            if (arg === 'fresh') o = { t: 'Thickness ke hisaab se naye due - ABP me nahi hain', head: ['Dept', 'Conveyor', 'Length m', 'Next CBM', 'Min thk'], rows: M.fresh.slice().sort((a, b) => a.next - b.next).map(a => [a.dept, a.name, fmt(a.len), dstr(a.next), thkTxt(a.conv)]), tm: s(M.fresh, a => a.len) };
+            else { const m = map[arg]; o = Object.assign(abpRows(m[0], m[2]), { t: m[1] }); }
+        } else if (kind === 'sb') {
+            const st = arg === 'steel'; const arr = (st ? M.steelRep.concat(M.steelPa) : M.bucketRep.concat(M.bucketPa));
+            o = Object.assign(repRows(arr, x => ''), { t: (st ? 'Steel cord' : 'Bucket') + ' - consumption' }); const pp = st ? M.steelPlan : M.bucketPlan, uu = s(arr); o.extra = `Plan ${fmt(pp)} m · consumed ${fmt(uu)} m · ${uu > pp ? '<b class="sbc-r">plan se ' + fmt(uu - pp) + ' m zyada</b>' : 'plan bacha ' + fmt(pp - uu) + ' m'}`;
+        } else if (kind === 'why') {
+            const arr = M.av.filter(a => (a.reason || 'OTHERS') === arg); o = { t: 'Avoid reason: ' + rn(arg), head: ['Dept', 'Conveyor', 'Cat', 'Length m', 'Grade', 'Next CBM', 'Min thk', 'Status', 'Remarks'], rows: arr.map(a => [a.dept, a.name, a.cat, fmt(a.len), a.grade, dstr(a.next), thkTxt(a.conv), M.repMap[a.conv] ? P_RED('Replaced anyway') : P_BLUE('Avoid'), a.remarks || '-']), tm: s(arr, a => a.len) };
         }
-        return { head, rows, tm };
+        return o;
     }
-    window.sbcRenderList = function () {
-        if (!S.loaded) return; const d = listData(fyNow(), el('sbcListDept').value || 'All');
-        el('sbcListWrap').innerHTML = `<table class="sbc-table"><thead><tr>${d.head.map(h => `<th style="text-align:left">${h}</th>`).join('')}</tr></thead><tbody>${d.rows.map(r => `<tr>${r.map(c => `<td style="text-align:left">${c}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${d.head.length}">Koi record nahi</td></tr>`}</tbody></table><div class="sbc-note">${d.rows.length} belts / ${fmt(d.tm)} m${S.list === 'steel' ? ' (steel cord = data.csv ka Belt CoverGrade STEELCORD)' : ''}</div>`;
+    window.sbcShow = function (k, quiet) {
+        if (!S.M || !el('sbcDetail')) return; const o = detail(k); if (!o) return; S.detail = k; S.last = o;
+        const p = el('sbcDetail'); p.style.display = 'block';
+        p.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px"><h3 style="margin:0;flex:1"><i class="fas fa-list"></i> ${o.t}</h3>
+            <button class="sbc-chip" onclick="sbcListCsv()"><i class="fas fa-download"></i> CSV</button>
+            <button class="sbc-chip on" onclick="sbcBack()"><i class="fas fa-arrow-up"></i> Graph par wapas</button>
+            <button class="sbc-chip" onclick="sbcCloseList()"><i class="fas fa-xmark"></i></button></div>
+            <div class="sbc-note" style="margin:0 0 8px">${o.rows.length} belts · ${fmt(o.tm)} m · ${f1(o.tm / TOTAL_KM)} SBC${o.extra ? ' · ' + o.extra : ''}</div>
+            <div class="sbc-tablewrap"><table class="sbc-table"><thead><tr>${o.head.map(x => `<th style="text-align:left">${x}</th>`).join('')}</tr></thead><tbody>${o.rows.map(r => `<tr>${r.map(c => `<td style="text-align:left">${c}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${o.head.length}">Koi record nahi</td></tr>`}</tbody></table></div>
+            <div style="text-align:center;margin-top:10px"><button class="sbc-chip on" onclick="sbcBack()"><i class="fas fa-arrow-up"></i> Graph par wapas</button></div>`;
+        if (!quiet) setTimeout(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
+    };
+    window.sbcBack = function () { const c = el(S.from || 'sbcMain'); (c || el('sbcScreen')).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+    window.sbcCloseList = function () { S.detail = null; el('sbcDetail').style.display = 'none'; window.sbcBack(); };
+    const strip = v => String(v == null ? '' : v).replace(/<[^>]*>/g, '').replace(/&amp;/g, '&');
+    function csvDownload(rows, name) {
+        const q = v => { const t = String(v == null ? '' : v); return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+        const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    }
+    window.sbcListCsv = function () { const o = S.last; if (!o) return; csvDownload([o.head].concat(o.rows.map(r => r.map(c => strip(c).replace(/,(?=\d{3})/g, '')))), `SBC_${o.t.replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40)}_FY${fyNow()}.csv`); };
+
+    // ---- full ABP status report (CSV) ----
+    window.sbcExportCsv = function () {
+        if (!S.loaded) return; const fy = fyNow(); const M = model(fy); const s = M.sum;
+        const dz = d => d ? dstr(d) : ''; const rn = r => r ? (REASONS.find(x => x[0] === r) || [0, r])[1] : '';
+        const head = ['FY', 'Dept', 'Conveyor', 'Category', 'Length (m)', 'Grade', 'Type', 'Next CBM (ABP)', 'Planned Mtrs', 'ABP Class', 'Avoid Reason', 'ABP Remarks',
+            'STATUS', 'Replacement Date', 'Replaced Mtrs (FY)', 'Piece Addition Mtrs (FY)', 'Status Remarks',
+            'Min Thickness (mm)', 'Top Cover (mm)', 'Last Thickness Date', 'Current Wear Rate (mm/month)', 'Predicted Life (months)', 'Next CBM (thickness)', 'Last Belt Replacement', 'Criticality',
+            'Open Abnormalities', 'Open Abnormality Details'];
+        const lastD = c => { const r = M.repMap[c]; if (!r) return null; return r.map(x => x.date).filter(Boolean).sort((a, b) => b - a)[0] || null; };
+        const thkCols = c => { const t = S.thk[c] || {}; return [t.minThk, t.top, dz(t.lastThk), t.cWear, t.predLife, dz(t.nextCbm), dz(t.lastRep), t.crit].map(v => v == null || v === '-' ? '' : v); };
+        const abnCols = c => { const a = (S.abn[c] || []); return [a.length || '', a.map(x => `${dz(x.date)}: ${x.issue}${x.rec ? ' (' + x.rec + ')' : ''}`).join(' | ')]; };
+        const rows = [head]; const seen = new Set();
+        M.abp.forEach(a => {
+            const rm = a.conv ? s(M.repMap[a.conv] || []) : 0, pm = a.conv ? s(M.paMap[a.conv] || []) : 0, d = a.conv ? lastD(a.conv) : null; let stt = '', rem = '';
+            if (a.conv) seen.add(a.conv);
+            if (a.type !== 'Fabric' && a.cls === 'Planned') {
+                const st = a.type === 'Steel'; const used = st ? s(M.steelRep) : s(M.bucketRep), pa = st ? s(M.steelPa) : s(M.bucketPa), tot = used + pa;
+                stt = tot > a.plan ? 'Plan exceeded' : (tot >= a.plan ? 'Plan consumed' : 'Planned - Pending'); rem = `Plan ${fmt(a.plan)} m; replaced ${fmt(used)} m; piece addition ${fmt(pa)} m; ${tot > a.plan ? 'plan se ' + fmt(tot - a.plan) + ' m zyada' : 'bacha ' + fmt(a.plan - tot) + ' m'}`;
+            } else if (a.cls === 'Planned') { stt = rm ? 'Planned - Replaced' : 'Planned - Pending'; rem = rm ? `Replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m (planned ${fmt(a.plan)} m)` : `Pending - next CBM ${dz(a.next)}`; }
+            else if (a.cls === 'Avoid') { stt = rm ? 'Could be avoided - but Replaced' : 'Can be avoided'; rem = rm ? `Avoid list me tha (${rn(a.reason)}) phir bhi replace hua${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : `Abhi tak avoid - ${rn(a.reason)}`; }
+            else if (a.cls === 'Replaced') { stt = 'Already replaced (before plan)'; rem = rm ? `Replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : 'ABP banne se pehle replace'; }
+            else stt = a.cls;
+            rows.push([`FY${fy}`, a.dept, a.name, a.cat, a.len, a.grade, a.type, dz(a.next), a.plan, a.cls, rn(a.reason), a.remarks, stt, dz(d), rm || '', pm || '', rem].concat(a.conv ? thkCols(a.conv) : Array(8).fill('')).concat(a.conv ? abnCols(a.conv) : ['', '']));
+        });
+        // ABP ke bahar: unplanned replacement / steel-bucket / piece addition / naye due
+        const extra = (c, stt, rem, len) => { const t = S.thk[c] || {}; const r = (M.repMap[c] || [])[0] || (M.paMap[c] || [])[0] || {}; rows.push([`FY${fy}`, t.dept || r.dept || '', t.name || r.name || c, '', len || t.len || '', t.grade || '', '', '', '', 'Not in ABP', '', '', stt, dz(lastD(c)), s(M.repMap[c] || []) || '', s(M.paMap[c] || []) || '', rem].concat(thkCols(c), abnCols(c))); seen.add(c); };
+        M.C.unplanned.forEach(x => extra(x.conv, 'Unplanned - Replaced (not in ABP)', `Replaced${x.date ? ' on ' + dz(x.date) : ''}, ${fmt(x.m)} m - ABP list me nahi tha`));
+        M.C.sb.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, M.isSteel(x.conv) ? 'Steel cord - Replaced' : 'Bucket - Replaced', `Replaced${x.date ? ' on ' + dz(x.date) : ''}, ${fmt(x.m)} m (total plan ke against)`); });
+        M.C.pa.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, 'Piece addition only', `Piece addition ${fmt(x.m)} m`); });
+        M.fresh.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, 'Due by thickness - not in ABP', `Thickness ke hisaab se next CBM ${dz(x.next)} - ABP me nahi hai`, x.len); });
+        // summary
+        rows.push([]); rows.push(['SUMMARY']);
+        [['FY target (m/km)', M.T], ['Consumed till date (m)', Math.round(M.st.total)], ['SBC till date', f1(M.st.total / TOTAL_KM)], ['Balance (m)', Math.round(Math.max(0, M.T * TOTAL_KM - M.st.total))],
+         ['Planned (ABP) replaced (m)', Math.round(s(M.C.planned))], ['Unplanned not in ABP (m)', Math.round(s(M.C.unplanned))], ['Avoid list but replaced (m)', Math.round(s(M.C.avoidRep))], ['Steel/Bucket replaced (m)', Math.round(s(M.C.sb))], ['Piece addition (m)', Math.round(s(M.C.pa))],
+         ['Planned pending (m)', Math.round(M.pendFab + M.pendSteel + M.pendBucket)], ['Projected SBC by March', f1(M.proj / TOTAL_KM)], ['Generated', dz(new Date())]].forEach(r => rows.push(r));
+        csvDownload(rows, `SBC_ABP_Status_FY${fy}_${dz(new Date())}.csv`);
     };
 
     // ---- export ----
