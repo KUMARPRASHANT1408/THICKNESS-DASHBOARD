@@ -422,7 +422,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 14-Oct-g</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 14-Oct-h</div>
         </div>
     </div>
 
@@ -2947,8 +2947,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const steelRep = C.sb.filter(r => isSteel(r.conv)), bucketRep = C.sb.filter(r => isBucket(r.conv));
         const steelPa = C.pa.filter(r => isSteel(r.conv)), bucketPa = C.pa.filter(r => isBucket(r.conv));
         const steelUsed = sum(steelRep) + sum(steelPa), bucketUsed = sum(bucketRep) + sum(bucketPa);
-        const paM = c => sum(paMap[c] || []); const remM = a => Math.max(0, planM(a) - paM(a.conv));
-        const pendFab = sum(plPend, remM), pendSteel = Math.max(0, steelPlan - steelUsed), pendBucket = Math.max(0, bucketPlan - bucketUsed);
+        const pendFab = sum(plPend, planM), pendSteel = Math.max(0, steelPlan - steelUsed), pendBucket = Math.max(0, bucketPlan - bucketUsed);
         const proj = st.total + pendFab + pendSteel + pendBucket;
         // thickness se naye due belts jo ABP me hai hi nahi
         const fresh = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (abpBy[c] || repMap[c] || isSteel(c) || isBucket(c) || /NOT\s*EXIST/.test(t.grade)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; fresh.push({ conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm }); });
@@ -2963,7 +2962,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             return 'OTHER'; };
         const due = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (isSteel(c) || isBucket(c) || repMap[c] || /NOT\s*EXIST/.test(t.grade)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; due.push(c); });
         const avoidT = due.filter(c => !plSet.has(c) && !preSet.has(c)).map(c => { const t = S.thk[c]; return { conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm, cat: t.cat, grade: t.grade, reason: thkReason(c), inAbp: avSet.has(c) }; });
-        return { fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, avRep, avStill, steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, paM, remM, pendSteel, pendBucket, steelUsed, bucketUsed, proj, fresh, planM, sum, abpBy, isSteel, isBucket };
+        return { fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, avRep, avStill, steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, pendSteel, pendBucket, steelUsed, bucketUsed, proj, fresh, planM, sum, abpBy, isSteel, isBucket };
     }
 
     window.sbcRender = function () {
@@ -3114,7 +3113,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const g4l = ['RTG planned', 'Can be avoided'];
         const g4 = [
             { label: 'Replaced', data: [s(M.plDone, M.planM) + s(preDone, M.planM), 0], color: CL.green, k: ['thk:plDone', null] },
-            { label: 'Pending', data: [s(M.plPend, M.remM), 0], color: CL.amber, k: ['thk:plPend', null] },
+            { label: 'Pending', data: [s(M.plPend, M.planM), 0], color: CL.amber, k: ['thk:plPend', null] },
             { label: 'Still avoided', data: [0, lenS(M.avStill)], color: CL.blue, k: [null, 'thk:avStill'] },
             { label: 'Replaced anyway', data: [0, lenS(M.avRep)], color: CL.darkred, k: [null, 'thk:avRep'] }];
         if (M.fresh.length) { g4l.push('Newly due (not in ABP)'); g4.forEach(d => { d.data.push(0); d.k.push(null); }); g4.push({ label: 'Newly due', data: [0, 0, lenS(M.fresh)], color: CL.purple, k: [null, null, 'thk:fresh'] }); }
@@ -3147,7 +3146,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 else { tm += x.m; rows.push({ d: x.date, r: [x.date ? dstr(x.date) : '<span class="sbc-note">not in Daily Report</span>', x.dept, x.name, fmt(x.m), x.kind || '', '-', thkTxt(x.conv), note(x)] }); } });
             rows.sort((a, b) => (a.d || 9e15) - (b.d || 9e15));
             return { head: ['Date', 'Dept', 'Conveyor', 'Metres', 'Type', 'Joint / Vendor', 'Min thk', 'Note'], rows: rows.map(x => x.r), tm, n: arr.length }; };
-        const abpRows = (arr, st) => ({ head: ['Dept', 'Conveyor', 'Cat', 'Length m', 'Planned m', 'Grade', 'Next CBM', 'Min thk', 'Status / Reason'], rows: arr.slice().sort((a, b) => (a.next || 0) - (b.next || 0)).map(a => [a.dept, a.name, a.cat, fmt(a.len), a.plan ? (a.cls === 'Planned' && !M.repMap[a.conv] && M.paM(a.conv) ? `${fmt(a.plan)} - ${fmt(M.paM(a.conv))} PA = <b>${fmt(M.remM(a))}</b>` : fmt(a.plan)) : '-', a.grade, dstr(a.next), thkTxt(a.conv), st(a)]), tm: s(arr, a => a.len) });
+        const abpRows = (arr, st) => ({ head: ['Dept', 'Conveyor', 'Cat', 'Length m', 'Planned m', 'Grade', 'Next CBM', 'Min thk', 'Status / Reason'], rows: arr.slice().sort((a, b) => (a.next || 0) - (b.next || 0)).map(a => [a.dept, a.name, a.cat, fmt(a.len), a.plan ? fmt(a.plan) : '-', a.grade, dstr(a.next), thkTxt(a.conv), st(a)]), tm: s(arr, a => a.len) });
         const doneTxt = a => { const r = M.repMap[a.conv]; if (!r) return P_PEND(); const d = r.map(x => x.date).filter(Boolean).sort((p, q) => q - p)[0]; return P_DONE('Done' + (d ? ' ' + dstr(d) : '') + ' · ' + fmt(s(r)) + ' m'); };
         const noteU = x => M.abpBy[x.conv] && M.abpBy[x.conv].cls === 'Avoid' ? P_RED('Was in avoid list: ' + rn(M.abpBy[x.conv].reason)) : P_RED('Not in ABP');
         let o;
@@ -3160,7 +3159,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             else if (arg === 'other') o = { t: 'Other consumption', head: ['Note'], rows: [[`${fmt(M.other)} m is in the SBC sheet monthly total but could not be matched to a belt-wise replacement / piece addition (date or conveyor name mismatch).`]], tm: M.other };
             else o = Object.assign(repRows(M.C.planned.concat(M.C.unplanned, M.C.avoidRep, M.C.sb, M.C.pa), x => x.kind === 'Piece addition' ? P_BLUE('Piece addition') : (M.C.planned.includes(x) ? P_DONE('Planned') : (M.C.sb.includes(x) ? P_BLUE('Steel/Bucket') : noteU(x)))), { t: 'All consumption till date' });
         } else if (kind === 'proj') {
-            o = Object.assign(abpRows(M.plPend, a => P_PEND('Pending')), { t: 'Remaining planned belts (due by March)' }); o.tm = s(M.plPend, M.remM);
+            o = Object.assign(abpRows(M.plPend, a => P_PEND('Pending')), { t: 'Remaining planned belts (due by March)' }); o.tm = s(M.plPend, M.planM);
             o.extra = `+ Steel cord plan remaining ${fmt(M.pendSteel)} m, Bucket plan remaining ${fmt(M.pendBucket)} m (no belt-wise list).`;
         } else if (kind === 'dept') {
             const arr = M.C.unplanned.concat(M.C.avoidRep).filter(x => x.dept === arg); o = Object.assign(repRows(arr, noteU), { t: `${arg} - unplanned replacement` });
@@ -3168,7 +3167,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const map = { plDone: [M.plDone.concat(M.pre), 'RTG planned - replaced', doneTxt], plPend: [M.plPend, 'RTG planned - pending', doneTxt], plAll: [M.pl.concat(M.pre), 'RTG planned - all', doneTxt],
                 avStill: [M.avStill, 'Can be avoided - still avoided', a => P_BLUE(rn(a.reason))], avRep: [M.avRep, 'Could be avoided - replaced anyway', a => P_RED('Replaced · ' + rn(a.reason))], avAll: [M.av, 'Can be avoided - all', a => M.repMap[a.conv] ? P_RED('Replaced · ' + rn(a.reason)) : P_BLUE(rn(a.reason))] };
             if (arg === 'fresh') o = { t: 'Newly due as per thickness - not in ABP', head: ['Dept', 'Conveyor', 'Length m', 'Next CBM', 'Min thk'], rows: M.fresh.slice().sort((a, b) => a.next - b.next).map(a => [a.dept, a.name, fmt(a.len), dstr(a.next), thkTxt(a.conv)]), tm: s(M.fresh, a => a.len) };
-            else { const m = map[arg]; o = Object.assign(abpRows(m[0], m[2]), { t: m[1] }); if (arg.startsWith('pl')) { o.tm = s(m[0], a => M.repMap[a.conv] ? M.planM(a) : M.remM(a)); o.extra = 'Metres = ABP Planned Mtrs (pending belts: minus piece addition already done this FY)'; } }
+            else { const m = map[arg]; o = Object.assign(abpRows(m[0], m[2]), { t: m[1] }); if (arg.startsWith('pl')) { o.tm = s(m[0], M.planM); o.extra = 'Metres = ABP Planned Mtrs'; } }
         } else if (kind === 'sb') {
             const st = arg === 'steel'; const arr = (st ? M.steelRep.concat(M.steelPa) : M.bucketRep.concat(M.bucketPa));
             o = Object.assign(repRows(arr, x => ''), { t: (st ? 'Steel cord' : 'Bucket') + ' - consumption' }); const pp = st ? M.steelPlan : M.bucketPlan, uu = s(arr); o.extra = `Plan ${fmt(pp)} m · consumed ${fmt(uu)} m · ${uu > pp ? '<b class="sbc-r">' + fmt(uu - pp) + ' m over plan</b>' : 'plan remaining ' + fmt(pp - uu) + ' m'}`;
@@ -3231,7 +3230,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             if (a.type !== 'Fabric' && a.cls === 'Planned') {
                 const st = a.type === 'Steel'; const used = st ? s(M.steelRep) : s(M.bucketRep), pa = st ? s(M.steelPa) : s(M.bucketPa), tot = used + pa;
                 stt = tot > a.plan ? 'Plan exceeded' : (tot >= a.plan ? 'Plan consumed' : 'Planned - Pending'); rem = `Plan ${fmt(a.plan)} m; replaced ${fmt(used)} m; piece addition ${fmt(pa)} m; ${tot > a.plan ? fmt(tot - a.plan) + ' m over plan' : 'remaining ' + fmt(a.plan - tot) + ' m'}`;
-            } else if (a.cls === 'Planned') { stt = rm ? 'Planned - Replaced' : 'Planned - Pending'; rem = rm ? `Replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m (planned ${fmt(a.plan)} m)` : `Pending - next CBM ${dz(a.next)}${pm ? `; piece addition ${fmt(pm)} m done, remaining ${fmt(Math.max(0, a.plan - pm))} m` : ''}`; }
+            } else if (a.cls === 'Planned') { stt = rm ? 'Planned - Replaced' : 'Planned - Pending'; rem = rm ? `Replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m (planned ${fmt(a.plan)} m)` : `Pending - next CBM ${dz(a.next)}`; }
             else if (a.cls === 'Avoid') { stt = rm ? 'Could be avoided - but Replaced' : 'Can be avoided'; rem = rm ? `In avoid list (${rn(a.reason)}) but replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : `Still avoided - ${rn(a.reason)}`; }
             else if (a.cls === 'Replaced') { stt = 'Already replaced (before plan)'; rem = rm ? `Replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : 'Replaced before ABP was made'; }
             else stt = a.cls;
