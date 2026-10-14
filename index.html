@@ -2867,7 +2867,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     const fyOf = d => (d.getMonth() >= 3 ? d.getFullYear() + 1 : d.getFullYear()) % 100;
     const mi = d => (d.getMonth() + 9) % 12;
     const dstr = d => d ? String(d.getDate()).padStart(2, '0') + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + d.getFullYear() : '-';
-    function pdmy(s) { const p = String(s || '').split('-'); if (p.length < 3) return null; const d = new Date(+p[2], +p[1] - 1, +p[0]); return isNaN(d) ? null : d; }
+    function pdmy(s) { const t = String(s || '').trim(); if (/^\d{5}(\.\d+)?$/.test(t)) { const e = new Date(Math.round((+t - 25569) * 86400000)); return new Date(e.getUTCFullYear(), e.getUTCMonth(), e.getUTCDate()); } const p = t.split('-'); if (p.length < 3) return null; const d = new Date(+p[2], +p[1] - 1, +p[0]); return isNaN(d) ? null : d; }
     const num = v => parseFloat(String(v == null ? '' : v).replace(/,/g, '')) || 0;
     const el = id => document.getElementById(id);
     const fyNow = () => +el('sbcFy').value;
@@ -2877,7 +2877,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
 
     function get(url) {
         return fetch(url + '?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw 0; return r.text(); })
-            .then(t => new Promise(res => Papa.parse(t, { header: true, skipEmptyLines: true, transformHeader: h => (h || '').trim(), complete: x => res(x.data) })))
+            .then(t => new Promise(res => Papa.parse(t, { header: true, skipEmptyLines: true, transformHeader: h => (h || '').replace(/_x002e_/gi, '.').replace(/_x0027_/gi, "'").trim(), complete: x => res(x.data) })))
             .catch(() => []);
     }
 
