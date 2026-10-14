@@ -422,7 +422,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 14-Oct-e</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 14-Oct-f</div>
         </div>
     </div>
 
@@ -2888,7 +2888,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 });
             });
             el('sbcLoading').innerText = S.monthly.length ? '' : 'sbc.csv not found or empty (check the SBC tab in Google Sheet / sync).';
-            S.abp = abp.map(r => ({ fy: String(r.FY || '').replace(/\D/g, '') * 1, dept: nd(r.Dept), conv: key(r.Conveyor), name: r.Conveyor, cat: r.Category, len: num(r.Length), grade: r.Grade, type: r.Type, next: pdmy(r.NextCBM), plan: num(r.PlannedMtrs), cls: r.Class, reason: r.Reason, remarks: r.Remarks }));
+            S.abp = abp.map(r => ({ fy: String(r.FY || '').replace(/\D/g, '') * 1, dept: nd(r.Dept), conv: key(r.Conveyor), name: r.Conveyor, cat: r.Category, len: num(r.Length), grade: r.Grade, type: r.Type, next: pdmy(r.NextCBM), plan: num(r.PlannedMtrs), cls: (r.Class === 'Planned' && String(r.Reason || '').trim()) ? 'Avoid' : r.Class, reason: r.Reason, remarks: r.Remarks }));
             S.thk = {};
             thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']), nextCbm: parseDateCustom(r[Object.keys(r).find(k => /^Next Prediction\s*\(CBM\)/i.test(k))]), minThk: (r['MIN THICKNESS'] || '').trim(), top: (r['TOP'] || '').trim(), lastThk: parseDateCustom(r['Last Thickness Date']), cWear: (v => v ? v.toFixed(3) : '')(num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))])), predLife: num(r['Predicted Life (in Months) (Actual)']) ? f1(num(r['Predicted Life (in Months) (Actual)'])) : '', crit: (r['Criticality'] || '').trim(), cat: String(r['CATEGORY'] || '').trim().toUpperCase(), pWearN: num(r[Object.keys(r).find(k => /^Planned Wear Rate/i.test(k))]), cWearN: num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))]), e1: String(r['Thickness EDGE 1'] || '').trim(), ctr: String(r['CENTER2'] || '').trim(), e2: String(r['Thickness EDGE 2'] || '').trim() }; });
             // Daily Report: har replacement / piece addition ki date, metres, joint, vendor
