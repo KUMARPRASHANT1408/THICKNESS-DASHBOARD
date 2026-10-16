@@ -426,7 +426,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 16-Oct-a</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 16-Oct-b</div>
         </div>
     </div>
 
@@ -2112,8 +2112,27 @@ function getAbnormalityStatusText(convName) {
     return `\n* Abnormality: **⚠️ Open**\n${lines.join('\n')}`;
 }
 
+function beltWidthText(r) {
+    const k = Object.keys(r).find(x => /^belt\s*width/i.test(x.trim()));
+    const v = k ? String(r[k] || '').trim() : '';
+    return v && v !== '0' ? v + ' mm' : 'N/A';
+}
+function maxHardnessText(r) {
+    // HARDNESS (EDGE1 / CENTER / EDGE2) columns hold one reading per line; latest = last line
+    const cols = Object.keys(r).filter(x => /^hardness/i.test(x.replace(/\s+/g, ' ').trim()));
+    let best = null, all = null;
+    cols.forEach(k => {
+        const pos = (k.match(/\(([^)]+)\)/) || [0, k])[1].trim();
+        const vals = String(r[k] || '').split(/\r?\n/).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
+        if (!vals.length) return;
+        const last = vals[vals.length - 1]; if (!best || last > best.v) best = { v: last, pos };
+        const mx = Math.max(...vals); if (!all || mx > all.v) all = { v: mx, pos };
+    });
+    if (!best) return 'N/A';
+    return `${best.v} Shore A (${best.pos}, latest reading)` + (all && all.v > best.v ? ` · highest ever ${all.v} (${all.pos})` : '');
+}
 function fullThkDetail(r) {
-    return `⚡ **Full Details:**\nConveyor **${r.conv}** (${r.dept}):\n* Length: **${r.length || 'N/A'} meters**\n* Top Cover: **${r.topCover} mm**\n* Min Thickness: **${parseFloat(r.minThk).toFixed(2)} mm** _(${r.wearType})_\n* Wear Rate: **${parseFloat(r.cWear).toFixed(3)} mm/M**\n* Predicted Life: **${r.predLife ? parseFloat(r.predLife).toFixed(1) + ' Months' : '-'}**\n* Last Thickness Inspection: **${r.lastInspDisp || '-'}**\n* Last Belt Replacement: **${r.lastRep || '-'}**\n* Next Repl. Plan: **${r.nextCBM || '-'}**\n* Status: **${r.crit}**${getAbnormalityStatusText(r.conv)}${getJointInfoText(r.conv, r.lastRep)}`;
+    return `⚡ **Full Details:**\nConveyor **${r.conv}** (${r.dept}):\n* Length: **${r.length || 'N/A'} meters**\n* Belt Width: **${beltWidthText(r)}**\n* Top Cover: **${r.topCover} mm**\n* Max Belt Hardness: **${maxHardnessText(r)}**\n* Min Thickness: **${parseFloat(r.minThk).toFixed(2)} mm** _(${r.wearType})_\n* Wear Rate: **${parseFloat(r.cWear).toFixed(3)} mm/M**\n* Predicted Life: **${r.predLife ? parseFloat(r.predLife).toFixed(1) + ' Months' : '-'}**\n* Last Thickness Inspection: **${r.lastInspDisp || '-'}**\n* Last Belt Replacement: **${r.lastRep || '-'}**\n* Next Repl. Plan: **${r.nextCBM || '-'}**\n* Status: **${r.crit}**${getAbnormalityStatusText(r.conv)}${getJointInfoText(r.conv, r.lastRep)}`;
 }
 function fullAbnDetail(r) {
     return `⚡ **Full Details:**\nConveyor **${r['NO.']}** (${r.Dept}):\n* Issue: **"${r['Major Abnormality']}"**\n* Category: **${r.category}**\n* Reported On: **${r['Abnormality Date']}**\n* Pending Since: **${r.ageDays} din**\n* Action Plan: **${r.plan}**`;
@@ -3009,25 +3028,26 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const plan = s(M.pl.filter(f), pm);
                 const cons = dn ? st.dm[dn].reduce((a, b) => a + b, 0) : st.total;
                 const cP = s(M.C.planned.filter(f)); const cU = cons - cP;
-                const bal = M.T * km - cons;
+                const bal = plan - cons;
                 const lP = s(M.leftP.filter(f), pm), lU = s(M.leftU.filter(f), ln), mP = s(M.maintP.filter(f), pm), mU = s(M.maintU.filter(f), ln);
                 return [plan, cP, cU, bal, cP + lP, cU + lU, lP, lU, mP, mU]; };
             const keys = ['plan', 'cp', 'cu', null, null, null, 'lp', 'lu', 'mp', 'mu'];
             let tb = '';
-            DEPTS.forEach(d => { const v = calc(d[0], d[1]); tb += `<tr><td>${d[0]}</td><td>${d[1]}</td>${v.map((x, i) => i === 3 ? `<td class="sbc-c ${x < 0 ? 'sbc-r' : 'sbc-g'}"><b>${fmt(x)}</b><small>${f1(x / d[1])}</small></td>` : cell(x, d[1], keys[i] && x ? 'tbl:' + keys[i] + ':' + d[0] : null)).join('')}</tr>`; });
+            DEPTS.forEach(d => { const v = calc(d[0], d[1]); tb += `<tr><td>${d[0]}</td>${v.map((x, i) => i === 3 ? `<td class="sbc-c ${x < 0 ? 'sbc-r' : 'sbc-g'}"><b>${fmt(x)}</b><small>${f1(x / TOTAL_KM)}</small></td>` : cell(x, TOTAL_KM, keys[i] && x ? 'tbl:' + keys[i] + ':' + d[0] : null)).join('')}</tr>`; });
             const v = calc(null, TOTAL_KM);
             const sbX = M.pendSteel + M.pendBucket;
-            if (M.steelPlan || M.bucketPlan) tb += `<tr><td colspan="2">Steel cord + Bucket (plan total)</td>${[M.steelPlan + M.bucketPlan, 0, 0, null, 0, 0, sbX, 0, 0, 0].map(x => x === null ? '<td></td>' : cell(x, TOTAL_KM, null)).join('')}</tr>`;
-            v[0] += M.steelPlan + M.bucketPlan; v[4] += sbX; v[6] += sbX;
-            tb += `<tr class="tot"><td>TOTAL</td><td>${TOTAL_KM}</td>${v.map((x, i) => i === 3 ? `<td class="sbc-c ${x < 0 ? 'sbc-r' : 'sbc-g'}"><b>${fmt(x)}</b><small>${f1(x / TOTAL_KM)}</small></td>` : cell(x, TOTAL_KM, keys[i] && x && i !== 0 ? 'tbl:' + keys[i] + ':ALL' : null)).join('')}</tr>`;
+            const sbU = M.sum(M.steelRep) + M.sum(M.steelPa) + M.sum(M.bucketRep) + M.sum(M.bucketPa);
+            if (M.steelPlan || M.bucketPlan) tb += `<tr><td>Steel cord + Bucket (plan total)</td>${[M.steelPlan + M.bucketPlan, 0, 0, null, 0, 0, sbX, 0, 0, 0].map(x => x === null ? '<td></td>' : cell(x, TOTAL_KM, null)).join('')}</tr>`;
+            v[0] += M.steelPlan + M.bucketPlan; v[3] += M.steelPlan + M.bucketPlan; v[4] += sbX; v[6] += sbX;
+            tb += `<tr class="tot"><td>TOTAL</td>${v.map((x, i) => i === 3 ? `<td class="sbc-c ${x < 0 ? 'sbc-r' : 'sbc-g'}"><b>${fmt(x)}</b><small>${f1(x / TOTAL_KM)}</small></td>` : cell(x, TOTAL_KM, keys[i] && x && i !== 0 ? 'tbl:' + keys[i] + ':ALL' : null)).join('')}</tr>`;
             const fc = (v[1] + v[2] + v[6] + v[7]); 
             TITLES.sbcTbl = `Department-wise SBC status & forecast - FY'${fy}`;
             h += `<div class="glass-panel sbc-panel" id="card-sbcTbl"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES.sbcTbl}</h3><button class="sbc-chip sbc-png" onclick="sbcTblCsv()"><i class="fas fa-download"></i> CSV</button></div>
-                <div class="sbc-note" style="margin:0 0 8px">Each cell: <b>metres</b> on top, <b>SBC (m/km)</b> below, on the department's own km. Tap a number to see its belt list. Forecast till March = ${fmt(fc)} m (${f1(fc / TOTAL_KM)} SBC) vs target ${fmt(M.T * TOTAL_KM)} m (${M.T}).</div>
+                <div class="sbc-note" style="margin:0 0 8px">Each cell: <b>metres</b> on top, <b>SBC</b> below (metres &divide; ${TOTAL_KM} km plant length). Tap a number to see its belt list. Forecast till March = ${fmt(fc)} m (${f1(fc / TOTAL_KM)} SBC) vs target ${fmt(M.T * TOTAL_KM)} m (${M.T}).</div>
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
-                <tr><th rowspan="2">Dept</th><th rowspan="2">km</th><th rowspan="2">Planned FY'${fy}<br><small>(ABP)</small></th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>from target</small></th><th colspan="2">Forecast till March</th><th colspan="2">Left to be consumed<br><small>(as per current wear)</small></th><th colspan="2">To be maintained</th></tr>
+                <tr><th rowspan="2">Dept</th><th rowspan="2">Planned FY'${fy}<br><small>(ABP)</small></th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>(planned &minus; consumed)</small></th><th colspan="2">Forecast till March</th><th colspan="2">Left to be consumed<br><small>(as per current wear)</small></th><th colspan="2">To be maintained</th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb}</tbody></table></div>
-                <div class="sbc-note"><b>Planned (ABP)</b> = Total Mtrs (col V) of planned belts. <b>Consumed planned</b> = actual metres on ABP planned belts; <b>Consumed unplanned</b> = all other consumption (unplanned replacement, avoid-list belts replaced, piece addition, steel/bucket). <b>Balance</b> = ${M.T} &times; dept km &minus; consumed. <b>Left planned</b> = planned, not yet replaced, next CBM (thickness) within FY'${fy}. <b>Left unplanned</b> = not in ABP, not replaced, next CBM within FY'${fy}. <b>Forecast</b> = consumed + left. <b>To be maintained planned</b> = planned but next CBM has moved beyond 31-Mar (plan for next FY). <b>To be maintained unplanned</b> = ABP gave a reason (skirt damage, high wear, etc.), next CBM within FY'${fy} - can be pushed.</div></div>`;
+                <div class="sbc-note"><b>Planned (ABP)</b> = Total Mtrs (col V) of planned belts. <b>Consumed planned</b> = actual metres on ABP planned belts; <b>Consumed unplanned</b> = all other consumption (unplanned replacement, avoid-list belts replaced, piece addition, steel/bucket). <b>Balance</b> = Planned (ABP) &minus; total consumed (planned + unplanned); negative = consumption already above plan. <b>Left planned</b> = planned, not yet replaced, next CBM (thickness) within FY'${fy}. <b>Left unplanned</b> = not in ABP, not replaced, next CBM within FY'${fy}. <b>Forecast</b> = consumed + left. <b>To be maintained planned</b> = planned but next CBM has moved beyond 31-Mar (plan for next FY). <b>To be maintained unplanned</b> = ABP gave a reason (skirt damage, high wear, etc.), next CBM within FY'${fy} - can be pushed.</div></div>`;
         }
         // ---- question graphs ----
         if (M.abp.length) {
@@ -3251,8 +3271,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     };
     window.S_from = function (id) { S.from = id; };
     window.sbcTblCsv = function () { const t = document.querySelector('#card-sbcTbl table'); if (!t) return;
-        const head = ['Dept', 'km', 'Planned (ABP) m', 'Planned (ABP) SBC', 'Consumed planned m', 'Consumed planned SBC', 'Consumed unplanned m', 'Consumed unplanned SBC', 'Balance from target m', 'Balance from target SBC', 'Forecast planned m', 'Forecast planned SBC', 'Forecast unplanned m', 'Forecast unplanned SBC', 'Left to consume planned m', 'Left to consume planned SBC', 'Left to consume unplanned m', 'Left to consume unplanned SBC', 'To be maintained planned m', 'To be maintained planned SBC', 'To be maintained unplanned m', 'To be maintained unplanned SBC'];
-        const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b) { r.push(b.innerText.replace(/,/g, '').replace('-', '') === '' ? '' : b.innerText.replace(/,/g, '')); r.push(sm && sm.innerText !== '-' ? sm.innerText : ''); } else { r.push(td.innerText); if (td.colSpan === 2) r.push(''); } }); rows.push(r); });
+        const head = ['Dept', 'Planned (ABP) m', 'Planned (ABP) SBC', 'Consumed planned m', 'Consumed planned SBC', 'Consumed unplanned m', 'Consumed unplanned SBC', 'Balance (planned - consumed) m', 'Balance (planned - consumed) SBC', 'Forecast planned m', 'Forecast planned SBC', 'Forecast unplanned m', 'Forecast unplanned SBC', 'Left to consume planned m', 'Left to consume planned SBC', 'Left to consume unplanned m', 'Left to consume unplanned SBC', 'To be maintained planned m', 'To be maintained planned SBC', 'To be maintained unplanned m', 'To be maintained unplanned SBC'];
+        const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b) { r.push(b.innerText.replace(/,/g, '').replace('-', '') === '' ? '' : b.innerText.replace(/,/g, '')); r.push(sm && sm.innerText !== '-' ? sm.innerText : ''); } else r.push(td.innerText); }); rows.push(r); });
         csvDownload(rows, `SBC_Dept_Status_FY${fyNow()}.csv`); };
     window.sbcBack = function () { const c = el(S.from || 'sbcMain'); (c || el('sbcScreen')).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     window.sbcCloseList = function () { S.detail = null; el('sbcDetail').style.display = 'none'; window.sbcBack(); };
