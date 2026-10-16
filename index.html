@@ -426,7 +426,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 16-Oct-b</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 16-Oct-c</div>
         </div>
     </div>
 
@@ -2853,6 +2853,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     const DEPTS = [['RMHS', 45], ['RMPP', 36], ['DRI', 14], ['RMBB', 14.8], ['SP#1', 9.7], ['SP#2#3', 9.2], ['BF#1', 4.3], ['BF#2', 6.97], ['CO#1', 9.5], ['CO#2', 7], ['LCP', 3], ['SMS#2', 11.1]];
     const KM = {}; DEPTS.forEach(d => KM[d[0]] = d[1]);
     const FY_TARGET = { 27: 252, 26: 270, 25: 318 };
+    const ABP_DATE = { 27: new Date(2026, 6, 22) };   // ABP sent to departments on 22-07-2026
     const M_TARGET_27 = [40, 30, 20, 20, 20, 20, 17, 17, 17, 15, 18, 18];
     const MON = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
     const GREEN = '#10b981', YELLOW = '#f59e0b', RED = '#ef4444';
@@ -2957,15 +2958,26 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const pre = abp.filter(a => a.cls === 'Replaced' && a.conv);
         const abpBy = {}; abp.forEach(a => { if (a.conv) abpBy[a.conv] = a; });
         const plSet = new Set(pl.map(a => a.conv)), avSet = new Set(av.map(a => a.conv)), preSet = new Set(pre.map(a => a.conv));
-        const C = { planned: [], unplanned: [], avoidRep: [], sb: [], pa: [] };
+        const C = { preAbp: [], planned: [], unplanned: [], avoidRep: [], sb: [], pa: [] };
+        // ABP issue date: everything consumed on/before it is counted as planned (the plan only covers what came after)
+        const CUT = ABP_DATE[fy] || null;
+        const evFY = (c, t) => (S.ev[c] || []).filter(e => e.type === t && fyOf(e.date) === fy);
         Object.keys(repMap).forEach(c => { const r = one(repMap, c); r.kind = 'Replacement';
+            const rd = r.date || (evFY(c, 'R').map(e => e.date).sort((a, b) => b - a)[0]) || null;
+            if (CUT && rd && rd <= CUT) { r.date = rd; r.evf = e => e.date <= CUT; C.preAbp.push(r); return; }
+            if (CUT) r.evf = e => e.date > CUT;
             if (isSteel(c) || isBucket(c)) C.sb.push(r); else if (plSet.has(c) || preSet.has(c)) C.planned.push(r); else if (avSet.has(c)) C.avoidRep.push(r); else C.unplanned.push(r); });
-        Object.keys(paMap).forEach(c => { const r = one(paMap, c); r.kind = 'Piece addition'; C.pa.push(r); });
-        const known = sum(C.planned) + sum(C.unplanned) + sum(C.avoidRep) + sum(C.sb) + sum(C.pa);
+        Object.keys(paMap).forEach(c => { const r = one(paMap, c); r.kind = 'Piece addition';
+            if (CUT) { const pre = Math.min(r.m, evFY(c, 'P').filter(e => e.date <= CUT).reduce((q, e) => q + e.m, 0));
+                if (pre > 0) C.preAbp.push(Object.assign({}, r, { m: pre, evf: e => e.date <= CUT }));
+                r.m -= pre; r.evf = e => e.date > CUT; if (r.m <= 0.01) return; }
+            C.pa.push(r); });
+        const known = sum(C.preAbp) + sum(C.planned) + sum(C.unplanned) + sum(C.avoidRep) + sum(C.sb) + sum(C.pa);
         const other = st.total - known;
         const planM = a => a.plan || a.len;
         const plDone = pl.filter(a => repMap[a.conv]), plPend = pl.filter(a => !repMap[a.conv]);
-        const avRep = av.filter(a => repMap[a.conv]), avStill = av.filter(a => !repMap[a.conv]);
+        const preRep = new Set(C.preAbp.filter(x => x.kind === 'Replacement').map(x => x.conv));
+        const avRep = av.filter(a => repMap[a.conv] && !preRep.has(a.conv)), avStill = av.filter(a => !repMap[a.conv] || preRep.has(a.conv));
         const steelPlan = sum(abp.filter(a => a.cls === 'Planned' && a.type === 'Steel'), a => a.plan), bucketPlan = sum(abp.filter(a => a.cls === 'Planned' && a.type === 'Bucket'), a => a.plan);
         const steelRep = C.sb.filter(r => isSteel(r.conv)), bucketRep = C.sb.filter(r => isBucket(r.conv));
         const steelPa = C.pa.filter(r => isSteel(r.conv)), bucketPa = C.pa.filter(r => isBucket(r.conv));
@@ -2991,7 +3003,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const maintP = plPend.filter(a => { const n = nextOf(a); return n && n > fyEnd; });       // planned, but CBM moved beyond FY
         const leftU = fresh;                                                                     // not in ABP, not replaced, falls in FY
         const maintU = avStill.filter(a => { const n = nextOf(a); return !n || n <= fyEnd; });   // ABP reason given (avoid), not replaced, falls in FY
-        return { nextOf, leftP, maintP, leftU, maintU, fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, avRep, avStill, steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, pendSteel, pendBucket, steelUsed, bucketUsed, proj, fresh, planM, sum, abpBy, isSteel, isBucket };
+        return { CUT, preRep, nextOf, leftP, maintP, leftU, maintU, fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, avRep, avStill, steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, pendSteel, pendBucket, steelUsed, bucketUsed, proj, fresh, planM, sum, abpBy, isSteel, isBucket };
     }
 
     window.sbcRender = function () {
@@ -3025,9 +3037,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const cell = (m, km, key) => `<td class="sbc-c${key ? ' sbc-click' : ''}"${key ? ` onclick="S_from('card-sbcTbl');sbcShow('${key}')"` : ''}><b>${m ? fmt(m) : '-'}</b><small>${m && km ? f1(m / km) : '-'}</small></td>`;
             const rowsT = []; const tot = Array(11).fill(0);
             const calc = (dn, km) => { const f = x => !dn || x.dept === dn;
-                const plan = s(M.pl.filter(f), pm);
+                const pre = s(M.C.preAbp.filter(f)); const plan = s(M.pl.filter(f), pm) + pre;
                 const cons = dn ? st.dm[dn].reduce((a, b) => a + b, 0) : st.total;
-                const cP = s(M.C.planned.filter(f)); const cU = cons - cP;
+                const cP = s(M.C.planned.filter(f)) + pre; const cU = cons - cP;
                 const bal = plan - cons;
                 const lP = s(M.leftP.filter(f), pm), lU = s(M.leftU.filter(f), ln), mP = s(M.maintP.filter(f), pm), mU = s(M.maintU.filter(f), ln);
                 return [plan, cP, cU, bal, cP + lP, cU + lU, lP, lU, mP, mU]; };
@@ -3047,13 +3059,13 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
                 <tr><th rowspan="2">Dept</th><th rowspan="2">Planned FY'${fy}<br><small>(ABP)</small></th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>(planned &minus; consumed)</small></th><th colspan="2">Forecast till March</th><th colspan="2">Left to be consumed<br><small>(as per current wear)</small></th><th colspan="2">To be maintained</th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb}</tbody></table></div>
-                <div class="sbc-note"><b>Planned (ABP)</b> = Total Mtrs (col V) of planned belts. <b>Consumed planned</b> = actual metres on ABP planned belts; <b>Consumed unplanned</b> = all other consumption (unplanned replacement, avoid-list belts replaced, piece addition, steel/bucket). <b>Balance</b> = Planned (ABP) &minus; total consumed (planned + unplanned); negative = consumption already above plan. <b>Left planned</b> = planned, not yet replaced, next CBM (thickness) within FY'${fy}. <b>Left unplanned</b> = not in ABP, not replaced, next CBM within FY'${fy}. <b>Forecast</b> = consumed + left. <b>To be maintained planned</b> = planned but next CBM has moved beyond 31-Mar (plan for next FY). <b>To be maintained unplanned</b> = ABP gave a reason (skirt damage, high wear, etc.), next CBM within FY'${fy} - can be pushed.</div></div>`;
+                <div class="sbc-note"><b>Planned FY</b> = everything consumed before ABP (till ${M.CUT ? dstr(M.CUT) : '-'}) + Total Mtrs (col V) of ABP planned belts. <b>Consumed planned</b> = all consumption before ABP + actual metres on ABP planned belts after it; <b>Consumed unplanned</b> = all other consumption (unplanned replacement, avoid-list belts replaced, piece addition, steel/bucket). <b>Balance</b> = Planned (ABP) &minus; total consumed (planned + unplanned); negative = consumption already above plan. <b>Left planned</b> = planned, not yet replaced, next CBM (thickness) within FY'${fy}. <b>Left unplanned</b> = not in ABP, not replaced, next CBM within FY'${fy}. <b>Forecast</b> = consumed + left. <b>To be maintained planned</b> = planned but next CBM has moved beyond 31-Mar (plan for next FY). <b>To be maintained unplanned</b> = ABP gave a reason (skirt damage, high wear, etc.), next CBM within FY'${fy} - can be pushed.</div></div>`;
         }
         // ---- question graphs ----
         if (M.abp.length) {
             const card = (id, n, title, sub, hgt) => { TITLES[id] = n + '. ' + title + ` (FY'${fy})`; return `<div class="glass-panel sbc-panel" id="card-${id}"><div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px"><h3 style="margin:0;flex:1"><span class="sbc-qn">${n}</span> ${title}</h3><button class="sbc-chip sbc-png" onclick="sbcPng('${id}')" title="Download PNG"><i class="fas fa-image"></i> PNG</button></div><div class="sbc-note" style="margin:0 0 8px">${sub}</div><div class="sbc-chart" style="height:${hgt || 280}px"><canvas id="${id}"></canvas></div><div class="sbc-tap"><i class="fas fa-hand-pointer"></i> Tap any bar to open its belt list below</div></div>`; };
             h += `<div class="sbc-grid2">
-                ${card('gCons', 1, 'Consumption till date - where did it go?', `Total ${fmt(st.total)} m (${f1(sbcT)} SBC). Planned = belts in ABP list, Unplanned = belts not in ABP.`)}
+                ${card('gCons', 1, 'Consumption till date - where did it go?', `Total ${fmt(st.total)} m (${f1(sbcT)} SBC). ${M.CUT ? `ABP issued ${dstr(M.CUT)}: everything consumed till then counts as planned. ` : ''}After that, Planned = belts in ABP list, Unplanned = belts not in ABP.`)}
                 ${card('gProj', 2, 'Where will SBC reach by March?', `Till date ${f1(sbcT)} + remaining planned belts ${f1((M.pendFab + M.pendSteel + M.pendBucket) / TOTAL_KM)} = <b class="${clsFor(projS / T)}">${f1(projS)}</b> (target ${T}).`)}
                 ${card('gDept', 3, 'Unplanned replacement - department wise', `${M.C.unplanned.length + M.C.avoidRep.length} belts / ${fmt(M.sum(M.C.unplanned) + M.sum(M.C.avoidRep))} m unplanned. Tap a department to see the belts.`, 320)}
                 ${card('gThk', 4, 'Belts due this FY as per thickness', `${M.pl.length + M.av.length + M.pre.length} belts due. RTG planned ${M.pl.length + M.pre.length}, ${M.av.length} can be avoided.`)}
@@ -3149,7 +3161,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     function drawQ(M) {
         const s = M.sum, C = M.C;
         // 1. consumption split
-        const g1 = [['planned', 'Planned (ABP) replaced', s(C.planned), CL.green], ['unplanned', 'Unplanned (not in ABP)', s(C.unplanned), CL.red], ['avoidRep', 'In avoid list, still replaced', s(C.avoidRep), CL.darkred], ['sb', 'Steel cord / Bucket replacement', s(C.sb), CL.blue], ['pa', 'Piece addition', s(C.pa), CL.purple]];
+        const g1 = [['preAbp', `Before ABP (till ${M.CUT ? dstr(M.CUT) : '-'}) - planned`, s(C.preAbp), '#34d399'], ['planned', 'Planned (ABP) replaced', s(C.planned), CL.green], ['unplanned', 'Unplanned (not in ABP)', s(C.unplanned), CL.red], ['avoidRep', 'In avoid list, still replaced', s(C.avoidRep), CL.darkred], ['sb', 'Steel cord / Bucket replacement', s(C.sb), CL.blue], ['pa', 'Piece addition', s(C.pa), CL.purple]];
         if (M.other > 1) g1.push(['other', 'Other (no belt match)', M.other, CL.grey]);
         qchart('gCons', { horiz: true, labels: g1.map(x => x[1]), ds: [{ label: 'Consumed', data: g1.map(x => x[2]), color: g1.map(x => x[3]) }] }, i => 'cons:' + g1[i][0]);
         // 2. projection
@@ -3200,7 +3212,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const jv = e => [e.joint, e.vendor].filter(Boolean).join(' / ') || '-';
         // har belt ke Daily Report wale events (date, metres, joint, vendor) - na mile to SBC sheet ka total
         const repRows = (arr, note) => { const rows = []; let tm = 0;
-            arr.forEach(x => { const ty = x.kind === 'Piece addition' ? 'P' : 'R'; const ev = M.fyEv(x.conv).filter(e => e.type === ty);
+            arr.forEach(x => { const ty = x.kind === 'Piece addition' ? 'P' : 'R'; const ev = M.fyEv(x.conv).filter(e => e.type === ty && (!x.evf || x.evf(e)));
                 if (ev.length) ev.forEach(e => { const m = e.m || (ev.length === 1 ? x.m : 0); tm += m; rows.push({ d: e.date, r: [dstr(e.date), x.dept, x.name, fmt(m), x.kind || '', jv(e), thkTxt(x.conv), note(x)] }); });
                 else { tm += x.m; rows.push({ d: x.date, r: [x.date ? dstr(x.date) : '<span class="sbc-note">not in Daily Report</span>', x.dept, x.name, fmt(x.m), x.kind || '', '-', thkTxt(x.conv), note(x)] }); } });
             rows.sort((a, b) => (a.d || 9e15) - (b.d || 9e15));
@@ -3210,13 +3222,14 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const noteU = x => M.abpBy[x.conv] && M.abpBy[x.conv].cls === 'Avoid' ? P_RED('Was in avoid list: ' + rn(M.abpBy[x.conv].reason)) : P_RED('Not in ABP');
         let o;
         if (kind === 'cons') {
-            if (arg === 'planned') o = Object.assign(repRows(M.C.planned, x => P_DONE(M.abpBy[x.conv] && M.abpBy[x.conv].cls === 'Replaced' ? 'ABP (replaced before plan)' : 'ABP planned')), { t: 'Planned (ABP) belts replaced' });
+            if (arg === 'preAbp') o = Object.assign(repRows(M.C.preAbp, x => P_DONE('Before ABP - planned')), { t: `Consumed before ABP (till ${dstr(M.CUT)}) - counted as planned` });
+            else if (arg === 'planned') o = Object.assign(repRows(M.C.planned, x => P_DONE(M.abpBy[x.conv] && M.abpBy[x.conv].cls === 'Replaced' ? 'ABP (replaced before plan)' : 'ABP planned')), { t: 'Planned (ABP) belts replaced' });
             else if (arg === 'unplanned') o = Object.assign(repRows(M.C.unplanned, noteU), { t: 'Unplanned replacement - not in ABP list' });
             else if (arg === 'avoidRep') o = Object.assign(repRows(M.C.avoidRep, noteU), { t: 'Avoid-list belts replaced anyway' });
             else if (arg === 'sb') o = Object.assign(repRows(M.C.sb, x => P_BLUE(M.isSteel(x.conv) ? 'Steel cord' : 'Bucket')), { t: 'Steel cord / Bucket replacement' });
             else if (arg === 'pa') o = Object.assign(repRows(M.C.pa, x => M.isSteel(x.conv) ? P_BLUE('Steel cord') : (M.isBucket(x.conv) ? P_BLUE('Bucket') : '')), { t: 'Piece addition (belt-wise)' });
             else if (arg === 'other') o = { t: 'Other consumption', head: ['Note'], rows: [[`${fmt(M.other)} m is in the SBC sheet monthly total but could not be matched to a belt-wise replacement / piece addition (date or conveyor name mismatch).`]], tm: M.other };
-            else o = Object.assign(repRows(M.C.planned.concat(M.C.unplanned, M.C.avoidRep, M.C.sb, M.C.pa), x => x.kind === 'Piece addition' ? P_BLUE('Piece addition') : (M.C.planned.includes(x) ? P_DONE('Planned') : (M.C.sb.includes(x) ? P_BLUE('Steel/Bucket') : noteU(x)))), { t: 'All consumption till date' });
+            else o = Object.assign(repRows(M.C.preAbp.concat(M.C.planned, M.C.unplanned, M.C.avoidRep, M.C.sb, M.C.pa), x => M.C.preAbp.includes(x) ? P_DONE('Before ABP') : x.kind === 'Piece addition' ? P_BLUE('Piece addition') : (M.C.planned.includes(x) ? P_DONE('Planned') : (M.C.sb.includes(x) ? P_BLUE('Steel/Bucket') : noteU(x)))), { t: 'All consumption till date' });
         } else if (kind === 'proj') {
             o = Object.assign(abpRows(M.plPend, a => P_PEND('Pending')), { t: 'Remaining planned belts (due by March)' }); o.tm = s(M.plPend, M.planM);
             o.extra = `+ Steel cord plan remaining ${fmt(M.pendSteel)} m, Bucket plan remaining ${fmt(M.pendBucket)} m (no belt-wise list).`;
@@ -3239,8 +3252,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const [, col, dn] = k.split(':'); const f = x => dn === 'ALL' || x.dept === dn; const dl = dn === 'ALL' ? 'All departments' : dn;
             const nx = a => dstr(M.nextOf(a));
             const abpL = (arr, t, st) => { const r = abpRows(arr.filter(f), st); r.head[6] = 'Next CBM (thickness)'; r.rows.forEach((row, i) => { row[6] = nx(arr.filter(f).sort((a, b) => (a.next || 0) - (b.next || 0))[i]); }); r.tm = s(arr.filter(f), M.planM); r.t = `${dl} - ${t}`; return r; };
-            if (col === 'plan') o = abpL(M.pl, 'Planned FY belts (ABP)', doneTxt);
-            else if (col === 'cp') o = Object.assign(repRows(M.C.planned.filter(f), x => P_DONE('ABP planned')), { t: `${dl} - Consumed on planned belts` });
+            if (col === 'plan') { o = abpL(M.pl, 'Planned FY belts (ABP)', doneTxt); const pr = s(M.C.preAbp.filter(f)); o.tm += pr; o.extra = `includes ${fmt(pr)} m consumed before ABP (till ${dstr(M.CUT)}) - see Consumed planned`; }
+            else if (col === 'cp') o = Object.assign(repRows(M.C.preAbp.concat(M.C.planned).filter(f), x => M.C.preAbp.includes(x) ? P_DONE('Before ABP') : P_DONE('ABP planned')), { t: `${dl} - Consumed on planned belts` });
             else if (col === 'cu') o = Object.assign(repRows(M.C.unplanned.concat(M.C.avoidRep, M.C.sb, M.C.pa).filter(f), x => x.kind === 'Piece addition' ? pill('Piece addition', 'rgba(167,139,250,.2)', '#c4b5fd') : (M.C.sb.includes(x) ? P_BLUE(M.isSteel(x.conv) ? 'Steel cord' : 'Bucket') : noteU(x))), { t: `${dl} - Consumed unplanned (incl. piece addition)` });
             else if (col === 'lp') o = abpL(M.leftP, 'Left to be consumed - planned', a => P_PEND('Pending'));
             else if (col === 'mp') o = abpL(M.maintP, 'To be maintained - planned (CBM moved beyond March)', a => P_BLUE('Plan next FY'));
@@ -3248,7 +3261,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             else if (col === 'lu') { const arr = M.leftU.filter(f); o = { t: `${dl} - Left to be consumed - unplanned (not in ABP)`, head: ['Dept', 'Conveyor', 'Length m', 'Next CBM (thickness)', 'Min thk'], rows: arr.sort((a, b) => a.next - b.next).map(a => [a.dept, a.name, fmt(a.len), dstr(a.next), thkTxt(a.conv)]), tm: s(arr, a => a.len) }; }
         } else if (kind === 'mon') {
             const i = +arg, fy = M.fy; const g = {}; M.st.rows.filter(x => x.mi === i).forEach(x => { const q = g[x.conv] = g[x.conv] || { conv: x.conv, name: x.name, dept: x.dept, m: 0 }; q.m += x.m; });
-            const cls = c => M.C.planned.some(x => x.conv === c) ? P_DONE('Planned (ABP)') : M.C.avoidRep.some(x => x.conv === c) ? P_RED('Avoid list - replaced') : M.C.unplanned.some(x => x.conv === c) ? P_RED('Unplanned') : M.C.sb.some(x => x.conv === c) ? P_BLUE(M.isSteel(c) ? 'Steel cord' : 'Bucket') : '';
+            const cls = c => M.C.preAbp.some(x => x.conv === c && x.kind === 'Replacement') ? P_DONE('Before ABP') : M.C.planned.some(x => x.conv === c) ? P_DONE('Planned (ABP)') : M.C.avoidRep.some(x => x.conv === c) ? P_RED('Avoid list - replaced') : M.C.unplanned.some(x => x.conv === c) ? P_RED('Unplanned') : M.C.sb.some(x => x.conv === c) ? P_BLUE(M.isSteel(c) ? 'Steel cord' : 'Bucket') : '';
             const arr = Object.values(g).sort((a, b) => b.m - a.m);
             o = { t: `${MON[i]}'${String(i < 9 ? fy - 1 : fy).padStart(2, '0')} - conveyors that consumed belt`, head: ['Dept', 'Conveyor', 'Metres (SBC sheet)', 'Activity (Daily Report)', 'Joint / Vendor', 'Class', 'Min thk'],
                 rows: arr.map(x => { const ev = M.fyEv(x.conv).filter(e => mi(e.date) === i); const act = ev.length ? ev.map(e => (e.type === 'R' ? 'Replacement ' : 'Piece addition ') + dstr(e.date) + (e.m ? ' (' + fmt(e.m) + ' m)' : '')).join('<br>') : '-';
@@ -3309,10 +3322,12 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             else if (a.cls === 'Avoid') { stt = rm ? 'Could be avoided - but Replaced' : 'Can be avoided'; rem = rm ? `In avoid list (${rn(a.reason)}) but replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : `Still avoided - ${rn(a.reason)}`; }
             else if (a.cls === 'Replaced') { stt = 'Already replaced (before plan)'; rem = rm ? `Replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m` : 'Replaced before ABP was made'; }
             else stt = a.cls;
+            if (a.conv && M.preRep.has(a.conv)) { stt = 'Replaced before ABP (counted as planned)'; rem = `Replaced${d ? ' on ' + dz(d) : ''}, ${fmt(rm)} m - before ABP issue date ${dz(M.CUT)}`; }
             rows.push([`FY${fy}`, a.dept, a.name, a.cat, a.len, a.grade, a.type, dz(a.next), a.plan, a.cls, rn(a.reason), a.remarks, stt, dz(d), rm || '', pm || '', rem].concat(xc(a.conv), a.conv ? thkCols(a.conv) : Array(8).fill('')).concat(a.conv ? abnCols(a.conv) : ['', '']));
         });
         // ABP ke bahar: unplanned replacement / steel-bucket / piece addition / naye due
         const extra = (c, stt, rem, len) => { const t = S.thk[c] || {}; const r = (M.repMap[c] || [])[0] || (M.paMap[c] || [])[0] || {}; rows.push([`FY${fy}`, t.dept || r.dept || '', t.name || r.name || c, '', len || t.len || '', t.grade || '', '', '', '', 'Not in ABP', '', '', stt, dz(lastD(c)), s(M.repMap[c] || []) || '', s(M.paMap[c] || []) || '', rem].concat(xc(c), thkCols(c), abnCols(c))); seen.add(c); };
+        M.C.preAbp.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, 'Before ABP (counted as planned)', `${x.kind} ${fmt(x.m)} m before ABP issue date ${dz(M.CUT)}`); });
         M.C.unplanned.forEach(x => extra(x.conv, 'Unplanned - Replaced (not in ABP)', `Replaced${x.date ? ' on ' + dz(x.date) : ''}, ${fmt(x.m)} m - not in ABP list`));
         M.C.sb.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, M.isSteel(x.conv) ? 'Steel cord - Replaced' : 'Bucket - Replaced', `Replaced${x.date ? ' on ' + dz(x.date) : ''}, ${fmt(x.m)} m (against total plan)`); });
         M.C.pa.forEach(x => { if (!seen.has(x.conv)) extra(x.conv, 'Piece addition only', `Piece addition ${fmt(x.m)} m`); });
@@ -3320,7 +3335,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         // summary
         rows.push([]); rows.push(['SUMMARY']);
         [['FY target (m/km)', M.T], ['Consumed till date (m)', Math.round(M.st.total)], ['SBC till date', f1(M.st.total / TOTAL_KM)], ['Balance (m)', Math.round(Math.max(0, M.T * TOTAL_KM - M.st.total))],
-         ['Planned (ABP) replaced (m)', Math.round(s(M.C.planned))], ['Unplanned not in ABP (m)', Math.round(s(M.C.unplanned))], ['Avoid list but replaced (m)', Math.round(s(M.C.avoidRep))], ['Steel/Bucket replaced (m)', Math.round(s(M.C.sb))], ['Piece addition (m)', Math.round(s(M.C.pa))],
+         ['ABP issue date', dz(M.CUT)], ['Consumed before ABP - planned (m)', Math.round(s(M.C.preAbp))], ['Planned (ABP) replaced (m)', Math.round(s(M.C.planned))], ['Unplanned not in ABP (m)', Math.round(s(M.C.unplanned))], ['Avoid list but replaced (m)', Math.round(s(M.C.avoidRep))], ['Steel/Bucket replaced (m)', Math.round(s(M.C.sb))], ['Piece addition (m)', Math.round(s(M.C.pa))],
          ['Planned pending (m)', Math.round(M.pendFab + M.pendSteel + M.pendBucket)], ['Projected SBC by March', f1(M.proj / TOTAL_KM)], ['Generated', dz(new Date())]].forEach(r => rows.push(r));
         csvDownload(rows, `SBC_ABP_Status_FY${fy}_${dz(new Date())}.csv`);
     };
