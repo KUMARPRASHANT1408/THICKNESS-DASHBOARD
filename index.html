@@ -353,6 +353,10 @@
         .sbc-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; }
         .sbc-pill { padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
         .sbc-qn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--teal); color: #fff; font-size: 0.75rem; margin-right: 4px; }
+        .sbc-st td.sbc-c { text-align: right; line-height: 1.15; }
+        .sbc-st td.sbc-c b { display: block; font-size: 0.8rem; } .sbc-st td.sbc-c small { color: var(--text-muted); font-size: 0.68rem; }
+        .sbc-st th { text-align: center !important; vertical-align: bottom; white-space: normal; min-width: 70px; border-left: 1px solid rgba(255,255,255,0.08); }
+        .sbc-st td.sbc-click { cursor: pointer; } .sbc-st td.sbc-click:hover b { color: var(--teal); text-decoration: underline; }
         .sbc-png { padding: 4px 10px; font-size: 0.7rem; margin: 0; white-space: nowrap; }
         .sbc-tap { font-size: 0.72rem; color: var(--teal); margin-top: 6px; text-align: center; }
         #sbcDetail { scroll-margin-top: 10px; border: 1px solid var(--teal); }
@@ -422,7 +426,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 14-Oct-h</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 16-Oct-a</div>
         </div>
     </div>
 
@@ -2962,7 +2966,13 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             return 'OTHER'; };
         const due = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (isSteel(c) || isBucket(c) || repMap[c] || /NOT\s*EXIST/.test(t.grade)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; due.push(c); });
         const avoidT = due.filter(c => !plSet.has(c) && !preSet.has(c)).map(c => { const t = S.thk[c]; return { conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm, cat: t.cat, grade: t.grade, reason: thkReason(c), inAbp: avSet.has(c) }; });
-        return { fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, avRep, avStill, steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, pendSteel, pendBucket, steelUsed, bucketUsed, proj, fresh, planM, sum, abpBy, isSteel, isBucket };
+        // ---- Dept status table: ABP + thickness ----
+        const nextOf = a => (S.thk[a.conv] && S.thk[a.conv].nextCbm) || a.next;
+        const leftP = plPend.filter(a => { const n = nextOf(a); return !n || n <= fyEnd; });      // planned, not replaced, falls in FY
+        const maintP = plPend.filter(a => { const n = nextOf(a); return n && n > fyEnd; });       // planned, but CBM moved beyond FY
+        const leftU = fresh;                                                                     // not in ABP, not replaced, falls in FY
+        const maintU = avStill.filter(a => { const n = nextOf(a); return !n || n <= fyEnd; });   // ABP reason given (avoid), not replaced, falls in FY
+        return { nextOf, leftP, maintP, leftU, maintU, fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, avRep, avStill, steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, pendSteel, pendBucket, steelUsed, bucketUsed, proj, fresh, planM, sum, abpBy, isSteel, isBucket };
     }
 
     window.sbcRender = function () {
@@ -2990,6 +3000,35 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             <button class="sbc-chip ${S.mode === 'sbc' ? 'on' : ''}" onclick="sbcSetMode('sbc')">SBC</button><button class="sbc-chip ${S.mode === 'm' ? 'on' : ''}" onclick="sbcSetMode('m')">Metres</button></div>
             <div class="sbc-chart"><canvas id="sbcMain"></canvas></div>
             <div class="sbc-note">Bar colour: <span class="sbc-g">green</span> &le;80% of target, <span class="sbc-y">yellow</span> 80-100%, <span class="sbc-r">red</span> &gt;100% ${fy === 27 ? '(monthly target)' : '(annual target / 12)'}. Cumulative line and annual target on right axis. <span style="color:var(--teal)"><i class="fas fa-hand-pointer"></i> Tap a month bar to see which conveyors consumed belt that month.</span></div></div>`;
+        // ---- Department status & forecast table ----
+        if (M.abp.length) {
+            const pm = M.planM, ln = a => a.len, s = M.sum;
+            const cell = (m, km, key) => `<td class="sbc-c${key ? ' sbc-click' : ''}"${key ? ` onclick="S_from('card-sbcTbl');sbcShow('${key}')"` : ''}><b>${m ? fmt(m) : '-'}</b><small>${m && km ? f1(m / km) : '-'}</small></td>`;
+            const rowsT = []; const tot = Array(11).fill(0);
+            const calc = (dn, km) => { const f = x => !dn || x.dept === dn;
+                const plan = s(M.pl.filter(f), pm);
+                const cons = dn ? st.dm[dn].reduce((a, b) => a + b, 0) : st.total;
+                const cP = s(M.C.planned.filter(f)); const cU = cons - cP;
+                const bal = M.T * km - cons;
+                const lP = s(M.leftP.filter(f), pm), lU = s(M.leftU.filter(f), ln), mP = s(M.maintP.filter(f), pm), mU = s(M.maintU.filter(f), ln);
+                return [plan, cP, cU, bal, cP + lP, cU + lU, lP, lU, mP, mU]; };
+            const keys = ['plan', 'cp', 'cu', null, null, null, 'lp', 'lu', 'mp', 'mu'];
+            let tb = '';
+            DEPTS.forEach(d => { const v = calc(d[0], d[1]); tb += `<tr><td>${d[0]}</td><td>${d[1]}</td>${v.map((x, i) => i === 3 ? `<td class="sbc-c ${x < 0 ? 'sbc-r' : 'sbc-g'}"><b>${fmt(x)}</b><small>${f1(x / d[1])}</small></td>` : cell(x, d[1], keys[i] && x ? 'tbl:' + keys[i] + ':' + d[0] : null)).join('')}</tr>`; });
+            const v = calc(null, TOTAL_KM);
+            const sbX = M.pendSteel + M.pendBucket;
+            if (M.steelPlan || M.bucketPlan) tb += `<tr><td colspan="2">Steel cord + Bucket (plan total)</td>${[M.steelPlan + M.bucketPlan, 0, 0, null, 0, 0, sbX, 0, 0, 0].map(x => x === null ? '<td></td>' : cell(x, TOTAL_KM, null)).join('')}</tr>`;
+            v[0] += M.steelPlan + M.bucketPlan; v[4] += sbX; v[6] += sbX;
+            tb += `<tr class="tot"><td>TOTAL</td><td>${TOTAL_KM}</td>${v.map((x, i) => i === 3 ? `<td class="sbc-c ${x < 0 ? 'sbc-r' : 'sbc-g'}"><b>${fmt(x)}</b><small>${f1(x / TOTAL_KM)}</small></td>` : cell(x, TOTAL_KM, keys[i] && x && i !== 0 ? 'tbl:' + keys[i] + ':ALL' : null)).join('')}</tr>`;
+            const fc = (v[1] + v[2] + v[6] + v[7]); 
+            TITLES.sbcTbl = `Department-wise SBC status & forecast - FY'${fy}`;
+            h += `<div class="glass-panel sbc-panel" id="card-sbcTbl"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES.sbcTbl}</h3><button class="sbc-chip sbc-png" onclick="sbcTblCsv()"><i class="fas fa-download"></i> CSV</button></div>
+                <div class="sbc-note" style="margin:0 0 8px">Each cell: <b>metres</b> on top, <b>SBC (m/km)</b> below, on the department's own km. Tap a number to see its belt list. Forecast till March = ${fmt(fc)} m (${f1(fc / TOTAL_KM)} SBC) vs target ${fmt(M.T * TOTAL_KM)} m (${M.T}).</div>
+                <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
+                <tr><th rowspan="2">Dept</th><th rowspan="2">km</th><th rowspan="2">Planned FY'${fy}<br><small>(ABP)</small></th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>from target</small></th><th colspan="2">Forecast till March</th><th colspan="2">Left to be consumed<br><small>(as per current wear)</small></th><th colspan="2">To be maintained</th></tr>
+                <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb}</tbody></table></div>
+                <div class="sbc-note"><b>Planned (ABP)</b> = Total Mtrs (col V) of planned belts. <b>Consumed planned</b> = actual metres on ABP planned belts; <b>Consumed unplanned</b> = all other consumption (unplanned replacement, avoid-list belts replaced, piece addition, steel/bucket). <b>Balance</b> = ${M.T} &times; dept km &minus; consumed. <b>Left planned</b> = planned, not yet replaced, next CBM (thickness) within FY'${fy}. <b>Left unplanned</b> = not in ABP, not replaced, next CBM within FY'${fy}. <b>Forecast</b> = consumed + left. <b>To be maintained planned</b> = planned but next CBM has moved beyond 31-Mar (plan for next FY). <b>To be maintained unplanned</b> = ABP gave a reason (skirt damage, high wear, etc.), next CBM within FY'${fy} - can be pushed.</div></div>`;
+        }
         // ---- question graphs ----
         if (M.abp.length) {
             const card = (id, n, title, sub, hgt) => { TITLES[id] = n + '. ' + title + ` (FY'${fy})`; return `<div class="glass-panel sbc-panel" id="card-${id}"><div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px"><h3 style="margin:0;flex:1"><span class="sbc-qn">${n}</span> ${title}</h3><button class="sbc-chip sbc-png" onclick="sbcPng('${id}')" title="Download PNG"><i class="fas fa-image"></i> PNG</button></div><div class="sbc-note" style="margin:0 0 8px">${sub}</div><div class="sbc-chart" style="height:${hgt || 280}px"><canvas id="${id}"></canvas></div><div class="sbc-tap"><i class="fas fa-hand-pointer"></i> Tap any bar to open its belt list below</div></div>`; };
@@ -3176,6 +3215,17 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             o = { t: 'Avoidable as per thickness: ' + tn, head: ['Dept', 'Conveyor', 'Cat', 'Length m', 'Grade', 'Next CBM', 'Min thk', 'Edge1 / Centre / Edge2 (mm)', 'Wear rate current / planned', 'ABP'],
                 rows: arr.map(a => { const t = S.thk[a.conv]; return [a.dept, a.name, a.cat, fmt(a.len), a.grade, dstr(a.next), thkTxt(a.conv), [t.e1, t.ctr, t.e2].map(v => v === '' ? '-' : v).join(' / '), (t.cWearN ? t.cWearN.toFixed(3) : '-') + ' / ' + (t.pWearN ? t.pWearN.toFixed(3) : '-'), a.inAbp ? P_BLUE('In avoid list') : pill('Not in ABP', 'rgba(167,139,250,.2)', '#c4b5fd')]; }), tm: s(arr, a => a.len) };
             o.extra = 'Rule: ' + TR_RULE[arg];
+        } else if (kind === 'tbl') {
+            const [, col, dn] = k.split(':'); const f = x => dn === 'ALL' || x.dept === dn; const dl = dn === 'ALL' ? 'All departments' : dn;
+            const nx = a => dstr(M.nextOf(a));
+            const abpL = (arr, t, st) => { const r = abpRows(arr.filter(f), st); r.head[6] = 'Next CBM (thickness)'; r.rows.forEach((row, i) => { row[6] = nx(arr.filter(f).sort((a, b) => (a.next || 0) - (b.next || 0))[i]); }); r.tm = s(arr.filter(f), M.planM); r.t = `${dl} - ${t}`; return r; };
+            if (col === 'plan') o = abpL(M.pl, 'Planned FY belts (ABP)', doneTxt);
+            else if (col === 'cp') o = Object.assign(repRows(M.C.planned.filter(f), x => P_DONE('ABP planned')), { t: `${dl} - Consumed on planned belts` });
+            else if (col === 'cu') o = Object.assign(repRows(M.C.unplanned.concat(M.C.avoidRep, M.C.sb, M.C.pa).filter(f), x => x.kind === 'Piece addition' ? pill('Piece addition', 'rgba(167,139,250,.2)', '#c4b5fd') : (M.C.sb.includes(x) ? P_BLUE(M.isSteel(x.conv) ? 'Steel cord' : 'Bucket') : noteU(x))), { t: `${dl} - Consumed unplanned (incl. piece addition)` });
+            else if (col === 'lp') o = abpL(M.leftP, 'Left to be consumed - planned', a => P_PEND('Pending'));
+            else if (col === 'mp') o = abpL(M.maintP, 'To be maintained - planned (CBM moved beyond March)', a => P_BLUE('Plan next FY'));
+            else if (col === 'mu') { const arr = M.maintU.filter(f); o = { t: `${dl} - To be maintained - unplanned (reason given, can be pushed)`, head: ['Dept', 'Conveyor', 'Cat', 'Length m', 'Grade', 'Next CBM (thickness)', 'Min thk', 'Reason', 'Remarks'], rows: arr.sort((a, b) => (M.nextOf(a) || 0) - (M.nextOf(b) || 0)).map(a => [a.dept, a.name, a.cat, fmt(a.len), a.grade, nx(a), thkTxt(a.conv), P_BLUE(rn(a.reason)), a.remarks || '-']), tm: s(arr, a => a.len) }; }
+            else if (col === 'lu') { const arr = M.leftU.filter(f); o = { t: `${dl} - Left to be consumed - unplanned (not in ABP)`, head: ['Dept', 'Conveyor', 'Length m', 'Next CBM (thickness)', 'Min thk'], rows: arr.sort((a, b) => a.next - b.next).map(a => [a.dept, a.name, fmt(a.len), dstr(a.next), thkTxt(a.conv)]), tm: s(arr, a => a.len) }; }
         } else if (kind === 'mon') {
             const i = +arg, fy = M.fy; const g = {}; M.st.rows.filter(x => x.mi === i).forEach(x => { const q = g[x.conv] = g[x.conv] || { conv: x.conv, name: x.name, dept: x.dept, m: 0 }; q.m += x.m; });
             const cls = c => M.C.planned.some(x => x.conv === c) ? P_DONE('Planned (ABP)') : M.C.avoidRep.some(x => x.conv === c) ? P_RED('Avoid list - replaced') : M.C.unplanned.some(x => x.conv === c) ? P_RED('Unplanned') : M.C.sb.some(x => x.conv === c) ? P_BLUE(M.isSteel(c) ? 'Steel cord' : 'Bucket') : '';
@@ -3199,6 +3249,11 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             <div style="text-align:center;margin-top:10px"><button class="sbc-chip on" onclick="sbcBack()"><i class="fas fa-arrow-up"></i> Back to graph</button></div>`;
         if (!quiet) setTimeout(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
     };
+    window.S_from = function (id) { S.from = id; };
+    window.sbcTblCsv = function () { const t = document.querySelector('#card-sbcTbl table'); if (!t) return;
+        const head = ['Dept', 'km', 'Planned (ABP) m', 'Planned (ABP) SBC', 'Consumed planned m', 'Consumed planned SBC', 'Consumed unplanned m', 'Consumed unplanned SBC', 'Balance from target m', 'Balance from target SBC', 'Forecast planned m', 'Forecast planned SBC', 'Forecast unplanned m', 'Forecast unplanned SBC', 'Left to consume planned m', 'Left to consume planned SBC', 'Left to consume unplanned m', 'Left to consume unplanned SBC', 'To be maintained planned m', 'To be maintained planned SBC', 'To be maintained unplanned m', 'To be maintained unplanned SBC'];
+        const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b) { r.push(b.innerText.replace(/,/g, '').replace('-', '') === '' ? '' : b.innerText.replace(/,/g, '')); r.push(sm && sm.innerText !== '-' ? sm.innerText : ''); } else { r.push(td.innerText); if (td.colSpan === 2) r.push(''); } }); rows.push(r); });
+        csvDownload(rows, `SBC_Dept_Status_FY${fyNow()}.csv`); };
     window.sbcBack = function () { const c = el(S.from || 'sbcMain'); (c || el('sbcScreen')).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     window.sbcCloseList = function () { S.detail = null; el('sbcDetail').style.display = 'none'; window.sbcBack(); };
     const strip = v => String(v == null ? '' : v).replace(/<br\s*\/?>/gi, ' | ').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&');
@@ -3264,6 +3319,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const banners = Array.from(inner.querySelectorAll('.sbc-banner')).map(b => b.outerHTML).join('');
         const kpis = (inner.querySelector('.sbc-kpis') || { outerHTML: '' }).outerHTML;
         let h = `<h2 style="margin:0 0 4px">SBC - Specific Belt Consumption, FY'${fy}</h2><div class="sbc-note" style="margin-bottom:10px">Generated ${dstr(new Date())} · Total ${TOTAL_KM} km · Target ${M.T} m/km</div>${banners}${kpis}${img('sbcMain', 340)}`;
+        const stc = el('card-sbcTbl'); if (stc) { const c = stc.cloneNode(true); c.querySelectorAll('button').forEach(b => b.remove()); h += br + c.outerHTML; }
         [['gCons', 'gProj'], ['gDept', 'gThk'], ['gSb', 'gWhy']].forEach(p => { if (!S.cfg[p[0]]) return; h += br; p.forEach(id => { if (S.cfg[id]) h += sub(id) + img(id, 310); }); });
         const det = inner.querySelector('details'); if (det) h += br + '<h3 style="margin:0 0 8px">Detailed tables</h3>' + Array.from(det.querySelectorAll('.sbc-tablewrap')).map(x => x.outerHTML).join('<div style="height:14px"></div>');
         const div = document.createElement('div'); div.style.cssText = `position:absolute;left:-10000px;top:0;width:${W + 40}px;padding:20px;background:${bg};color:#f8fafc;`; div.innerHTML = h; el('sbcScreen').appendChild(div);
