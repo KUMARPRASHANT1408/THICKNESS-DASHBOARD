@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-n</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-o</div>
         </div>
     </div>
 
@@ -3119,7 +3119,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const fd = pdmy(r['Final Replacement Date']); if (fd && fd.getFullYear() > 2000) L.push({ type: 'R', date: fd, m: num(r['Cosnumption'] || r['Consumption']), joint: String(r['Type of joint'] || '').trim(), vendor: String(r['Vendor'] || '').trim() });
                 for (let i = 1; i <= 8; i++) { const d = pdmy(r['Piece Addition date' + i]); if (d && d.getFullYear() > 2000) L.push({ type: 'P', date: d, m: num(r['PA consumption' + i]), joint: String(r['Type of PA Joint' + i] || '').trim(), vendor: String(r['PA vendor' + i] || '').trim() }); } });
             // ABP master = Old ABP (col U, consumption of 1 year) + New ABP add-on belts. All are planned.
-            S.abp = abp.filter(r => key(r.Conveyor)).map(r => { const c = key(r.Conveyor); const t = S.thk[c] || {}; return { fy: String(r.FY || '').replace(/\D/g, '') * 1, dept: nd(r.Dept) || t.dept || '', conv: c, name: String(r.Conveyor).trim(), cat: t.cat || '', len: num(r.Length) || t.len || 0, grade: t.grade || '', type: 'Fabric', next: pdmy(r.CBM_in_ABP), plan: num(r.PlannedMtrs), cls: 'Planned', src: /new/i.test(r.Source || '') ? 'NEW' : 'OLD', reason: '', remarks: '' }; });
+            S.abp = abp.filter(r => key(r.Conveyor)).map(r => { const c = key(r.Conveyor); const t = S.thk[c] || {}; return { fy: String(r.FY || '').replace(/\D/g, '') * 1, dept: nd(r.Dept) || t.dept || '', conv: c, name: String(r.Conveyor).trim(), cat: t.cat || '', len: num(r.Length) || t.len || 0, grade: t.grade || '', type: 'Fabric', next: pdmy(r.CBM_in_ABP), plan: num(r.PlannedMtrs), cls: 'Planned', src: /new/i.test(r.Source || '') ? 'NEW' : 'OLD', force: /^\s*(yes|y|1)\s*$/i.test(r.Replace_This_FY || ''), reason: '', remarks: '' }; });
             S.abn = {}; abn.forEach(r => { const c = key(r['NO.']); if (!c || /close/i.test(r['Status'] || '')) return; (S.abn[c] = S.abn[c] || []).push({ date: parseDateCustom(r['Abnormality Date']), issue: String(r['Major Abnormality'] || '').trim(), rec: String(r['recommendation'] || '').trim() }); });
             const fys = new Set(Object.keys(FY_TARGET).map(Number)); S.monthly.forEach(x => fys.add(x.fy));
             const arr = Array.from(fys).sort((a, b) => b - a); const sel = el('sbcFy'); const cur = sel.value;
@@ -3185,9 +3185,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const nextOf = a => (S.thk[a.conv] && S.thk[a.conv].nextCbm) || a.next;
         const today = new Date(); today.setHours(0, 0, 0, 0);
         // overdue belts (next CBM already passed) are never pushed - they must be replaced
-        plPend.forEach(a => { const n = nextOf(a); a.overdue = !!(n && n < today); if (!S.thk[a.conv]) a.push = null; else if (n && n > fyEnd) a.push = 'CBM'; else if (a.overdue) a.push = null; else { const r = thkReason(a.conv); a.push = (r === 'OTHER' || r === 'NODATA') ? null : r; } });
+        plPend.forEach(a => { const n = nextOf(a); a.overdue = !!(n && n < today); if (a.force || !S.thk[a.conv]) a.push = null; else if (n && n > fyEnd) a.push = 'CBM'; else if (a.overdue) a.push = null; else { const r = thkReason(a.conv); a.push = (r === 'OTHER' || r === 'NODATA') ? null : r; } });
         // decision 20-Oct-2026: belts whose next CBM is after 31-Mar are removed from the plan; belts due Jan-Mar are pushed to next FY
-        plPend.forEach(a => { const n = nextOf(a); a.drop = !S.thk[a.conv] ? null : (n && n > fyEnd) ? 'CBM' : (!a.overdue && n && fyOf(n) === fy && mi(n) >= 9) ? 'JANMAR' : null; });
+        plPend.forEach(a => { const n = nextOf(a); a.drop = (a.force || !S.thk[a.conv]) ? null : (n && n > fyEnd) ? 'CBM' : (!a.overdue && n && fyOf(n) === fy && mi(n) >= 9) ? 'JANMAR' : null; });
         const dropAll = plPend.filter(a => a.drop), activeP = plPend.filter(a => !a.drop);
         // plan must equal the target (252 x 170): take belts out of the plan - latest CBM month first, longest first - only until the plan comes down to the target
         const cutM = Math.max(0, sum(pl, planM) + (SB_TARGET[fy] || 0) - T * TOTAL_KM);
@@ -3222,7 +3222,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const avRep = [], avStill = [], preRep = new Set(), CUT = null;
         // ---- new dept table (20-Oct): forecast = belts that will need replacement by 31-Mar as per latest thickness ----
         const today0 = new Date(); today0.setHours(0, 0, 0, 0);
-        const fcP = plPend.filter(a => !a.outOfPlan && !isSB2(a.conv) && (() => { const n = nextOf(a); return !n || n <= fyEnd; })());
+        const fcP = plPend.filter(a => !a.outOfPlan && !isSB2(a.conv) && (a.force || (() => { const n = nextOf(a); return !n || n <= fyEnd; })()));
         const fcU = fresh;
         const pushPl = fcP.filter(a => a.push && a.push !== 'CBM');
         const pushUn = fcU.filter(x => x.reason !== 'OTHER' && x.reason !== 'NODATA' && x.next && x.next >= today0);
@@ -3578,7 +3578,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             else if (a.outOfPlan) { stt = 'Removed from plan (to hold target)'; rem = `${a.drop === 'CBM' ? 'CBM after 31-Mar' : 'due Jan-Mar'}; next CBM ${dz(M.nextOf(a))}`; }
             else if (a.drop) { stt = a.drop === 'CBM' ? 'In plan - not due this FY' : 'In plan - push to next FY (due Jan-Mar)'; rem = `Next CBM ${dz(M.nextOf(a))}`; }
             else if (a.push) { stt = 'Planned - Pending, can push'; rem = `${RS(a.push)}; next CBM ${dz(M.nextOf(a))}`; }
-            else { stt = 'Planned - Pending, must replace'; rem = `Next CBM ${dz(M.nextOf(a))}${a.overdue ? ' (overdue)' : ''}${S.thk[a.conv] ? '' : ' (no thickness data)'}`; }
+            else { stt = 'Planned - Pending, must replace'; rem = `Next CBM ${dz(M.nextOf(a))}${a.overdue ? ' (overdue)' : ''}${a.force ? ' - added to plan: replace this FY (belt condition)' : ''}${S.thk[a.conv] ? '' : ' (no thickness data)'}`; }
             if (pm) rem += `; piece addition ${fmt(pm)} m this FY`;
             rows.push([`FY${fy}`, a.dept, a.name, a.src === 'NEW' ? 'New ABP (add-on)' : 'Old ABP', a.len, a.plan, a.grade, a.cat, dz(a.next), stt, a.push ? RS(a.push) : '', dz(d), rm || '', pm || '', rem, actTxt(a.conv)].concat(thkCols(a.conv), abnCols(a.conv)));
         });
