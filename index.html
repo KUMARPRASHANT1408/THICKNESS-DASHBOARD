@@ -619,7 +619,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-h</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-i</div>
         </div>
     </div>
 
@@ -3487,10 +3487,15 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 rows.sort((p, q) => p.d - q.d);
                 o = { t: `${dl} - Forecast till March - ${P ? 'planned' : 'unplanned'} (consumed + left)`, head: ['Stage', 'Dept', 'Conveyor', 'Metres', 'Type', 'Date / Next CBM', 'Note'], rows: rows.map(x => x.r), tm: s(cons) + (P ? s(left, M.planM) : s(left, a => a.len)) };
                 o.extra = `consumed ${fmt(s(cons))} m + left ${fmt(P ? s(left, M.planM) : s(left, a => a.len))} m`; }
-            else if (col === 'push') { const arr = M.pushP.filter(f).sort((a, b) => M.planM(b) - M.planM(a));
-                o = Object.assign(abpRows(arr, doneTxt), { t: `${dl} - Push candidates (pending planned belts with a push reason)` });
+            else if (col === 'push') { const arr = M.pushP.filter(f), must = M.mustP.filter(f);
+                const A = abpRows(arr, doneTxt), B = abpRows(must, doneTxt); const blank = A.head.map(() => '');
+                const sec = txt => { const r = blank.slice(); r[0] = `<b>${txt}</b>`; return r; };
+                const rows = [].concat(arr.length ? [sec(`Push candidates - thickness gives a reason (${arr.length})`)].concat(A.rows) : [sec('No pending planned belt here has a thickness-based push reason')],
+                    must.length ? [sec(`Other pending planned belts - no push reason yet, choose from these if needed (${must.length})`)].concat(B.rows) : []);
+                o = { t: `${dl} - Push needed: options`, head: A.head, rows, tm: s(arr, M.planM) + s(must, M.planM), n: arr.length + must.length, sections: true };
                 const need = dn === 'ALL' ? M.pushActual : (() => { const c = s(M.C.planned.filter(f)) + s(M.C.unplanned.filter(f)); const pl = s(M.pl.filter(f), M.planM) - s(M.removed.filter(f), M.planM); return Math.max(0, c + s(M.activeP.filter(f), M.planM) - (M.planTotal ? pl * M.fabTarget / M.planTotal : 0)); })();
-                o.extra = `push needed ${fmt(need)} m · candidates ${fmt(s(arr, M.planM))} m${need > s(arr, M.planM) ? ' · <b class="sbc-r">' + fmt(need - s(arr, M.planM)) + ' m short</b>' : ''}`; }
+                const cand = s(arr, M.planM), un = s(M.C.unplanned.filter(f));
+                o.extra = `push needed ${fmt(need)} m (unplanned already consumed ${fmt(un)} m) · candidates with a reason ${fmt(cand)} m${need > cand ? ' · <b class="sbc-r">' + fmt(need - cand) + ' m short</b> - pick from the other pending belts below' : ''}`; }
             else if (col === 'lp') o = Object.assign(abpRows(M.leftP.filter(f), doneTxt), { t: `${dl} - Left to be consumed - planned (still in plan)` });
             else if (col === 'mp') o = Object.assign(abpRows(M.maintP.filter(f), doneTxt), { t: `${dl} - To be maintained - planned (removed from plan / pushed to next FY)` });
             else if (col === 'lu') o = Object.assign(freshRows(M.leftU.filter(f)), { t: `${dl} - Left to be consumed - unplanned (not in ABP, normal wear)` });
@@ -3513,7 +3518,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             <button class="sbc-chip" onclick="sbcListCsv()"><i class="fas fa-download"></i> CSV</button>
             <button class="sbc-chip on" onclick="sbcBack()"><i class="fas fa-arrow-up"></i> Back to graph</button>
             <button class="sbc-chip" onclick="sbcCloseList()"><i class="fas fa-xmark"></i></button></div>
-            <div class="sbc-note" style="margin:0 0 8px">${o.n != null ? o.n : o.rows.length} belts${o.n != null && o.n !== o.rows.length ? ' (' + o.rows.length + ' entries)' : ''} · ${fmt(o.tm)} m · ${f1(o.tm / TOTAL_KM)} SBC${o.extra ? ' · ' + o.extra : ''}</div>
+            <div class="sbc-note" style="margin:0 0 8px">${o.n != null ? o.n : o.rows.length} belts${o.n != null && o.n !== o.rows.length && !o.sections ? ' (' + o.rows.length + ' entries)' : ''} · ${fmt(o.tm)} m · ${f1(o.tm / TOTAL_KM)} SBC${o.extra ? ' · ' + o.extra : ''}</div>
             <div class="sbc-tablewrap"><table class="sbc-table"><thead><tr>${o.head.map(x => `<th style="text-align:left">${x}</th>`).join('')}</tr></thead><tbody>${o.rows.map(r => `<tr>${r.map(c => `<td style="text-align:left">${c}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${o.head.length}">No records</td></tr>`}</tbody></table></div>
             <div style="text-align:center;margin-top:10px"><button class="sbc-chip on" onclick="sbcBack()"><i class="fas fa-arrow-up"></i> Back to graph</button></div>`;
         if (!quiet) setTimeout(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
