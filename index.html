@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-s</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-t</div>
         </div>
     </div>
 
@@ -3250,7 +3250,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const avRep = [], avStill = [], preRep = new Set(), CUT = null;
         // ---- new dept table (20-Oct): forecast = belts that will need replacement by 31-Mar as per latest thickness ----
         const today0 = new Date(); today0.setHours(0, 0, 0, 0);
-        const dueCbm = a => a.force || (() => { const n = nextOf(a); return !n || n <= fyEnd; })();
+        const notEx = c => /NOT\s*EXIST/.test(grade(c));   // belts marked NOT EXISTING in the thickness sheet are never forecast
+        const dueCbm = a => !notEx(a.conv) && (a.force || (() => { const n = nextOf(a); return !n || n <= fyEnd; })());
         const fcP = plPend.filter(a => !a.outOfPlan && !isSB2(a.conv) && dueCbm(a)).concat(sbFcP);
         const fcU = fresh.concat(sbFcU);
         const pushPl = fcP.filter(a => a.push && a.push !== 'CBM');
@@ -3316,7 +3317,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const used = sbP + sbUn;
                 tb += `<tr><td><b>Steel cord + Bucket allowance</b><br><small class="sbc-incl">used ${fmt(used)} m + forecast ${fmt(M.sbFcM)} m (in dept rows) · ${used + M.sbFcM > M.sbTarget ? '<span class="sbc-r">' + fmt(used + M.sbFcM - M.sbTarget) + ' m over</span>' : fmt(M.sbTarget - used - M.sbFcM) + ' m left'}</small></td>${sp(M.sbTarget)}<td class="sbc-c" colspan="2" style="text-align:center"><small>in dept rows</small></td>${sp(M.sbTarget)}${sp(sbLeft)}${sp(0)}${sp(0)}${sp(0)}${sp(sbLeft)}${sp(sbLeft)}</tr>`;
                 // breakdown rows (consumption only - the allowance is one combined figure)
-                const sub = (nm, fn, key) => { const p = s(M.sbPl.filter(fn)), u = s(M.sbUn.filter(fn)); return `<tr class="sbc-sub"><td>&nbsp;&nbsp;&nbsp;↳ ${nm} <small>(in dept rows)</small></td>${sp(0)}${sp(p, '', p ? key : null)}${sp(u, '', u ? key : null)}${sp(0)}${sp(0)}${sp(0)}${sp(0)}${sp(0)}${sp(p + u)}${sp(p + u)}</tr>`; };
+                const sub = (nm, fn, key) => { const p = s(M.sbPl.filter(fn)), u = s(M.sbUn.filter(fn)), fp = s(M.sbFc.filter(x => x.cls === 'P' && fn(x)), ln), fu = s(M.sbFc.filter(x => x.cls === 'U' && fn(x)), ln); return `<tr class="sbc-sub"><td>&nbsp;&nbsp;&nbsp;↳ ${nm} <small>(in dept rows)</small></td>${sp(0)}${sp(p, '', p ? key : null)}${sp(u, '', u ? key : null)}${sp(0)}${sp(fp, '', fp ? 'sbfc:P:' + nm : null)}${sp(fu, '', fu ? 'sbfc:U:' + nm : null)}${sp(0)}${sp(0)}${sp(p + u + fp + fu)}${sp(p + u + fp + fu)}</tr>`; };
                 tb += sub('Steel cord', r => M.isSteel(r.conv), 'sb:steel') + sub('Bucket', r => M.isBucket(r.conv), 'sb:bucket');
             }
             const v = calc(null); Object.keys(v).forEach(k => v[k] += sbv[k]);
@@ -3337,7 +3338,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             let tb2 = ''; DEPTS.forEach(d => { tb2 += row2(d[0] + sbNote(d[0]), calc2(d[0]), d[0]); });
             const v2 = calc2(null);
             if (M.sbTarget) { const used = sbP + sbUn; v2.tgt += M.sbTarget; v2.bal += M.sbTarget; v2.fP += sbLeft; v2.mar += sbLeft; v2.over = v2.mar - v2.tgt;
-                tb2 += `<tr><td><b>Steel cord + Bucket allowance</b><br><small class="sbc-incl">used ${fmt(used)} m + forecast ${fmt(M.sbFcM)} m (in dept rows)</small></td>${sp2(M.sbTarget)}<td class="sbc-c" colspan="2" style="text-align:center"><small>in dept rows</small></td>${sp2(M.sbTarget)}${sp2(sbLeft)}${sp2(0)}${sp2(sbLeft)}${sp2(0)}</tr>`; }
+                tb2 += `<tr><td><b>Steel cord + Bucket allowance</b><br><small class="sbc-incl">used ${fmt(used)} m + forecast ${fmt(M.sbFcM)} m (in dept rows) · ${used + M.sbFcM > M.sbTarget ? '<span class="sbc-r">' + fmt(used + M.sbFcM - M.sbTarget) + ' m over</span>' : fmt(M.sbTarget - used - M.sbFcM) + ' m left'}</small></td>${sp2(M.sbTarget)}<td class="sbc-c" colspan="2" style="text-align:center"><small>in dept rows</small></td>${sp2(M.sbTarget)}${sp2(sbLeft)}${sp2(0)}${sp2(sbLeft)}${sp2(0)}</tr>`;
+                const sub2 = (nm, fn, key) => { const p = s(M.sbPl.filter(fn)), u = s(M.sbUn.filter(fn)), fp = s(M.sbFc.filter(x => x.cls === 'P' && fn(x)), ln), fu = s(M.sbFc.filter(x => x.cls === 'U' && fn(x)), ln); return `<tr class="sbc-sub"><td>&nbsp;&nbsp;&nbsp;↳ ${nm} <small>(in dept rows)</small></td>${sp2(0)}${sp2(p, '', p ? key : null)}${sp2(u, '', u ? key : null)}${sp2(0)}${sp2(fp, '', fp ? 'sbfc:P:' + nm : null)}${sp2(fu, '', fu ? 'sbfc:U:' + nm : null)}${sp2(p + u + fp + fu)}${sp2(0)}</tr>`; };
+                tb2 += sub2('Steel cord', r => M.isSteel(r.conv), 'sb:steel') + sub2('Bucket', r => M.isBucket(r.conv), 'sb:bucket'); }
             tb2 += row2('<b>TOTAL</b>', v2, 'ALL').replace('<tr>', '<tr class="tot">');
             TITLES.sbcCbm = `Department-wise SBC as per CBM - nothing pushed - FY'${fy}`;
             h += `<div class="glass-panel sbc-panel" id="card-sbcCbm"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES.sbcCbm}</h3><button class="sbc-chip sbc-png" onclick="sbcCbmCsv()"><i class="fas fa-download"></i> CSV</button></div>
@@ -3346,7 +3349,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
                 <tr><th rowspan="2">Dept</th><th rowspan="2">Target</th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>target &minus; consumed planned</small></th><th colspan="2">Forecast till 31-Mar<br><small>(as per CBM, nothing pushed)</small></th><th rowspan="2">By March<br><small>consumed + forecast</small></th><th rowspan="2">Over target<br><small>by March &minus; target</small></th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb2}</tbody></table></div>
-                <div class="sbc-note">Same as the table above, but <b>no belt is pushed and no belt is taken out of the plan</b>: <b>Forecast planned</b> = every ABP belt not yet replaced whose next CBM (thickness sheet) is on or before 31-Mar (incl. belts added to the plan for replacement this FY) + bucket PC1. <b>Forecast unplanned</b> = every belt not in the ABP whose next CBM is on or before 31-Mar + steel cord J24C1 (100 m), J65C2 (300 m), J67C1 (914 m), CCBHAC1 (114 m). <b>Over target</b> = by March &minus; target.</div></div>`;
+                <div class="sbc-note">Same as the table above, but <b>no belt is pushed and no belt is taken out of the plan</b>: <b>Forecast planned</b> = every ABP belt not yet replaced whose next CBM (thickness sheet) is on or before 31-Mar (incl. belts added to the plan for replacement this FY) + bucket PC1. Belts marked NOT EXISTING in the thickness sheet are never forecast. <b>Forecast unplanned</b> = every belt not in the ABP whose next CBM is on or before 31-Mar + steel cord J24C1 (100 m), J65C2 (300 m), J67C1 (914 m), CCBHAC1 (114 m). <b>Over target</b> = by March &minus; target.</div></div>`;
         }
         // ---- question graphs ----
         if (M.abp.length) {
@@ -3545,6 +3548,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         } else if (kind === 'push') {
             const A = abpRows(M.pushPl.filter(a => a.push === arg), doneTxt), U = freshRows(M.pushUn.filter(x => x.reason === arg)); const pad = r => { const x = A.head.map(() => ''); x[0] = r[0]; x[1] = r[1]; x[2] = 'Not in ABP'; x[3] = r[2]; x[6] = r[3]; x[7] = r[4]; x[10] = r[5]; return x; };
             o = { t: 'Push: ' + RS(arg), head: A.head, rows: A.rows.concat(U.rows.map(pad)), tm: A.tm + U.tm }; o.extra = 'Rule: ' + PR_RULE[arg];
+        } else if (kind === 'sbfc') {
+            const fn = arg2 === 'Bucket' ? (x => M.isBucket(x.conv)) : (x => M.isSteel(x.conv)); const arr = M.sbFc.filter(x => x.cls === arg && fn(x));
+            o = arg === 'P' ? Object.assign(abpRows(arr, doneTxt), { t: `${arg2} - forecast planned (given by user)` }) : Object.assign(freshRows(arr), { t: `${arg2} - forecast unplanned (given by user)` });
         } else if (kind === 'cbm') {
             const dn = arg2, f = x => dn === 'ALL' ? true : x.dept === dn, dl = dn === 'ALL' ? 'All departments' : dn;
             if (arg === 'fcp') o = Object.assign(abpRows(M.cbmP.filter(f), doneTxt), { t: `${dl} - As per CBM: planned belts due by 31-Mar (nothing pushed)` });
