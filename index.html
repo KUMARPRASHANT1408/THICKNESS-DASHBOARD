@@ -426,7 +426,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-c</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-d</div>
         </div>
     </div>
 
@@ -2999,7 +2999,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const pendSteel = Math.max(0, sbTarget - steelUsed - bucketUsed), pendBucket = 0;
         const planTotal = sum(pl, planM), pushNeeded = Math.max(0, planTotal - fabTarget);
         const pendFab = sum(plPend, planM), pendMust = sum(mustP, planM), pushM = sum(pushP, planM);
-        const proj = st.total + pendFab + pendSteel, projPush = st.total + pendMust + pendSteel;
+        const consBW = sum(C.planned) + sum(C.unplanned) + sum(C.sb);   // belt-wise (SBC sheet main table)
+        const consX = Math.max(st.total, consBW);
+        const proj = consX + pendFab + pendSteel, projPush = consX + pendMust + pendSteel;
+        const pushActual = Math.max(0, proj - T * TOTAL_KM);   // push needed after counting unplanned consumption
         // ---- thickness: belts due this FY that are NOT in the ABP ----
         const fresh = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (plSet.has(c) || repMap[c] || paMap[c] || isSteel(c) || isBucket(c) || /NOT\s*EXIST/.test(t.grade)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; fresh.push({ conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm, cat: t.cat, grade: t.grade, reason: thkReason(c) }); });
         const fyEv = c => (S.ev[c] || []).filter(e => fyOf(e.date) === fy);
@@ -3010,7 +3013,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const avRep = [], avStill = [], preRep = new Set(), CUT = null;
         return { CUT, preRep, nextOf, leftP, maintP, leftU, maintU, fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, mustP, pushP, avRep, avStill,
             steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, pendMust, pushM, pendSteel, pendBucket, steelUsed, bucketUsed, proj, projPush, fresh, planM, sum, abpBy, isSteel, isBucket,
-            sbTarget, fabTarget, planTotal, pushNeeded, thkReason };
+            sbTarget, fabTarget, planTotal, pushNeeded, pushActual, consX, thkReason };
     }
 
     window.sbcRender = function () {
@@ -3022,7 +3025,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         else if (ratio > 0.8) h += `<div class="sbc-banner amber"><i class="fas fa-circle-exclamation"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} / ${T}). Only ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m) left.</div>`;
         else h += `<div class="sbc-banner green"><i class="fas fa-circle-check"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} / ${T}). Balance ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m).</div>`;
         if (M.abp.length) { const pp = M.projPush / TOTAL_KM;
-            h += `<div class="sbc-banner ${M.pushNeeded > M.pushM ? 'red' : 'amber'}"><i class="fas fa-forward"></i> ABP (old + new) = ${fmt(M.planTotal)} m vs fabric target ${fmt(M.fabTarget)} m - <b>${fmt(M.pushNeeded)} m must be pushed</b> to hold ${T}. Push candidates (pending planned belts with a thickness-based reason): ${M.pushP.length} belts / ${fmt(M.pushM)} m. If all remaining planned belts are replaced, SBC reaches ${f1(projS)}; if push candidates are pushed, ${f1(pp)}.</div>`; }
+            h += `<div class="sbc-banner ${M.pushActual > M.pushM ? 'red' : 'amber'}"><i class="fas fa-forward"></i> <b>Push needed to hold ${T}: ${fmt(M.pushActual)} m</b> (${f1(M.pushActual / TOTAL_KM)} SBC) = consumed ${fmt(M.consX)} + pending planned ${fmt(M.pendFab)} + steel/bucket allowance left ${fmt(M.pendSteel)} &minus; target ${fmt(T * TOTAL_KM)}. On paper the plan gap is only ${fmt(M.pushNeeded)} m (ABP ${fmt(M.planTotal)} vs fabric target ${fmt(M.fabTarget)}); unplanned consumption of ${fmt(M.sum(M.C.unplanned))} m adds the rest. Push candidates: ${M.pushP.length} belts / ${fmt(M.pushM)} m${M.pushActual > M.pushM ? ` - <b>${fmt(M.pushActual - M.pushM)} m short</b> even if all are pushed` : ''}. By March: ${f1(projS)} if all planned done, ${f1(pp)} after push.</div>`; }
         if (st.minD && st.minD > new Date(2000 + fy - 1, 3, 11)) h += `<div class="sbc-banner amber"><i class="fas fa-database"></i> Partial data: FY'${fy} data is available from ${dstr(st.minD)} only - actual SBC will be higher.</div>`;
         if (!st.rows.length) h += `<div class="sbc-banner amber">No data found in the SBC sheet for this FY.</div>`;
         // ---- KPIs ----
@@ -3050,24 +3053,28 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const cP = s(M.C.planned.filter(f)); const cU = s(M.C.unplanned.filter(f)); const cons = cP + cU;
                 const bal = plan - cons;
                 const lP = s(M.leftP.filter(f), pm), lU = s(M.leftU.filter(f), ln), mP = s(M.maintP.filter(f), pm), mU = s(M.maintU.filter(f), ln);
-                return [plan, cP, cU, bal, cP + lP, cU + lU, lP, lU, mP, mU]; };
-            const keys = ['plan', 'cp', 'cu', null, null, null, 'lp', 'lu', 'mp', 'mu'];
+                // dept share of the fabric target = its ABP metres scaled to 40,519.5 (so dept push figures add up to the plant figure)
+                const share = M.planTotal ? plan * M.fabTarget / M.planTotal : 0;
+                return [plan, cP, cU, bal, cP + lP, cU + lU, lP, lU, mP, mU, Math.max(0, cP + cU + s(M.plPend.filter(f), pm) - share)]; };
+            const keys = ['plan', 'cp', 'cu', null, 'fp', 'fu', 'lp', 'lu', 'mp', 'mu', 'push'];
+            const sp = (x, cls) => `<td class="sbc-c ${cls}"><b>${fmt(x)}</b><small>${f1(x / TOTAL_KM)}</small></td>`;
+            const rc = (x, i, dk) => i === 3 ? sp(x, x < 0 ? 'sbc-r' : 'sbc-g') : i === 10 ? (x > 0.5 ? `<td class="sbc-c sbc-r sbc-click" onclick="S_from('card-sbcTbl');sbcShow('tbl:push:${dk}')"><b>${fmt(x)}</b><small>${f1(x / TOTAL_KM)}</small></td>` : sp(0, 'sbc-g')) : cell(x, TOTAL_KM, dk && keys[i] && x ? 'tbl:' + keys[i] + ':' + dk : null);
             let tb = '';
-            DEPTS.forEach(d => { const v = calc(d[0], d[1]); tb += `<tr><td>${d[0]}</td>${v.map((x, i) => i === 3 ? `<td class="sbc-c ${x < 0 ? 'sbc-r' : 'sbc-g'}"><b>${fmt(x)}</b><small>${f1(x / TOTAL_KM)}</small></td>` : cell(x, TOTAL_KM, keys[i] && x ? 'tbl:' + keys[i] + ':' + d[0] : null)).join('')}</tr>`; });
+            DEPTS.forEach(d => { const v = calc(d[0], d[1]); tb += `<tr><td>${d[0]}</td>${v.map((x, i) => rc(x, i, d[0])).join('')}</tr>`; });
             const v = calc(null, TOTAL_KM);
             const sbU = M.steelUsed + M.bucketUsed, sbX = M.pendSteel;
-            const sbRow = [M.sbTarget, sbU, 0, M.sbTarget - sbU, sbU + sbX, 0, sbX, 0, 0, 0];
-            if (M.sbTarget) tb += `<tr><td>Steel cord + Bucket (allowance)</td>${sbRow.map((x, i) => i === 3 ? `<td class="sbc-c ${x < 0 ? 'sbc-r' : 'sbc-g'}"><b>${fmt(x)}</b><small>${f1(x / TOTAL_KM)}</small></td>` : cell(x, TOTAL_KM, i === 1 && x ? 'cons:sb' : null)).join('')}</tr>`;
-            sbRow.forEach((x, i) => v[i] += x);
-            tb += `<tr class="tot"><td>TOTAL</td>${v.map((x, i) => i === 3 ? `<td class="sbc-c ${x < 0 ? 'sbc-r' : 'sbc-g'}"><b>${fmt(x)}</b><small>${f1(x / TOTAL_KM)}</small></td>` : cell(x, TOTAL_KM, keys[i] && x && i !== 0 ? 'tbl:' + keys[i] + ':ALL' : null)).join('')}</tr>`;
+            const sbRow = [M.sbTarget, sbU, 0, M.sbTarget - sbU, sbU + sbX, 0, sbX, 0, 0, 0, Math.max(0, sbU - M.sbTarget)];
+            if (M.sbTarget) tb += `<tr><td>Steel cord + Bucket (allowance)</td>${sbRow.map((x, i) => i === 1 && x ? cell(x, TOTAL_KM, 'cons:sb') : rc(x, i, null)).join('')}</tr>`;
+            sbRow.forEach((x, i) => v[i] += x); v[10] = M.pushActual;
+            tb += `<tr class="tot"><td>TOTAL</td>${v.map((x, i) => rc(x, i, i === 0 ? null : 'ALL')).join('')}</tr>`;
             const fc = (v[1] + v[2] + v[6] + v[7]); 
             TITLES.sbcTbl = `Department-wise SBC status & forecast - FY'${fy}`;
             h += `<div class="glass-panel sbc-panel" id="card-sbcTbl"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES.sbcTbl}</h3><button class="sbc-chip sbc-png" onclick="sbcTblCsv()"><i class="fas fa-download"></i> CSV</button></div>
                 <div class="sbc-note" style="margin:0 0 8px">Each cell: <b>metres</b> on top, <b>SBC</b> below (metres &divide; ${TOTAL_KM} km plant length). Tap a number to see its belt list. Forecast till March = ${fmt(fc)} m (${f1(fc / TOTAL_KM)} SBC) vs target ${fmt(M.T * TOTAL_KM)} m (${M.T}).</div>
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
-                <tr><th rowspan="2">Dept</th><th rowspan="2">Planned FY'${fy}<br><small>(ABP)</small></th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>(planned &minus; consumed)</small></th><th colspan="2">Forecast till March</th><th colspan="2">Left to be consumed<br><small>(as per current wear)</small></th><th colspan="2">To be maintained</th></tr>
+                <tr><th rowspan="2">Dept</th><th rowspan="2">Planned FY'${fy}<br><small>(ABP)</small></th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>(planned &minus; consumed)</small></th><th colspan="2">Forecast till March</th><th colspan="2">Left to be consumed<br><small>(as per current wear)</small></th><th colspan="2">To be maintained</th><th rowspan="2">Push needed<br><small>(forecast &minus; target share)</small></th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb}</tbody></table></div>
-                <div class="sbc-note"><b>Planned FY</b> = Old ABP (col U) + New ABP add-on belts; fabric target ${fmt(M.fabTarget)} m, steel cord + bucket allowance ${fmt(M.sbTarget)} m. <b>Consumed planned</b> = replacement + piece addition on belts in Old / New ABP; <b>Consumed unplanned</b> = consumption on belts not in either ABP (steel cord / bucket outside ABP goes to the allowance row). <b>Balance</b> = Planned &minus; total consumed; negative = consumption already above plan. <b>Left planned</b> = pending planned belts with no push reason (must replace). <b>To be maintained planned</b> = pending planned belts that can be pushed (latest thickness: next CBM after 31-Mar, edge/skirt wear, high wear rate, long B/C belt or due Jan-Mar; belts already past their CBM date are never pushed). <b>Left unplanned</b> = not in ABP, not replaced, next CBM within FY'${fy}, normal wear. <b>To be maintained unplanned</b> = same but with a push reason from thickness. <b>Forecast</b> = consumed + left.</div></div>`;
+                <div class="sbc-note"><b>Planned FY</b> = Old ABP (col U) + New ABP add-on belts + steel cord / bucket allowance = ${fmt(M.planTotal + M.sbTarget)} m. The target is only ${fmt(M.T * TOTAL_KM)} m (${M.T}): fabric ${fmt(M.fabTarget)} + steel cord / bucket ${fmt(M.sbTarget)}, so the plan is ${fmt(M.pushNeeded)} m over target on paper. <b>Push needed</b> (dept) = consumed + all pending planned &minus; dept share of the fabric target (dept ABP metres &times; ${fmt(M.fabTarget)} / ${fmt(M.planTotal)}); the total also adds steel cord / bucket. <b>Consumed planned</b> = replacement + piece addition on belts in Old / New ABP; <b>Consumed unplanned</b> = consumption on belts not in either ABP (steel cord / bucket outside ABP goes to the allowance row). <b>Balance</b> = Planned &minus; total consumed; negative = consumption already above plan. <b>Left planned</b> = pending planned belts with no push reason (must replace). <b>To be maintained planned</b> = pending planned belts that can be pushed (latest thickness: next CBM after 31-Mar, edge/skirt wear, high wear rate, long B/C belt or due Jan-Mar; belts already past their CBM date are never pushed). <b>Left unplanned</b> = not in ABP, not replaced, next CBM within FY'${fy}, normal wear. <b>To be maintained unplanned</b> = same but with a push reason from thickness. <b>Forecast</b> = consumed + left. <b>Push needed</b> (dept) = consumed + all pending planned &minus; dept plan, i.e. how much of the dept's pending planned belts must be pushed to stay inside its plan; TOTAL = push needed to hold ${M.T} (includes the plan-vs-target gap of ${fmt(M.pushNeeded)} m).</div></div>`;
         }
         // ---- question graphs ----
         if (M.abp.length) {
@@ -3264,6 +3271,18 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             if (col === 'plan') o = Object.assign(abpRows(M.pl.filter(f), doneTxt), { t: `${dl} - Planned FY belts (Old ABP + New ABP add-on)` });
             else if (col === 'cp') o = Object.assign(repRows(M.C.planned.filter(f), noteC), { t: `${dl} - Consumed planned` });
             else if (col === 'cu') o = Object.assign(repRows(M.C.unplanned.filter(f), noteC), { t: `${dl} - Consumed unplanned` });
+            else if (col === 'fp' || col === 'fu') { const P = col === 'fp';
+                const cons = (P ? M.C.planned : M.C.unplanned).filter(f), left = (P ? M.leftP : M.leftU).filter(f);
+                const evd = x => { const e = M.fyEv(x.conv).filter(e => e.type === (x.kind === 'Replacement' ? 'R' : 'P')).map(e => e.date).sort((p, q) => p - q); return e.length ? e : (x.date ? [x.date] : []); };
+                const rows = cons.map(x => { const ds = evd(x); return { d: ds[0] || 0, r: [P_DONE('Consumed'), x.dept, x.name, fmt(x.m), x.kind, ds.length ? ds.map(dstr).join('<br>') : '-', noteC(x)] }; })
+                    .concat(left.map(a => ({ d: 9e15 + ((M.nextOf(a) || a.next || 0) - 0), r: [P_PEND('Left - ' + (P ? 'must replace' : 'due')), a.dept, a.name, fmt(P ? M.planM(a) : a.len), P ? 'Planned belt' : 'Not in ABP', 'Next CBM ' + dstr(M.nextOf ? M.nextOf(a) : a.next), P ? (a.overdue ? 'CBM overdue' : S.thk[a.conv] ? 'No push reason' : 'No thickness data') : (a.reason === 'OTHER' ? 'Normal wear' : RS(a.reason))] })));
+                rows.sort((p, q) => p.d - q.d);
+                o = { t: `${dl} - Forecast till March - ${P ? 'planned' : 'unplanned'} (consumed + left)`, head: ['Stage', 'Dept', 'Conveyor', 'Metres', 'Type', 'Date / Next CBM', 'Note'], rows: rows.map(x => x.r), tm: s(cons) + (P ? s(left, M.planM) : s(left, a => a.len)) };
+                o.extra = `consumed ${fmt(s(cons))} m + left ${fmt(P ? s(left, M.planM) : s(left, a => a.len))} m`; }
+            else if (col === 'push') { const arr = M.pushP.filter(f).sort((a, b) => M.planM(b) - M.planM(a));
+                o = Object.assign(abpRows(arr, doneTxt), { t: `${dl} - Push candidates (pending planned belts with a push reason)` });
+                const need = dn === 'ALL' ? M.pushActual : (() => { const c = s(M.C.planned.filter(f)) + s(M.C.unplanned.filter(f)); const pl = s(M.pl.filter(f), M.planM); return Math.max(0, c + s(M.plPend.filter(f), M.planM) - (M.planTotal ? pl * M.fabTarget / M.planTotal : 0)); })();
+                o.extra = `push needed ${fmt(need)} m · candidates ${fmt(s(arr, M.planM))} m${need > s(arr, M.planM) ? ' · <b class="sbc-r">' + fmt(need - s(arr, M.planM)) + ' m short</b>' : ''}`; }
             else if (col === 'lp') o = Object.assign(abpRows(M.leftP.filter(f), doneTxt), { t: `${dl} - Left to be consumed - planned (must replace)` });
             else if (col === 'mp') o = Object.assign(abpRows(M.maintP.filter(f), doneTxt), { t: `${dl} - To be maintained - planned (can push)` });
             else if (col === 'lu') o = Object.assign(freshRows(M.leftU.filter(f)), { t: `${dl} - Left to be consumed - unplanned (not in ABP, normal wear)` });
@@ -3293,7 +3312,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     };
     window.S_from = function (id) { S.from = id; };
     window.sbcTblCsv = function () { const t = document.querySelector('#card-sbcTbl table'); if (!t) return;
-        const head = ['Dept', 'Planned (ABP) m', 'Planned (ABP) SBC', 'Consumed planned m', 'Consumed planned SBC', 'Consumed unplanned m', 'Consumed unplanned SBC', 'Balance (planned - consumed) m', 'Balance (planned - consumed) SBC', 'Forecast planned m', 'Forecast planned SBC', 'Forecast unplanned m', 'Forecast unplanned SBC', 'Left to consume planned m', 'Left to consume planned SBC', 'Left to consume unplanned m', 'Left to consume unplanned SBC', 'To be maintained planned m', 'To be maintained planned SBC', 'To be maintained unplanned m', 'To be maintained unplanned SBC'];
+        const head = ['Dept', 'Planned (ABP) m', 'Planned (ABP) SBC', 'Consumed planned m', 'Consumed planned SBC', 'Consumed unplanned m', 'Consumed unplanned SBC', 'Balance (planned - consumed) m', 'Balance (planned - consumed) SBC', 'Forecast planned m', 'Forecast planned SBC', 'Forecast unplanned m', 'Forecast unplanned SBC', 'Left to consume planned m', 'Left to consume planned SBC', 'Left to consume unplanned m', 'Left to consume unplanned SBC', 'To be maintained planned m', 'To be maintained planned SBC', 'To be maintained unplanned m', 'To be maintained unplanned SBC', 'Push needed m', 'Push needed SBC'];
         const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b) { r.push(b.innerText.replace(/,/g, '').replace('-', '') === '' ? '' : b.innerText.replace(/,/g, '')); r.push(sm && sm.innerText !== '-' ? sm.innerText : ''); } else r.push(td.innerText); }); rows.push(r); });
         csvDownload(rows, `SBC_Dept_Status_FY${fyNow()}.csv`); };
     window.sbcBack = function () { const c = el(S.from || 'sbcMain'); (c || el('sbcScreen')).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
