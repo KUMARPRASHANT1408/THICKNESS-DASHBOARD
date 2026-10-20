@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-t</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-u</div>
         </div>
     </div>
 
@@ -3094,7 +3094,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (typeof currentRole === 'undefined' || currentRole !== 'admin') return;
         el('landingPage').style.display = 'none'; el('sbcScreen').style.display = 'block'; window.scrollTo(0, 0); el('sbcScreen').scrollTop = 0;
         el('sbcLoading').style.display = 'block'; el('sbcLoading').innerText = 'Loading data...';
-        Promise.all([get('./sbc.csv'), get('./abp_master.csv'), get('./data.csv'), get('./abn.csv'), get('./daily.csv'), get('./abp_overrides.csv')]).then(([sbc, abp, thk, abn, dly, ovr]) => {
+        Promise.all([get('./sbc.csv'), get('./abp_master.csv'), get('./data.csv'), get('./abn.csv'), get('./daily.csv'), get('./abp_overrides.csv'), get('./umc.csv')]).then(([sbc, abp, thk, abn, dly, ovr, umc]) => {
+            // UMC rate list: cost per metre of each conveyor's belt
+            S.umc = {}; umc.forEach(r => { const c = key(r.Conveyor), v = num(String(r.CostPerMtr || '').replace(/,/g, '')); if (c && v > 0 && !S.umc[c]) S.umc[c] = v; });
             // fixed classification from the ABP modification sheet (conveyor + type) - e.g. its unplanned list always stays unplanned
             S.ovr = {}; ovr.forEach(r => { const c = key(r.Conveyor); if (!c) return; const k = c + '|' + (/piece/i.test(r.Type || '') ? 'P' : 'R'); const o = S.ovr[k] = S.ovr[k] || { P: 0, U: 0 }; o[/^unplan/i.test(String(r.Class || '').trim()) ? 'U' : 'P'] += num(r.Mtrs); });
             // sbc.csv = Google Sheet "SBC" tab: main table (Department, Conveyor, Replacement/Piece Addition FY'25-27) + flat pivot (Dept., Conv. Name, Clean Month, FY'25-27)
@@ -3119,7 +3121,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             });
             el('sbcLoading').innerText = S.monthly.length ? '' : 'sbc.csv not found or empty (check the SBC tab in Google Sheet / sync).';
             S.thk = {};
-            thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']), nextCbm: parseDateCustom(r[Object.keys(r).find(k => /^Next Prediction\s*\(CBM\)/i.test(k))]), minThk: (r['MIN THICKNESS'] || '').trim(), top: (r['TOP'] || '').trim(), lastThk: parseDateCustom(r['Last Thickness Date']), cWear: (v => v ? v.toFixed(3) : '')(num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))])), predLife: num(r['Predicted Life (in Months) (Actual)']) ? f1(num(r['Predicted Life (in Months) (Actual)'])) : '', crit: (r['Criticality'] || '').trim(), cat: String(r['CATEGORY'] || '').trim().toUpperCase(), pWearN: num(r[Object.keys(r).find(k => /^Planned Wear Rate/i.test(k))]), cWearN: num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))]), e1: String(r['Thickness EDGE 1'] || '').trim(), ctr: String(r['CENTER2'] || '').trim(), e2: String(r['Thickness EDGE 2'] || '').trim() }; });
+            thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], width: String(r['Belt Width'] || '').trim(), len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']), nextCbm: parseDateCustom(r[Object.keys(r).find(k => /^Next Prediction\s*\(CBM\)/i.test(k))]), minThk: (r['MIN THICKNESS'] || '').trim(), top: (r['TOP'] || '').trim(), lastThk: parseDateCustom(r['Last Thickness Date']), cWear: (v => v ? v.toFixed(3) : '')(num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))])), predLife: num(r['Predicted Life (in Months) (Actual)']) ? f1(num(r['Predicted Life (in Months) (Actual)'])) : '', crit: (r['Criticality'] || '').trim(), cat: String(r['CATEGORY'] || '').trim().toUpperCase(), pWearN: num(r[Object.keys(r).find(k => /^Planned Wear Rate/i.test(k))]), cWearN: num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))]), e1: String(r['Thickness EDGE 1'] || '').trim(), ctr: String(r['CENTER2'] || '').trim(), e2: String(r['Thickness EDGE 2'] || '').trim() }; });
             // Daily Report: har replacement / piece addition ki date, metres, joint, vendor
             S.ev = {}; dly.forEach(r => { const c = key(r['Conveyor']); if (!c) return; const L = S.ev[c] = S.ev[c] || [];
                 const fd = pdmy(r['Final Replacement Date']); if (fd && fd.getFullYear() > 2000) L.push({ type: 'R', date: fd, m: num(r['Cosnumption'] || r['Consumption']), joint: String(r['Type of joint'] || '').trim(), vendor: String(r['Vendor'] || '').trim() });
@@ -3350,6 +3352,34 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 <tr><th rowspan="2">Dept</th><th rowspan="2">Target</th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>target &minus; consumed planned</small></th><th colspan="2">Forecast till 31-Mar<br><small>(as per CBM, nothing pushed)</small></th><th rowspan="2">By March<br><small>consumed + forecast</small></th><th rowspan="2">Over target<br><small>by March &minus; target</small></th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb2}</tbody></table></div>
                 <div class="sbc-note">Same as the table above, but <b>no belt is pushed and no belt is taken out of the plan</b>: <b>Forecast planned</b> = every ABP belt not yet replaced whose next CBM (thickness sheet) is on or before 31-Mar (incl. belts added to the plan for replacement this FY) + bucket PC1. Belts marked NOT EXISTING in the thickness sheet are never forecast. <b>Forecast unplanned</b> = every belt not in the ABP whose next CBM is on or before 31-Mar + steel cord J24C1 (100 m), J65C2 (300 m), J67C1 (914 m), CCBHAC1 (114 m). <b>Over target</b> = by March &minus; target.</div></div>`;
+            // ---- Table 3: cost (Rs) - same split as table 1 (after push), metres x UMC rate per metre ----
+            const rate = c => (S.umc || {})[c] || 0;
+            const miss = {}; const cs = (arr, mf) => arr.reduce((q, x) => { const r = rate(x.conv), m = +mf(x) || 0; if (!r && m) { const e = miss[x.conv] = miss[x.conv] || { conv: x.conv, name: x.name || x.conv, dept: x.dept, m: 0 }; e.m = Math.max(e.m, m); } return q + r * m; }, 0);
+            const cm = x => x.m;
+            const calc3 = dn => { const f = x => !dn || x.dept === dn;
+                const tgt = cs(M.pl.filter(f).filter(a => !a.outOfPlan), pm);
+                const cP = cs(M.C.planned.filter(f).concat(M.C.sb.filter(f)), cm), cU = cs(M.C.unplanned.filter(f), cm);
+                const fP = cs(M.fcP.filter(f), pm), fU = cs(M.fcU.filter(f), ln), pP = cs(M.pushPl.filter(f), pm), pU = cs(M.pushUn.filter(f), ln);
+                return { tgt, cP, cU, bal: tgt - cP, fP, fU, pP, pU, mar: cP + cU + fP + fU, end: cP + cU + fP + fU - pP - pU }; };
+            const L = v => v / 1e5, rs = v => v ? (Math.abs(L(v)) >= 100 ? fmt(Math.round(L(v))) : f1(L(v))) : '-';
+            const sp3 = (x, cls, key) => `<td class="sbc-c ${cls || ''}${key ? ' sbc-click' : ''}"${key ? ` onclick="S_from('card-sbcCost');sbcShow('${key}')"` : ''}><b>${rs(x)}</b><small>${x ? (x / 1e7).toFixed(2) + ' Cr' : '-'}</small></td>`;
+            const row3 = (name, v, dk) => `<tr><td>${name}</td>${sp3(v.tgt, '', dk ? 'tbl:plan:' + dk : null)}${sp3(v.cP, '', dk ? 'tbl:cp:' + dk : null)}${sp3(v.cU, '', dk ? 'tbl:cu:' + dk : null)}${sp3(v.bal, v.bal < 0 ? 'sbc-r' : 'sbc-g')}${sp3(v.fP, '', dk ? 'tbl:fcp:' + dk : null)}${sp3(v.fU, '', dk ? 'tbl:fcu:' + dk : null)}${sp3(v.pP, '', dk ? 'tbl:pushp:' + dk : null)}${sp3(v.pU, '', dk ? 'tbl:pushu:' + dk : null)}${sp3(v.mar, v.mar > v.tgt ? 'sbc-r' : 'sbc-g')}${sp3(v.end, v.end > v.tgt ? 'sbc-r' : 'sbc-g')}</tr>`;
+            let tb3 = ''; const per = {};
+            DEPTS.forEach(d => { const before = Object.keys(miss).length; const v = calc3(d[0]); per[d[0]] = Object.values(miss).filter(x => x.dept === d[0]); const n = per[d[0]].length;
+                tb3 += row3(d[0] + (n ? `<br><small class="sbc-incl sbc-click" onclick="S_from('card-sbcCost');sbcShow('umc:miss:${d[0]}')">${n} belt${n > 1 ? 's' : ''} without UMC rate</small>` : ''), v, d[0]); });
+            const v3 = calc3(null);
+            const sub3 = (nm, fn) => { const p = cs(M.C.planned.concat(M.C.sb).filter(fn), cm), u = cs(M.C.unplanned.filter(fn), cm), fp = cs(M.sbFc.filter(x => x.cls === 'P' && fn(x)), ln), fu = cs(M.sbFc.filter(x => x.cls === 'U' && fn(x)), ln); return `<tr class="sbc-sub"><td>&nbsp;&nbsp;&nbsp;↳ ${nm} <small>(in dept rows)</small></td>${sp3(0)}${sp3(p)}${sp3(u)}${sp3(0)}${sp3(fp)}${sp3(fu)}${sp3(0)}${sp3(0)}${sp3(p + u + fp + fu)}${sp3(p + u + fp + fu)}</tr>`; };
+            tb3 += sub3('Steel cord', r => M.isSteel(r.conv)) + sub3('Bucket', r => M.isBucket(r.conv));
+            tb3 += row3('<b>TOTAL</b>', v3, 'ALL').replace('<tr>', '<tr class="tot">');
+            S.umcMiss = Object.values(miss); const mm = S.umcMiss.reduce((q, x) => q + x.m, 0);
+            TITLES.sbcCost = `Department-wise belt cost (Rs) - target, consumed, forecast & push - FY'${fy}`;
+            h += `<div class="glass-panel sbc-panel" id="card-sbcCost"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES.sbcCost}</h3><button class="sbc-chip sbc-png" onclick="sbcCostCsv()"><i class="fas fa-download"></i> CSV</button></div>
+                <div class="sbc-banner ${v3.end > v3.tgt ? 'red' : 'green'}" style="margin:0 0 8px"><i class="fas fa-indian-rupee-sign"></i> Spent till date <b>Rs ${rs(v3.cP + v3.cU)} lakh</b>. Future spend till 31-Mar after push <b>Rs ${rs(v3.fP + v3.fU - v3.pP - v3.pU)} lakh</b>. Year-end total <b>Rs ${rs(v3.end)} lakh (${(v3.end / 1e7).toFixed(2)} Cr)</b> vs ABP budget Rs ${rs(v3.tgt)} lakh - ${v3.end > v3.tgt ? `<b>Rs ${rs(v3.end - v3.tgt)} lakh over</b>` : `Rs ${rs(v3.tgt - v3.end)} lakh under`}.</div>
+                <div class="sbc-note" style="margin:0 0 8px">Each cell: <b>Rs lakh</b> on top, <b>Rs crore</b> below. Cost = metres &times; UMC rate per metre (UMC list). Same belts and split as the first department table (year-end after push). Tap a number to see its belts.${S.umcMiss.length ? ` <span class="sbc-r sbc-click" onclick="S_from('card-sbcCost');sbcShow('umc:miss:ALL')"><b>${S.umcMiss.length} belts (${fmt(mm)} m) have no UMC rate and are not costed - tap to see them.</b></span>` : ''}</div>
+                <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
+                <tr><th rowspan="2">Dept</th><th rowspan="2">ABP budget<br><small>belts kept in plan</small></th><th colspan="2">Spent (consumed)</th><th rowspan="2">Balance<br><small>budget &minus; spent planned</small></th><th colspan="2">Forecast till 31-Mar</th><th colspan="2">Push<br><small>(can be avoided)</small></th><th rowspan="2">By March<br><small>spent + forecast</small></th><th rowspan="2">Year-end<br><small>after push</small></th></tr>
+                <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb3}</tbody></table></div>
+                <div class="sbc-note"><b>ABP budget</b> = cost of the ABP belts kept in the plan (the steel cord / bucket allowance has no belt list, so it has no budget here). <b>Spent</b> = metres consumed this FY &times; rate. <b>Forecast</b>, <b>Push</b>, <b>By March</b> and <b>Year-end</b> use the same belts as the first department table, including the steel cord / bucket forecast. Belts with no UMC rate are counted as Rs 0 until their rate is added to umc.csv.</div></div>`;
         }
         // ---- question graphs ----
         if (M.abp.length) {
@@ -3548,6 +3578,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         } else if (kind === 'push') {
             const A = abpRows(M.pushPl.filter(a => a.push === arg), doneTxt), U = freshRows(M.pushUn.filter(x => x.reason === arg)); const pad = r => { const x = A.head.map(() => ''); x[0] = r[0]; x[1] = r[1]; x[2] = 'Not in ABP'; x[3] = r[2]; x[6] = r[3]; x[7] = r[4]; x[10] = r[5]; return x; };
             o = { t: 'Push: ' + RS(arg), head: A.head, rows: A.rows.concat(U.rows.map(pad)), tm: A.tm + U.tm }; o.extra = 'Rule: ' + PR_RULE[arg];
+        } else if (kind === 'umc') {
+            const arr = (S.umcMiss || []).filter(x => arg2 === 'ALL' || x.dept === arg2).sort((a, b) => (a.dept > b.dept ? 1 : a.dept < b.dept ? -1 : b.m - a.m));
+            o = { t: `${arg2 === 'ALL' ? 'All departments' : arg2} - belts without a UMC rate (not costed)`, head: ['Dept', 'Conveyor', 'Metres (largest use)', 'Width', 'Grade'], rows: arr.map(x => { const t = S.thk[x.conv] || {}; return [x.dept, x.name, fmt(x.m), t.width || '-', t.grade || '-']; }), tm: arr.reduce((q, x) => q + x.m, 0) };
         } else if (kind === 'sbfc') {
             const fn = arg2 === 'Bucket' ? (x => M.isBucket(x.conv)) : (x => M.isSteel(x.conv)); const arr = M.sbFc.filter(x => x.cls === arg && fn(x));
             o = arg === 'P' ? Object.assign(abpRows(arr, doneTxt), { t: `${arg2} - forecast planned (given by user)` }) : Object.assign(freshRows(arr), { t: `${arg2} - forecast unplanned (given by user)` });
@@ -3617,6 +3650,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const head = ['Dept', 'Target m', 'Target SBC', 'Consumed planned m', 'Consumed planned SBC', 'Consumed unplanned m', 'Consumed unplanned SBC', 'Balance m', 'Balance SBC', 'Forecast planned (CBM) m', 'Forecast planned (CBM) SBC', 'Forecast unplanned (CBM) m', 'Forecast unplanned (CBM) SBC', 'By March m', 'By March SBC', 'Over target m', 'Over target SBC'];
         const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b && td.classList.contains('sbc-c')) { const x = b.innerText.replace(/,/g, ''); r.push(x === '-' ? '' : x); r.push(sm && sm.innerText !== '-' ? sm.innerText : ''); } else { r.push(td.innerText.replace(/\s*\n\s*/g, ' - ')); for (let k = 1; k < (td.colSpan || 1) * (td.classList.contains('sbc-c') ? 2 : 1); k++) r.push(''); } }); rows.push(r); });
         csvDownload(rows, `SBC_Dept_Table_as_per_CBM_FY${fyNow()}.csv`); };
+    window.sbcCostCsv = function () { const t = document.querySelector('#card-sbcCost table'); if (!t) return;
+        const head = ['Dept', 'ABP budget Rs lakh', 'ABP budget Rs Cr', 'Spent planned Rs lakh', 'Spent planned Rs Cr', 'Spent unplanned Rs lakh', 'Spent unplanned Rs Cr', 'Balance Rs lakh', 'Balance Rs Cr', 'Forecast planned Rs lakh', 'Forecast planned Rs Cr', 'Forecast unplanned Rs lakh', 'Forecast unplanned Rs Cr', 'Push planned Rs lakh', 'Push planned Rs Cr', 'Push unplanned Rs lakh', 'Push unplanned Rs Cr', 'By March Rs lakh', 'By March Rs Cr', 'Year-end Rs lakh', 'Year-end Rs Cr'];
+        const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b && td.classList.contains('sbc-c')) { const x = b.innerText.replace(/,/g, ''); r.push(x === '-' ? '' : x); r.push(sm && sm.innerText !== '-' ? sm.innerText.replace(' Cr', '') : ''); } else r.push(td.innerText.replace(/\s*\n\s*/g, ' - ')); }); rows.push(r); });
+        csvDownload(rows, `SBC_Dept_Cost_FY${fyNow()}.csv`); };
     window.sbcBack = function () { const c = el(S.from || 'sbcMain'); (c || el('sbcScreen')).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     window.sbcCloseList = function () { S.detail = null; el('sbcDetail').style.display = 'none'; window.sbcBack(); };
     const strip = v => String(v == null ? '' : v).replace(/<br\s*\/?>/gi, ' | ').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&');
