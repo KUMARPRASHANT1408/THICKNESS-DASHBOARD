@@ -426,7 +426,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-a</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-b</div>
         </div>
     </div>
 
@@ -2859,7 +2859,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     const MON = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
     const GREEN = '#10b981', YELLOW = '#f59e0b', RED = '#ef4444';
     const REASONS = [['HIGHWEARRATE', 'High wear rate'], ['B/C CATEGORY LONG BELT', 'Long B/C category belts'], ['JAN-MAR 2027', "Falling Jan-Mar'27"], ['SKIRT DAMAGE', 'Damaged at skirt area'], ['OTHERS', 'Others']];
-    const S = { daily: [], abp: [], thk: {}, abn: {}, ev: {}, cfg: {}, mode: 'sbc', charts: {}, loaded: false, detail: null };
+    const S = { daily: [], abp: [], thk: {}, abn: {}, ev: {}, cfg: {}, ovr: {}, mode: 'sbc', charts: {}, loaded: false, detail: null };
 
     const key = s => String(s || '').trim().toUpperCase().replace(/\s+/g, '');
     function nd(d) {
@@ -2891,7 +2891,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (typeof currentRole === 'undefined' || currentRole !== 'admin') return;
         el('landingPage').style.display = 'none'; el('sbcScreen').style.display = 'block'; window.scrollTo(0, 0); el('sbcScreen').scrollTop = 0;
         el('sbcLoading').style.display = 'block'; el('sbcLoading').innerText = 'Loading data...';
-        Promise.all([get('./sbc.csv'), get('./abp_master.csv'), get('./data.csv'), get('./abn.csv'), get('./daily.csv')]).then(([sbc, abp, thk, abn, dly]) => {
+        Promise.all([get('./sbc.csv'), get('./abp_master.csv'), get('./data.csv'), get('./abn.csv'), get('./daily.csv'), get('./abp_overrides.csv')]).then(([sbc, abp, thk, abn, dly, ovr]) => {
+            // fixed classification from the ABP modification sheet (conveyor + type) - e.g. its unplanned list always stays unplanned
+            S.ovr = {}; ovr.forEach(r => { const c = key(r.Conveyor); if (c) S.ovr[c + '|' + (/piece/i.test(r.Type || '') ? 'P' : 'R')] = String(r.Class || '').trim(); });
             // sbc.csv = Google Sheet "SBC" tab: main table (Department, Conveyor, Replacement/Piece Addition FY'25-27) + flat pivot (Dept., Conv. Name, Clean Month, FY'25-27)
             const MONN = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
             const FYL = [[25, "FY'25"], [26, "FY'26"], [27, "FY'27"]];
@@ -2961,7 +2963,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const plSet = new Set(pl.map(a => a.conv));
         // ---- every consumption (replacement + piece addition): in ABP master -> planned, steel/bucket -> allowance, rest -> unplanned ----
         const C = { preAbp: [], planned: [], unplanned: [], avoidRep: [], sb: [], pa: [] };
-        const route = r => { if (plSet.has(r.conv)) { r.src = abpBy[r.conv].src; C.planned.push(r); } else if (isSteel(r.conv) || isBucket(r.conv)) C.sb.push(r); else C.unplanned.push(r); };
+        const route = r => { const ov = (S.ovr || {})[r.conv + '|' + (r.kind === 'Replacement' ? 'R' : 'P')]; if (ov === 'Unplanned') { r.fixed = true; C.unplanned.push(r); return; } if (plSet.has(r.conv)) { r.src = abpBy[r.conv].src; C.planned.push(r); } else if (isSteel(r.conv) || isBucket(r.conv)) C.sb.push(r); else C.unplanned.push(r); };
         Object.keys(repMap).forEach(c => { const r = one(repMap, c); r.kind = 'Replacement'; route(r); });
         Object.keys(paMap).forEach(c => { const r = one(paMap, c); r.kind = 'Piece addition'; route(r); });
         const known = sum(C.planned) + sum(C.unplanned) + sum(C.sb);
@@ -3222,7 +3224,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const abpRows = (arr, st) => ({ head: ['Dept', 'Conveyor', 'ABP', 'Length m', 'Planned m', 'Grade', 'Next CBM (thickness)', 'Min thk', 'Edge1 / Centre / Edge2', 'Wear cur / plan', 'Status / Reason'],
             rows: arr.slice().sort((a, b) => (M.nextOf(a) || 0) - (M.nextOf(b) || 0)).map(a => { const t = tk(a.conv); return [a.dept, a.name, SRC(a), fmt(a.len), fmt(a.plan), a.grade || '-', dstr(M.nextOf(a)), thkTxt(a.conv), [t.e1, t.ctr, t.e2].map(v => v === '' || v == null ? '-' : v).join(' / '), (t.cWearN ? t.cWearN.toFixed(3) : '-') + ' / ' + (t.pWearN ? t.pWearN.toFixed(3) : '-'), st(a)]; }), tm: s(arr, M.planM) });
         const doneTxt = a => { const r = M.repMap[a.conv]; if (!r) return a.push ? P_BLUE('Can push: ' + RS(a.push)) : P_PEND(a.overdue ? 'Must replace - CBM overdue' : S.thk[a.conv] ? 'Must replace' : 'Must replace - no thickness data'); const d = r.map(x => x.date).filter(Boolean).sort((p, q) => q - p)[0]; return P_DONE('Done' + (d ? ' ' + dstr(d) : '') + ' · ' + fmt(s(r)) + ' m'); };
-        const noteC = x => M.abpBy[x.conv] ? P_DONE(SRC(M.abpBy[x.conv])) : M.C.sb.includes(x) ? P_BLUE(M.isSteel(x.conv) ? 'Steel cord' : 'Bucket') : P_RED('Not in ABP');
+        const noteC = x => x.fixed ? P_RED('Unplanned (ABP modification list)') : M.abpBy[x.conv] ? P_DONE(SRC(M.abpBy[x.conv])) : M.C.sb.includes(x) ? P_BLUE(M.isSteel(x.conv) ? 'Steel cord' : 'Bucket') : P_RED('Not in ABP');
         const freshRows = arr => ({ head: ['Dept', 'Conveyor', 'Length m', 'Next CBM (thickness)', 'Min thk', 'Thickness note'], rows: arr.slice().sort((a, b) => a.next - b.next).map(a => [a.dept, a.name, fmt(a.len), dstr(a.next), thkTxt(a.conv), a.reason === 'OTHER' ? P_PEND('Normal wear - will be needed') : P_BLUE(RS(a.reason))]), tm: s(arr, a => a.len) });
         let o;
         if (kind === 'cons') {
@@ -3260,7 +3262,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             else if (col === 'mu') o = Object.assign(freshRows(M.maintU.filter(f)), { t: `${dl} - To be maintained - unplanned (not in ABP, reason to push)` });
         } else if (kind === 'mon') {
             const i = +arg, fy = M.fy; const g = {}; M.st.rows.filter(x => x.mi === i).forEach(x => { const q = g[x.conv] = g[x.conv] || { conv: x.conv, name: x.name, dept: x.dept, m: 0 }; q.m += x.m; });
-            const cls = c => M.abpBy[c] ? P_DONE(M.abpBy[c].src === 'NEW' ? 'Planned - New ABP' : 'Planned - Old ABP') : M.C.sb.some(x => x.conv === c) ? P_BLUE(M.isSteel(c) ? 'Steel cord' : 'Bucket') : P_RED('Unplanned');
+            const cls = c => M.C.unplanned.some(x => x.conv === c && x.fixed) ? P_RED('Unplanned (ABP modification list)') : M.abpBy[c] ? P_DONE(M.abpBy[c].src === 'NEW' ? 'Planned - New ABP' : 'Planned - Old ABP') : M.C.sb.some(x => x.conv === c) ? P_BLUE(M.isSteel(c) ? 'Steel cord' : 'Bucket') : P_RED('Unplanned');
             const arr = Object.values(g).sort((a, b) => b.m - a.m);
             o = { t: `${MON[i]}'${String(i < 9 ? fy - 1 : fy).padStart(2, '0')} - conveyors that consumed belt`, head: ['Dept', 'Conveyor', 'Metres (SBC sheet)', 'Activity (Daily Report)', 'Joint / Vendor', 'Class', 'Min thk'],
                 rows: arr.map(x => { const ev = M.fyEv(x.conv).filter(e => mi(e.date) === i); const act = ev.length ? ev.map(e => (e.type === 'R' ? 'Replacement ' : 'Piece addition ') + dstr(e.date) + (e.m ? ' (' + fmt(e.m) + ' m)' : '')).join('<br>') : '-';
