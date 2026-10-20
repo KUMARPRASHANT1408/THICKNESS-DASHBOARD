@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-r</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-s</div>
         </div>
     </div>
 
@@ -3241,7 +3241,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const proj = consX + pendFab + pendSteel, projPush = consX + pendMust + pendSteel;
         const pushActual = Math.max(0, proj - T * TOTAL_KM);   // push needed after counting unplanned consumption
         // ---- thickness: belts due this FY that are NOT in the ABP ----
-        const fresh = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (plSet.has(c) || repMap[c] || paMap[c] || isSteel(c) || isBucket(c) || /NOT\s*EXIST/.test(t.grade)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; fresh.push({ conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm, cat: t.cat, grade: t.grade, reason: MANUAL_PUSH[c] ? 'MANUAL' : thkReason(c) }); });
+        const fresh = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (plSet.has(c) || repMap[c] || isSteel(c) || isBucket(c) || /NOT\s*EXIST/.test(t.grade)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; fresh.push({ conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm, cat: t.cat, grade: t.grade, reason: MANUAL_PUSH[c] ? 'MANUAL' : thkReason(c) }); });
         const fyEv = c => (S.ev[c] || []).filter(e => fyOf(e.date) === fy);
         const avoidT = fresh, due = fresh.map(x => x.conv);
         // ---- dept status table ----
