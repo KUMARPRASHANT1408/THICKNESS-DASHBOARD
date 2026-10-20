@@ -77,3 +77,19 @@ JPP3C1,Piece addition,Unplanned,300,ABP modification sheet - unplanned list
 J65C2,Piece addition,Unplanned,400,ABP modification sheet - unplanned list
 J37C4,Piece addition,Unplanned,700,ABP modification sheet - unplanned list
 JNT3C1,Piece addition,Unplanned,110,ABP modification sheet - unplanned list
+BC6(COAL),Replacement,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+BC6(COAL),Piece addition,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+MSRC1,Replacement,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+MSRC1,Piece addition,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+J30FC6,Replacement,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+J30FC6,Piece addition,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+GJ0016,Replacement,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+GJ0016,Piece addition,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+J24C1,Replacement,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+J24C1,Piece addition,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+FCSBHAC1,Replacement,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+FCSBHAC1,Piece addition,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+OF1AC2,Replacement,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+OF1AC2,Piece addition,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+RP6,Replacement,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
+RP6,Piece addition,Unplanned,,Confirmed unplanned (not in Old ABP col U / New ABP add-on)
