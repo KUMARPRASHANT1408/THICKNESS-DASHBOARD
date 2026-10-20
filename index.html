@@ -355,6 +355,7 @@
         .sbc-qn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--teal); color: #fff; font-size: 0.75rem; margin-right: 4px; }
         .sbc-st td.sbc-c { text-align: right; line-height: 1.15; }
         .sbc-st tr.sbc-sub td { font-size: .74rem; color: var(--text-muted); }
+        .sbc-incl { color: var(--text-muted); font-size: .68rem; font-weight: 500; }
         .sbc-st td.sbc-c b { display: block; font-size: 0.8rem; } .sbc-st td.sbc-c small { color: var(--text-muted); font-size: 0.68rem; }
         .sbc-st th { text-align: center !important; vertical-align: bottom; white-space: normal; min-width: 70px; border-left: 1px solid rgba(255,255,255,0.08); }
         .sbc-st td.sbc-click { cursor: pointer; } .sbc-st td.sbc-click:hover b { color: var(--teal); text-decoration: underline; }
@@ -620,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-m</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-n</div>
         </div>
     </div>
 
@@ -3263,7 +3264,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (M.abp.length) {
             const pm = M.planM, ln = a => a.len, s = M.sum;
             const sp = (x, cls, key) => `<td class="sbc-c ${cls || ''}${key ? ' sbc-click' : ''}"${key ? ` onclick="S_from('card-sbcTbl');sbcShow('${key}')"` : ''}><b>${x ? fmt(x) : '-'}</b><small>${x ? f1(x / TOTAL_KM) : '-'}</small></td>`;
-            const calc = dn => { const f = x => (!dn || x.dept === dn) && !M.isSB2(x.conv);
+            const calc = dn => { const f = x => !dn || x.dept === dn;   // steel cord / bucket stay in their department
                 const ft = x => !dn || x.dept === dn;   // target: every ABP belt kept in the plan (total = 252)
                 const tgt = s(M.pl.filter(ft), pm) - s(M.removed.filter(ft), pm);
                 const cP = s(M.C.planned.filter(f)) + s(M.C.sb.filter(f)), cU = s(M.C.unplanned.filter(f));
@@ -3271,13 +3272,16 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const pP = s(M.pushPl.filter(f), pm), pU = s(M.pushUn.filter(f), ln);
                 return { tgt, cP, cU, bal: tgt - cP, fP, fU, pP, pU, mar: cP + cU + fP + fU, end: cP + cU + fP + fU - pP - pU }; };
             const row = (name, v, dk) => `<tr><td>${name}</td>${sp(v.tgt, '', dk ? 'tbl:plan:' + dk : null)}${sp(v.cP, '', dk ? 'tbl:cp:' + dk : null)}${sp(v.cU, '', dk ? 'tbl:cu:' + dk : null)}${sp(v.bal, v.bal < 0 ? 'sbc-r' : 'sbc-g')}${sp(v.fP, '', dk ? 'tbl:fcp:' + dk : null)}${sp(v.fU, '', dk ? 'tbl:fcu:' + dk : null)}${sp(v.pP, '', dk ? 'tbl:pushp:' + dk : null)}${sp(v.pU, '', dk ? 'tbl:pushu:' + dk : null)}${sp(v.mar, v.mar > v.tgt ? 'sbc-r' : 'sbc-g')}${sp(v.end, v.end > v.tgt ? 'sbc-r' : 'sbc-g')}</tr>`;
-            let tb = ''; DEPTS.forEach(d => { tb += row(d[0], calc(d[0]), d[0]); });
+            const sbNote = dn => { const st = s(M.sbAll.filter(r => r.dept === dn && M.isSteel(r.conv))), bk = s(M.sbAll.filter(r => r.dept === dn && M.isBucket(r.conv))); return st || bk ? `<br><small class="sbc-incl">incl. ${[st ? 'steel cord ' + fmt(st) : '', bk ? 'bucket ' + fmt(bk) : ''].filter(Boolean).join(' · ')} m</small>` : ''; };
+            let tb = ''; DEPTS.forEach(d => { tb += row(d[0] + sbNote(d[0]), calc(d[0]), d[0]); });
             const sbP = s(M.sbPl), sbUn = s(M.sbUn), sbLeft = M.pendSteel;
-            const sbv = { tgt: M.sbTarget, cP: sbP, cU: sbUn, bal: M.sbTarget - sbP, fP: sbLeft, fU: 0, pP: 0, pU: 0, mar: sbP + sbUn + sbLeft, end: sbP + sbUn + sbLeft };
+            // allowance row: its consumption is already inside the department rows, so only the target and the unused allowance are added to the totals
+            const sbv = { tgt: M.sbTarget, cP: 0, cU: 0, bal: M.sbTarget, fP: sbLeft, fU: 0, pP: 0, pU: 0, mar: sbLeft, end: sbLeft };
             if (M.sbTarget) {
-                tb += row('<b>Steel cord + Bucket (allowance)</b>', sbv, 'SB');
+                const used = sbP + sbUn;
+                tb += `<tr><td><b>Steel cord + Bucket allowance</b><br><small class="sbc-incl">used ${fmt(used)} m (in dept rows) · ${used > M.sbTarget ? '<span class="sbc-r">' + fmt(used - M.sbTarget) + ' m over</span>' : fmt(M.sbTarget - used) + ' m left'}</small></td>${sp(M.sbTarget)}<td class="sbc-c" colspan="2" style="text-align:center"><small>in dept rows</small></td>${sp(M.sbTarget)}${sp(sbLeft)}${sp(0)}${sp(0)}${sp(0)}${sp(sbLeft)}${sp(sbLeft)}</tr>`;
                 // breakdown rows (consumption only - the allowance is one combined figure)
-                const sub = (nm, fn, key) => { const p = s(M.sbPl.filter(fn)), u = s(M.sbUn.filter(fn)); return `<tr class="sbc-sub"><td>&nbsp;&nbsp;&nbsp;↳ ${nm}</td>${sp(0)}${sp(p, '', p ? key : null)}${sp(u, '', u ? key : null)}${sp(0)}${sp(0)}${sp(0)}${sp(0)}${sp(0)}${sp(p + u)}${sp(p + u)}</tr>`; };
+                const sub = (nm, fn, key) => { const p = s(M.sbPl.filter(fn)), u = s(M.sbUn.filter(fn)); return `<tr class="sbc-sub"><td>&nbsp;&nbsp;&nbsp;↳ ${nm} <small>(in dept rows)</small></td>${sp(0)}${sp(p, '', p ? key : null)}${sp(u, '', u ? key : null)}${sp(0)}${sp(0)}${sp(0)}${sp(0)}${sp(0)}${sp(p + u)}${sp(p + u)}</tr>`; };
                 tb += sub('Steel cord', r => M.isSteel(r.conv), 'sb:steel') + sub('Bucket', r => M.isBucket(r.conv), 'sb:bucket');
             }
             const v = calc(null); Object.keys(v).forEach(k => v[k] += sbv[k]);
@@ -3288,7 +3292,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
                 <tr><th rowspan="2">Dept</th><th rowspan="2">Target</th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>target &minus; consumed planned</small></th><th colspan="2">Forecast till 31-Mar<br><small>(latest thickness)</small></th><th colspan="2">Push<br><small>(can be avoided)</small></th><th rowspan="2">By March<br><small>consumed + forecast</small></th><th rowspan="2">Year-end<br><small>after push</small></th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb}</tbody></table></div>
-                <div class="sbc-note"><b>Target</b> = ABP belts kept in the plan (Old ABP + New ABP add-on, minus belts taken out so the plant total is ${fmt(M.T * TOTAL_KM)} m = ${M.T}) + steel cord / bucket allowance. <b>Consumed</b> = replacement + piece addition this FY; planned = belt is in the ABP (or in the planned lists of the ABP modification sheet), unplanned = everything else. <b>Balance</b> = target &minus; consumed planned (unplanned shown separately). <b>Forecast planned</b> = ABP belts not yet replaced whose next CBM (thickness sheet) is on or before 31-Mar. <b>Forecast unplanned</b> = belts not in the ABP whose next CBM is on or before 31-Mar. <b>Push</b> = forecast belts that can be avoided this FY - latest thickness shows edge / skirt wear, high wear rate, a long B/C belt, or next CBM in Jan-Mar (belts already past their CBM are never pushed). <b>By March</b> = consumed + forecast. <b>Year-end</b> = by March &minus; push. Steel cord and bucket belts (any class) are counted only in the steel cord + bucket row; its forecast is the allowance still unused.</div></div>`;
+                <div class="sbc-note"><b>Target</b> = ABP belts kept in the plan (Old ABP + New ABP add-on, minus belts taken out so the plant total is ${fmt(M.T * TOTAL_KM)} m = ${M.T}) + steel cord / bucket allowance. <b>Consumed</b> = replacement + piece addition this FY; planned = belt is in the ABP (or in the planned lists of the ABP modification sheet), unplanned = everything else. <b>Balance</b> = target &minus; consumed planned (unplanned shown separately). <b>Forecast planned</b> = ABP belts not yet replaced whose next CBM (thickness sheet) is on or before 31-Mar. <b>Forecast unplanned</b> = belts not in the ABP whose next CBM is on or before 31-Mar. <b>Push</b> = forecast belts that can be avoided this FY - latest thickness shows edge / skirt wear, high wear rate, a long B/C belt, or next CBM in Jan-Mar (belts already past their CBM are never pushed). <b>By March</b> = consumed + forecast. <b>Year-end</b> = by March &minus; push. Steel cord and bucket belts are counted in their department (shown under the dept name); the allowance row adds only its target and the part not yet used.</div></div>`;
         }
         // ---- question graphs ----
         if (M.abp.length) {
@@ -3543,7 +3547,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     window.S_from = function (id) { S.from = id; };
     window.sbcTblCsv = function () { const t = document.querySelector('#card-sbcTbl table'); if (!t) return;
         const head = ['Dept', 'Target m', 'Target SBC', 'Consumed planned m', 'Consumed planned SBC', 'Consumed unplanned m', 'Consumed unplanned SBC', 'Balance m', 'Balance SBC', 'Forecast planned m', 'Forecast planned SBC', 'Forecast unplanned m', 'Forecast unplanned SBC', 'Push planned m', 'Push planned SBC', 'Push unplanned m', 'Push unplanned SBC', 'By March m', 'By March SBC', 'Year-end m', 'Year-end SBC'];
-        const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b && td.classList.contains('sbc-c')) { const x = b.innerText.replace(/,/g, ''); r.push(x === '-' ? '' : x); r.push(sm && sm.innerText !== '-' ? sm.innerText : ''); } else r.push(td.innerText); }); rows.push(r); });
+        const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b && td.classList.contains('sbc-c')) { const x = b.innerText.replace(/,/g, ''); r.push(x === '-' ? '' : x); r.push(sm && sm.innerText !== '-' ? sm.innerText : ''); } else { r.push(td.innerText.replace(/\s*\n\s*/g, ' - ')); for (let k = 1; k < (td.colSpan || 1) * (td.classList.contains('sbc-c') ? 2 : 1); k++) r.push(''); } }); rows.push(r); });
         csvDownload(rows, `SBC_Dept_Table_FY${fyNow()}.csv`); };
     window.sbcBack = function () { const c = el(S.from || 'sbcMain'); (c || el('sbcScreen')).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     window.sbcCloseList = function () { S.detail = null; el('sbcDetail').style.display = 'none'; window.sbcBack(); };
