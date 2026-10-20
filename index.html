@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-q</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-r</div>
         </div>
     </div>
 
@@ -3052,7 +3052,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     const FY_TARGET = { 27: 252, 26: 270, 25: 318 };
     // belts NOT in the ABP that the field team decided to run till next FY (pushed by decision)
     // steel cord / bucket belts expected to be consumed by 31-Mar (given by the user, 20-Oct-2026). p = planned, otherwise unplanned
-    const SB_FORECAST = [{ c: 'PC1', m: 144, p: true }, { c: 'J24C1', m: 100 }, { c: 'J65C2', m: 300 }, { c: 'J67C1', m: 914 }];
+    const SB_FORECAST = [{ c: 'PC1', m: 144, p: true }, { c: 'J24C1', m: 100 }, { c: 'J65C2', m: 300 }, { c: 'J67C1', m: 914 }, { c: 'CCBHAC1', m: 114 }];
+    // belts that are steel cord although the thickness sheet shows another grade (confirmed by the user)
+    const STEEL_CORD_FIX = ['CCBHAC1'];
     const MANUAL_PUSH = { 'J12C2': '20-Oct-2026', 'OFBBC1': '20-Oct-2026' };
     const FAB_TARGET = { 27: 40519.5 };   // fabric target FY'27 = Old ABP total (col U)
     const SB_TARGET = { 27: 2320.5 };     // steel cord + bucket allowance = 252 x 170 - fabric
@@ -3177,7 +3179,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const paMap = {}; st.pas.forEach(x => (paMap[x.conv] = paMap[x.conv] || []).push(x));
         const one = (map, c) => { const r = map[c]; const ds = r.map(x => x.date).filter(Boolean).sort((a, b) => b - a); return { conv: c, name: r[0].name, dept: r[0].dept, m: sum(r), date: ds[0] || null }; };
         const grade = c => (S.thk[c] && S.thk[c].grade) || '';
-        const isSteel = c => grade(c).includes('STEEL'), isBucket = c => grade(c).includes('BUCKET');
+        const isSteel = c => STEEL_CORD_FIX.includes(c) || grade(c).includes('STEEL'), isBucket = c => !STEEL_CORD_FIX.includes(c) && grade(c).includes('BUCKET');
         // ---- plan = ABP master (old ABP + new ABP add-on) ----
         const pl = abp.filter(a => a.conv), av = [], pre = [];
         const abpBy = {}; pl.forEach(a => { abpBy[a.conv] = a; });
@@ -3325,7 +3327,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
                 <tr><th rowspan="2">Dept</th><th rowspan="2">Target</th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>target &minus; consumed planned</small></th><th colspan="2">Forecast till 31-Mar<br><small>(latest thickness)</small></th><th colspan="2">Push<br><small>(can be avoided)</small></th><th rowspan="2">By March<br><small>consumed + forecast</small></th><th rowspan="2">Year-end<br><small>after push</small></th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb}</tbody></table></div>
-                <div class="sbc-note"><b>Target</b> = ABP belts kept in the plan (Old ABP + New ABP add-on, minus belts taken out so the plant total is ${fmt(M.T * TOTAL_KM)} m = ${M.T}) + steel cord / bucket allowance. <b>Consumed</b> = replacement + piece addition this FY; planned = belt is in the ABP (or in the planned lists of the ABP modification sheet), unplanned = everything else. <b>Balance</b> = target &minus; consumed planned (unplanned shown separately). <b>Forecast planned</b> = ABP belts not yet replaced whose next CBM (thickness sheet) is on or before 31-Mar. <b>Forecast unplanned</b> = belts not in the ABP whose next CBM is on or before 31-Mar. Steel cord / bucket forecast (given by the user): bucket PC1 144 m planned; steel cord J24C1 100 m, J65C2 300 m, J67C1 914 m unplanned - these are never pushed. <b>Push</b> = forecast belts that can be avoided this FY - latest thickness shows edge / skirt wear, high wear rate, a long B/C belt, or next CBM in Jan-Mar (belts already past their CBM are never pushed). <b>By March</b> = consumed + forecast. <b>Year-end</b> = by March &minus; push. Steel cord and bucket belts are counted in their department (shown under the dept name); the allowance row adds only its target and the part not yet used.</div></div>`;
+                <div class="sbc-note"><b>Target</b> = ABP belts kept in the plan (Old ABP + New ABP add-on, minus belts taken out so the plant total is ${fmt(M.T * TOTAL_KM)} m = ${M.T}) + steel cord / bucket allowance. <b>Consumed</b> = replacement + piece addition this FY; planned = belt is in the ABP (or in the planned lists of the ABP modification sheet), unplanned = everything else. <b>Balance</b> = target &minus; consumed planned (unplanned shown separately). <b>Forecast planned</b> = ABP belts not yet replaced whose next CBM (thickness sheet) is on or before 31-Mar. <b>Forecast unplanned</b> = belts not in the ABP whose next CBM is on or before 31-Mar. Steel cord / bucket forecast (given by the user): bucket PC1 144 m planned; steel cord J24C1 100 m, J65C2 300 m, J67C1 914 m, CCBHAC1 114 m unplanned - these are never pushed. <b>Push</b> = forecast belts that can be avoided this FY - latest thickness shows edge / skirt wear, high wear rate, a long B/C belt, or next CBM in Jan-Mar (belts already past their CBM are never pushed). <b>By March</b> = consumed + forecast. <b>Year-end</b> = by March &minus; push. Steel cord and bucket belts are counted in their department (shown under the dept name); the allowance row adds only its target and the part not yet used.</div></div>`;
             // ---- Table 2: as per CBM - every belt due by 31-Mar, nothing pushed ----
             const calc2 = dn => { const f = x => !dn || x.dept === dn; const b = calc(dn);
                 const fP = s(M.cbmP.filter(f), pm), fU = s(M.cbmU.filter(f), ln); const mar = b.cP + b.cU + fP + fU;
@@ -3344,7 +3346,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
                 <tr><th rowspan="2">Dept</th><th rowspan="2">Target</th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>target &minus; consumed planned</small></th><th colspan="2">Forecast till 31-Mar<br><small>(as per CBM, nothing pushed)</small></th><th rowspan="2">By March<br><small>consumed + forecast</small></th><th rowspan="2">Over target<br><small>by March &minus; target</small></th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb2}</tbody></table></div>
-                <div class="sbc-note">Same as the table above, but <b>no belt is pushed and no belt is taken out of the plan</b>: <b>Forecast planned</b> = every ABP belt not yet replaced whose next CBM (thickness sheet) is on or before 31-Mar (incl. belts added to the plan for replacement this FY) + bucket PC1. <b>Forecast unplanned</b> = every belt not in the ABP whose next CBM is on or before 31-Mar + steel cord J24C1 (100 m), J65C2 (300 m), J67C1 (914 m). <b>Over target</b> = by March &minus; target.</div></div>`;
+                <div class="sbc-note">Same as the table above, but <b>no belt is pushed and no belt is taken out of the plan</b>: <b>Forecast planned</b> = every ABP belt not yet replaced whose next CBM (thickness sheet) is on or before 31-Mar (incl. belts added to the plan for replacement this FY) + bucket PC1. <b>Forecast unplanned</b> = every belt not in the ABP whose next CBM is on or before 31-Mar + steel cord J24C1 (100 m), J65C2 (300 m), J67C1 (914 m), CCBHAC1 (114 m). <b>Over target</b> = by March &minus; target.</div></div>`;
         }
         // ---- question graphs ----
         if (M.abp.length) {
