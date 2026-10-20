@@ -354,6 +354,7 @@
         .sbc-pill { padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
         .sbc-qn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--teal); color: #fff; font-size: 0.75rem; margin-right: 4px; }
         .sbc-st td.sbc-c { text-align: right; line-height: 1.15; }
+        .sbc-st tr.sbc-sub td { font-size: .74rem; color: var(--text-muted); }
         .sbc-st td.sbc-c b { display: block; font-size: 0.8rem; } .sbc-st td.sbc-c small { color: var(--text-muted); font-size: 0.68rem; }
         .sbc-st th { text-align: center !important; vertical-align: bottom; white-space: normal; min-width: 70px; border-left: 1px solid rgba(255,255,255,0.08); }
         .sbc-st td.sbc-click { cursor: pointer; } .sbc-st td.sbc-click:hover b { color: var(--teal); text-decoration: underline; }
@@ -619,7 +620,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-l</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-m</div>
         </div>
     </div>
 
@@ -3273,7 +3274,12 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             let tb = ''; DEPTS.forEach(d => { tb += row(d[0], calc(d[0]), d[0]); });
             const sbP = s(M.sbPl), sbUn = s(M.sbUn), sbLeft = M.pendSteel;
             const sbv = { tgt: M.sbTarget, cP: sbP, cU: sbUn, bal: M.sbTarget - sbP, fP: sbLeft, fU: 0, pP: 0, pU: 0, mar: sbP + sbUn + sbLeft, end: sbP + sbUn + sbLeft };
-            if (M.sbTarget) tb += row('Steel cord + Bucket (allowance)', sbv, 'SB');
+            if (M.sbTarget) {
+                tb += row('<b>Steel cord + Bucket (allowance)</b>', sbv, 'SB');
+                // breakdown rows (consumption only - the allowance is one combined figure)
+                const sub = (nm, fn, key) => { const p = s(M.sbPl.filter(fn)), u = s(M.sbUn.filter(fn)); return `<tr class="sbc-sub"><td>&nbsp;&nbsp;&nbsp;↳ ${nm}</td>${sp(0)}${sp(p, '', p ? key : null)}${sp(u, '', u ? key : null)}${sp(0)}${sp(0)}${sp(0)}${sp(0)}${sp(0)}${sp(p + u)}${sp(p + u)}</tr>`; };
+                tb += sub('Steel cord', r => M.isSteel(r.conv), 'sb:steel') + sub('Bucket', r => M.isBucket(r.conv), 'sb:bucket');
+            }
             const v = calc(null); Object.keys(v).forEach(k => v[k] += sbv[k]);
             tb += row('<b>TOTAL</b>', v, 'ALL').replace('<tr>', '<tr class="tot">');
             TITLES.sbcTbl = `Department-wise SBC - target, consumed, forecast & push - FY'${fy}`;
