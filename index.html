@@ -533,6 +533,29 @@
         #sbcScreen .sbc-bar h2 { min-width: 0; flex: 1 1 60%; font-size: 1rem; }
         #sbcScreen .sbc-bar .btn-slate, #sbcScreen .sbc-bar .sbc-sel { padding: 6px 10px; font-size: .85rem; }
         @media (max-width: 768px) { #mainContent > .header { margin: 0 -15px 12px; padding: 10px 15px; } .interactive-section { padding: 14px; } }
+        /* table tools: search + Excel-style filter */
+        .tf-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 8px; }
+        .tf-search { flex: 1 1 220px; max-width: 360px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-base); color: var(--text-main); font: inherit; font-size: .9rem; }
+        .tf-search:focus { outline: 2px solid var(--teal); outline-offset: -1px; }
+        .tf-clear { padding: 7px 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-base); color: var(--red); font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; }
+        .tf-info { font-size: .8rem; color: var(--text-muted); }
+        .tf-btn { margin-left: 6px; border: 1px solid var(--glass-border); background: var(--glass-base); color: var(--text-muted); border-radius: 6px; width: 22px; height: 20px; line-height: 16px; font-size: 11px; cursor: pointer; padding: 0; vertical-align: middle; }
+        .tf-btn:hover { color: var(--teal); border-color: var(--teal); }
+        .tf-btn.on { background: var(--teal); color: #fff; border-color: var(--teal); }
+        .tf-pop { position: fixed; z-index: 20000; width: 280px; max-height: 380px; display: flex; flex-direction: column; background: var(--glass-base); color: var(--text-main); border: 1px solid var(--glass-border); border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,.25); padding: 10px; gap: 8px; }
+        .tf-pop.sheet { left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 70vh; }
+        .tf-pop-h { display: flex; align-items: center; gap: 8px; } .tf-pop-h b { flex: 1; font-size: .9rem; }
+        .tf-x { border: 0; background: none; color: var(--text-muted); font-size: 22px; line-height: 1; cursor: pointer; }
+        .tf-q { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface-2); color: var(--text-main); font: inherit; font-size: .88rem; }
+        .tf-list { overflow-y: auto; flex: 1; min-height: 60px; border: 1px solid var(--glass-border); border-radius: 8px; padding: 4px; }
+        .tf-row { display: flex; align-items: center; gap: 8px; padding: 6px 6px; font-size: .86rem; cursor: pointer; border-radius: 6px; }
+        .tf-row:hover { background: var(--surface-2); } .tf-row span { flex: 1; word-break: break-word; } .tf-row em { font-style: normal; color: var(--text-muted); font-size: .75rem; }
+        .tf-row input { width: 16px; height: 16px; accent-color: var(--teal); }
+        .tf-all { font-weight: 600; } .tf-empty { padding: 10px; color: var(--text-muted); font-size: .85rem; }
+        .tf-foot { display: flex; gap: 8px; align-items: center; }
+        .tf-foot button { padding: 7px 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-base); color: var(--text-main); font: inherit; font-size: .85rem; cursor: pointer; }
+        .tf-foot .tf-ok { background: var(--teal); color: #fff; border-color: var(--teal); font-weight: 600; }
+        .tf-foot .tf-clear-col { color: var(--red); }
 </style>
 </head>
 <body>
@@ -596,7 +619,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-g</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-h</div>
         </div>
     </div>
 
@@ -3587,5 +3610,102 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     };
 })();
 </script>
+<script>
+// ===== Table tools: search + Excel-style column filter on every table =====
+(function () {
+    const ST = new WeakMap();   // table -> { q, filters: { colIndex: Set(values) } }
+    const norm = t => String(t == null ? '' : t).replace(/\s*\n\s*/g, ' / ').replace(/\s+/g, ' ').trim();
+    const cellVal = td => { const v = norm(td ? td.innerText : ''); return v === '' || v === '-' ? '(Blanks)' : v; };
+    const skip = t => !t.tHead || !t.tBodies.length || t.closest('.chat-body, .msg') || t.closest('[style*="left:-"]') || t.dataset.tfSkip === '1';
+    const rowsOf = t => Array.from(t.tBodies[0].rows).filter(r => r.cells.length > 1 && !r.classList.contains('tot'));
+    const singleHead = t => t.tHead.rows.length === 1;
+    let pop = null;
+
+    function apply(t) {
+        const s = ST.get(t); if (!s) return; const rows = rowsOf(t); let shown = 0;
+        const q = s.q.toLowerCase();
+        rows.forEach(r => {
+            let ok = !q || norm(r.innerText).toLowerCase().includes(q);
+            if (ok) for (const k in s.filters) { const set = s.filters[k]; if (set && !set.has(cellVal(r.cells[k]))) { ok = false; break; } }
+            r.style.display = ok ? '' : 'none'; if (ok) shown++;
+        });
+        const nActive = Object.keys(s.filters).filter(k => s.filters[k]).length;
+        if (s.info) s.info.textContent = (q || nActive) ? `Showing ${shown} of ${rows.length}` : `${rows.length} rows`;
+        if (s.clear) s.clear.style.display = (q || nActive) ? '' : 'none';
+        if (singleHead(t)) Array.from(t.tHead.rows[0].cells).forEach((th, i) => { const b = th.querySelector('.tf-btn'); if (b) b.classList.toggle('on', !!s.filters[i]); });
+    }
+
+    function openPop(t, col, btn) {
+        closePop(); const s = ST.get(t);
+        // values from rows that pass every other filter (like Excel)
+        const others = Object.assign({}, s.filters); delete others[col];
+        const cnt = new Map();
+        rowsOf(t).forEach(r => { for (const k in others) { if (others[k] && !others[k].has(cellVal(r.cells[k]))) return; } const v = cellVal(r.cells[col]); cnt.set(v, (cnt.get(v) || 0) + 1); });
+        const vals = Array.from(cnt.keys()).sort((a, b) => { const na = parseFloat(a.replace(/,/g, '')), nb = parseFloat(b.replace(/,/g, '')); return (!isNaN(na) && !isNaN(nb) && /^[-\d.,\s]+$/.test(a) && /^[-\d.,\s]+$/.test(b)) ? na - nb : a.localeCompare(b, undefined, { numeric: true }); });
+        const cur = s.filters[col]; const sel = new Set(cur ? vals.filter(v => cur.has(v)) : vals);
+        const title = norm(t.tHead.rows[0].cells[col].innerText).replace(/\u25BE/g, '').trim();
+        pop = document.createElement('div'); pop.className = 'tf-pop';
+        pop.innerHTML = `<div class="tf-pop-h"><b>${title}</b><button type="button" class="tf-x" aria-label="Close">&times;</button></div>
+            <input type="text" class="tf-q" placeholder="Search values...">
+            <label class="tf-row tf-all"><input type="checkbox"> <span>(Select all)</span></label>
+            <div class="tf-list"></div>
+            <div class="tf-foot"><button type="button" class="tf-clear-col">Clear filter</button><span style="flex:1"></span><button type="button" class="tf-cancel">Cancel</button><button type="button" class="tf-ok">OK</button></div>`;
+        document.body.appendChild(pop);
+        const list = pop.querySelector('.tf-list'), all = pop.querySelector('.tf-all input'), qi = pop.querySelector('.tf-q');
+        const esc = v => v.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        const draw = () => { const q = qi.value.toLowerCase(); const vis = vals.filter(v => v.toLowerCase().includes(q));
+            list.innerHTML = vis.map(v => `<label class="tf-row"><input type="checkbox" data-v="${encodeURIComponent(v)}" ${sel.has(v) ? 'checked' : ''}> <span>${esc(v)}</span><em>${cnt.get(v)}</em></label>`).join('') || '<div class="tf-empty">No match</div>';
+            all.checked = vis.length > 0 && vis.every(v => sel.has(v)); all.indeterminate = !all.checked && vis.some(v => sel.has(v)); };
+        draw();
+        list.addEventListener('change', e => { const v = decodeURIComponent(e.target.dataset.v || ''); if (e.target.checked) sel.add(v); else sel.delete(v); draw(); });
+        all.addEventListener('change', () => { const q = qi.value.toLowerCase(); vals.filter(v => v.toLowerCase().includes(q)).forEach(v => all.checked ? sel.add(v) : sel.delete(v)); draw(); });
+        qi.addEventListener('input', () => {
+            // typing in the value search works like Excel: only the matching values stay ticked
+            const q = qi.value.toLowerCase(); sel.clear(); vals.filter(v => v.toLowerCase().includes(q)).forEach(v => sel.add(v)); draw(); });
+        pop.querySelector('.tf-ok').onclick = () => { s.filters[col] = sel.size === vals.length ? null : new Set(sel); closePop(); apply(t); };
+        pop.querySelector('.tf-clear-col').onclick = () => { s.filters[col] = null; closePop(); apply(t); };
+        pop.querySelector('.tf-cancel').onclick = closePop; pop.querySelector('.tf-x').onclick = closePop;
+        // position under the header button (bottom sheet on phones)
+        if (window.innerWidth > 600) { const r = btn.getBoundingClientRect(); const w = 280; pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px'; pop.style.top = Math.min(r.bottom + 4, window.innerHeight - 380) + 'px'; }
+        else pop.classList.add('sheet');
+        setTimeout(() => qi.focus({ preventScroll: true }), 50);
+    }
+    function closePop() { if (pop) { pop.remove(); pop = null; } }
+    document.addEventListener('mousedown', e => { if (pop && !pop.contains(e.target) && !e.target.closest('.tf-btn')) closePop(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
+
+    function addHeadButtons(t) {
+        if (!singleHead(t)) return;
+        Array.from(t.tHead.rows[0].cells).forEach((th, i) => {
+            if (th.querySelector('.tf-btn') || !norm(th.innerText) || /^actions?$/i.test(norm(th.innerText))) return;
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'tf-btn'; b.title = 'Filter'; b.innerHTML = '&#9662;';
+            b.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); openPop(t, i, b); });
+            th.appendChild(b);
+        });
+    }
+
+    function enhance(t) {
+        if (ST.has(t) || skip(t)) return;
+        const s = { q: '', filters: {} }; ST.set(t, s);
+        const wrap = t.closest('.table-container, .sbc-tablewrap') || t;
+        const bar = document.createElement('div'); bar.className = 'tf-bar';
+        bar.innerHTML = `<input type="search" class="tf-search" placeholder="Search conveyor / any value..."><button type="button" class="tf-clear">Clear filters</button><span class="tf-info"></span>`;
+        wrap.parentNode.insertBefore(bar, wrap);
+        // the section already has its own conveyor search box -> keep just one search
+        const sec = wrap.closest('.interactive-section'); if (sec && sec.querySelector('input.search-input')) bar.querySelector('.tf-search').style.display = 'none';
+        s.info = bar.querySelector('.tf-info'); s.clear = bar.querySelector('.tf-clear');
+        bar.querySelector('.tf-search').addEventListener('input', e => { s.q = e.target.value.trim(); apply(t); });
+        s.clear.onclick = () => { s.q = ''; s.filters = {}; bar.querySelector('.tf-search').value = ''; apply(t); };
+        addHeadButtons(t);
+        // re-apply when the page re-draws the rows
+        let tm = null; new MutationObserver(() => { clearTimeout(tm); tm = setTimeout(() => { addHeadButtons(t); apply(t); }, 60); }).observe(t, { childList: true, subtree: true });
+        apply(t);
+    }
+    function scan() { document.querySelectorAll('table').forEach(enhance); }
+    let sm = null; new MutationObserver(() => { clearTimeout(sm); sm = setTimeout(scan, 120); }).observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('DOMContentLoaded', scan); setTimeout(scan, 500);
+})();
+</script>
+
 </body>
 </html>
