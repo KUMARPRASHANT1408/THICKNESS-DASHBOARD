@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-o</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Oct-p</div>
         </div>
     </div>
 
@@ -3050,6 +3050,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     const DEPTS = [['RMHS', 45], ['RMPP', 36], ['DRI', 14], ['RMBB', 14.8], ['SP#1', 9.7], ['SP#2#3', 9.2], ['BF#1', 4.3], ['BF#2', 6.97], ['CO#1', 9.5], ['CO#2', 7], ['LCP', 3], ['SMS#2', 11.1]];
     const KM = {}; DEPTS.forEach(d => KM[d[0]] = d[1]);
     const FY_TARGET = { 27: 252, 26: 270, 25: 318 };
+    // belts NOT in the ABP that the field team decided to run till next FY (pushed by decision)
+    const MANUAL_PUSH = { 'J12C2': '20-Oct-2026', 'OFBBC1': '20-Oct-2026' };
     const FAB_TARGET = { 27: 40519.5 };   // fabric target FY'27 = Old ABP total (col U)
     const SB_TARGET = { 27: 2320.5 };     // steel cord + bucket allowance = 252 x 170 - fabric
     const M_TARGET_27 = [40, 30, 20, 20, 20, 20, 17, 17, 17, 15, 18, 18];
@@ -3118,6 +3120,26 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             S.ev = {}; dly.forEach(r => { const c = key(r['Conveyor']); if (!c) return; const L = S.ev[c] = S.ev[c] || [];
                 const fd = pdmy(r['Final Replacement Date']); if (fd && fd.getFullYear() > 2000) L.push({ type: 'R', date: fd, m: num(r['Cosnumption'] || r['Consumption']), joint: String(r['Type of joint'] || '').trim(), vendor: String(r['Vendor'] || '').trim() });
                 for (let i = 1; i <= 8; i++) { const d = pdmy(r['Piece Addition date' + i]); if (d && d.getFullYear() > 2000) L.push({ type: 'P', date: d, m: num(r['PA consumption' + i]), joint: String(r['Type of PA Joint' + i] || '').trim(), vendor: String(r['PA vendor' + i] || '').trim() }); } });
+            // month-wise graph = same total as the "SBC till date" card: the SBC sheet pivot misses some rows (new entries / piece additions whose
+            // date column holds an old replacement date). Per conveyor, the gap (main table - pivot) is put in the month of its latest Daily Report entry.
+            (function reconcileMonthly() {
+                const mainBy = {}, pivBy = {};
+                S.daily.forEach(x => { const k = x.fy + '|' + x.conv; mainBy[k] = (mainBy[k] || 0) + x.m; });
+                S.monthly.forEach(x => { const k = x.fy + '|' + x.conv; pivBy[k] = (pivBy[k] || 0) + x.m; });
+                // pivot has metres the main table does not -> scale those pivot rows down to the main table value
+                Object.keys(pivBy).forEach(k => { const mv = mainBy[k] || 0, pv = pivBy[k]; if (pv > mv + 0.01) S.monthly.forEach(x => { if (x.fy + '|' + x.conv === k) { x.m = pv ? x.m * mv / pv : 0; x.adj = 'scaled'; } }); });
+                S.monthly = S.monthly.filter(x => x.m > 0.01);
+                const fyMi = d => (d.getMonth() + 9) % 12;
+                Object.keys(mainBy).forEach(k => {
+                    let gap = mainBy[k] - (pivBy[k] || 0); if (gap <= 0.01) return;
+                    const fy = +k.split('|')[0], c = k.slice(k.indexOf('|') + 1);
+                    const src = S.daily.find(x => x.fy === fy && x.conv === c) || {};
+                    const evs = (S.ev[c] || []).filter(e => e.date && fyOf(e.date) === fy).sort((p, q) => q.date - p.date);
+                    const add = (d, m) => { const mi = fyMi(d); S.monthly.push({ fy, mi, date: new Date(d.getFullYear(), d.getMonth(), 1), dept: src.dept || '', conv: c, name: src.name || c, m, type: 'X', adj: 'daily' }); };
+                    evs.forEach(e => { if (gap <= 0.01 || !(e.m > 0)) return; const m = Math.min(gap, e.m); add(e.date, m); gap -= m; });
+                    if (gap > 0.01) { const r = S.daily.find(x => x.fy === fy && x.conv === c && x.date); const d = (evs[0] && evs[0].date) || (r && r.date) || new Date(); add(fyOf(d) === fy ? d : (fyOf(new Date()) === fy ? new Date() : new Date(2000 + fy, 2, 1)), gap); }
+                });
+            })();
             // ABP master = Old ABP (col U, consumption of 1 year) + New ABP add-on belts. All are planned.
             S.abp = abp.filter(r => key(r.Conveyor)).map(r => { const c = key(r.Conveyor); const t = S.thk[c] || {}; return { fy: String(r.FY || '').replace(/\D/g, '') * 1, dept: nd(r.Dept) || t.dept || '', conv: c, name: String(r.Conveyor).trim(), cat: t.cat || '', len: num(r.Length) || t.len || 0, grade: t.grade || '', type: 'Fabric', next: pdmy(r.CBM_in_ABP), plan: num(r.PlannedMtrs), cls: 'Planned', src: /new/i.test(r.Source || '') ? 'NEW' : 'OLD', force: /^\s*(yes|y|1)\s*$/i.test(r.Replace_This_FY || ''), reason: '', remarks: '' }; });
             S.abn = {}; abn.forEach(r => { const c = key(r['NO.']); if (!c || /close/i.test(r['Status'] || '')) return; (S.abn[c] = S.abn[c] || []).push({ date: parseDateCustom(r['Abnormality Date']), issue: String(r['Major Abnormality'] || '').trim(), rec: String(r['recommendation'] || '').trim() }); });
@@ -3213,7 +3235,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const proj = consX + pendFab + pendSteel, projPush = consX + pendMust + pendSteel;
         const pushActual = Math.max(0, proj - T * TOTAL_KM);   // push needed after counting unplanned consumption
         // ---- thickness: belts due this FY that are NOT in the ABP ----
-        const fresh = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (plSet.has(c) || repMap[c] || paMap[c] || isSteel(c) || isBucket(c) || /NOT\s*EXIST/.test(t.grade)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; fresh.push({ conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm, cat: t.cat, grade: t.grade, reason: thkReason(c) }); });
+        const fresh = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (plSet.has(c) || repMap[c] || paMap[c] || isSteel(c) || isBucket(c) || /NOT\s*EXIST/.test(t.grade)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; fresh.push({ conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm, cat: t.cat, grade: t.grade, reason: MANUAL_PUSH[c] ? 'MANUAL' : thkReason(c) }); });
         const fyEv = c => (S.ev[c] || []).filter(e => fyOf(e.date) === fy);
         const avoidT = fresh, due = fresh.map(x => x.conv);
         // ---- dept status table ----
@@ -3225,7 +3247,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const fcP = plPend.filter(a => !a.outOfPlan && !isSB2(a.conv) && (a.force || (() => { const n = nextOf(a); return !n || n <= fyEnd; })()));
         const fcU = fresh;
         const pushPl = fcP.filter(a => a.push && a.push !== 'CBM');
-        const pushUn = fcU.filter(x => x.reason !== 'OTHER' && x.reason !== 'NODATA' && x.next && x.next >= today0);
+        const pushUn = fcU.filter(x => x.reason === 'MANUAL' || x.reason !== 'OTHER' && x.reason !== 'NODATA' && x.next && x.next >= today0);
         // one set of year-end numbers used by the table, banner, KPIs and graphs
         const fcPm = sum(fcP, planM), fcUm = sum(fcU, x => x.len), pushPm = sum(pushPl, planM), pushUm = sum(pushUn, x => x.len);
         const byMarch = consBW + fcPm + fcUm + pendSteel, yearEnd = byMarch - pushPm - pushUm, gapEnd = yearEnd - T * TOTAL_KM;
@@ -3364,8 +3386,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     }
 
     // ---- 6 question graphs ----
-    const PR = [['CBM', 'Next CBM beyond 31-Mar (not due this FY)'], ['EDGE', 'Edge wear (skirt damage) - repair skirt'], ['WEAR', 'High wear rate - fix root cause'], ['LONG', 'Long B/C belt (>90 m) - piece addition'], ['JANMAR', 'Due Jan-Mar - can shift to next FY']];
-    const PR_RULE = { CBM: 'Latest thickness puts next CBM after 31-Mar', EDGE: 'Lowest edge reading is 1 mm or more below centre', WEAR: 'Current wear rate > 1.2 x planned wear rate', LONG: 'Category B/C and length > 90 m', JANMAR: 'Next CBM falls in Jan-Mar of this FY' };  // belts whose next CBM has already passed are never pushed
+    const PR = [['CBM', 'Next CBM beyond 31-Mar (not due this FY)'], ['EDGE', 'Edge wear (skirt damage) - repair skirt'], ['WEAR', 'High wear rate - fix root cause'], ['LONG', 'Long B/C belt (>90 m) - piece addition'], ['JANMAR', 'Due Jan-Mar - can shift to next FY'], ['MANUAL', 'Field decision - run till next FY']];
+    const PR_RULE = { CBM: 'Latest thickness puts next CBM after 31-Mar', EDGE: 'Lowest edge reading is 1 mm or more below centre', WEAR: 'Current wear rate > 1.2 x planned wear rate', LONG: 'Category B/C and length > 90 m', JANMAR: 'Next CBM falls in Jan-Mar of this FY', MANUAL: 'Belt not in the ABP; field team decided it can run till April (next FY) - decision date shown in the code list MANUAL_PUSH' };  // belts whose next CBM has already passed are never pushed
     const TR = [['EDGE', 'Edge wear (skirt damage) - repair skirt'], ['WEAR', 'High wear rate - fix root cause'], ['LONG', 'Long B/C belt (>90 m) - piece addition'], ['JANMAR', 'Due Jan-Mar - can shift to next FY'], ['OTHER', 'Other - review case by case']];
     const TR_RULE = { EDGE: 'Lowest edge reading is 1 mm or more below centre', WEAR: 'Current wear rate > 1.2 x planned wear rate', LONG: 'Category B/C and length > 90 m', JANMAR: 'Next CBM falls in Jan-Mar', OTHER: 'None of the above' };
     const CL = { green: '#10b981', amber: '#f59e0b', red: '#ef4444', darkred: '#b91c1c', blue: '#38bdf8', purple: '#a78bfa', grey: '#64748b', teal: '#14b8a6' };
