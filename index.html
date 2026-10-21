@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-c</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-d</div>
         </div>
     </div>
 
@@ -3057,6 +3057,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     // belts that are steel cord although the thickness sheet shows another grade (confirmed by the user)
     const STEEL_CORD_FIX = ['CCBHAC1'];
     // pushed belts brought back into this FY's forecast by decision (21-Oct-2026)
+    // fabric belts NOT in the ABP that the user wants replaced this FY (unplanned forecast, never pushed, no change to the plan)
+    const EXTRA_UNPLANNED = [{ c: 'SP1C3', m: 220 }];
     const NO_PUSH = ['SP3-7002', 'BC15(IRON)', 'PSB1-BC30', 'K7-BC37', 'Y4', 'J14C1'];
     const MANUAL_PUSH = { 'J12C2': '20-Oct-2026', 'OFBBC1': '20-Oct-2026' };
     const FAB_TARGET = { 27: 40519.5 };   // fabric target FY'27 = Old ABP total (col U)
@@ -3258,9 +3260,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const notEx = c => /NOT\s*EXIST/.test(grade(c));   // belts marked NOT EXISTING in the thickness sheet are never forecast
         const dueCbm = a => !notEx(a.conv) && (a.force || (() => { const n = nextOf(a); return !n || n <= fyEnd; })());
         const fcP = plPend.filter(a => !a.outOfPlan && !isSB2(a.conv) && dueCbm(a)).concat(sbFcP);
-        const fcU = fresh.concat(sbFcU);
+        const exU = EXTRA_UNPLANNED.map(x => { const c = key(x.c), t = S.thk[c] || {}; return { conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || '', len: x.m, next: t.nextCbm || null, cat: t.cat || '', grade: t.grade || '', reason: 'USER' }; }).filter(x => !fresh.some(f => f.conv === x.conv) && !repMap[x.conv] && !plSet.has(x.conv));
+        const fcU = fresh.concat(exU, sbFcU);
         const pushPl = fcP.filter(a => a.push && a.push !== 'CBM');
-        const pushUn = fcU.filter(x => x.reason !== 'SBFC' && (x.reason === 'MANUAL' || x.reason !== 'OTHER' && x.reason !== 'NODATA' && x.next && x.next >= today0));
+        const pushUn = fcU.filter(x => x.reason !== 'SBFC' && x.reason !== 'USER' && (x.reason === 'MANUAL' || x.reason !== 'OTHER' && x.reason !== 'NODATA' && x.next && x.next >= today0));
         // one set of year-end numbers used by the table, banner, KPIs and graphs
         const fcPm = sum(fcP, planM), fcUm = sum(fcU, x => x.len), pushPm = sum(pushPl, planM), pushUm = sum(pushUn, x => x.len);
         const byMarch = consBW + fcPm + fcUm + pendSteel, yearEnd = byMarch - pushPm - pushUm, gapEnd = yearEnd - T * TOTAL_KM;
@@ -3464,7 +3467,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     }
 
     // ---- 6 question graphs ----
-    const PR = [['CBM', 'Next CBM beyond 31-Mar (not due this FY)'], ['EDGE', 'Edge wear (skirt damage) - repair skirt'], ['WEAR', 'High wear rate - fix root cause'], ['LONG', 'Long B/C belt (>90 m) - piece addition'], ['JANMAR', 'Due Jan-Mar - can shift to next FY'], ['MANUAL', 'Field decision - run till next FY'], ['SBFC', 'Steel cord / bucket - expected by 31-Mar (given by user)']];
+    const PR = [['CBM', 'Next CBM beyond 31-Mar (not due this FY)'], ['EDGE', 'Edge wear (skirt damage) - repair skirt'], ['WEAR', 'High wear rate - fix root cause'], ['LONG', 'Long B/C belt (>90 m) - piece addition'], ['JANMAR', 'Due Jan-Mar - can shift to next FY'], ['MANUAL', 'Field decision - run till next FY'], ['SBFC', 'Steel cord / bucket - expected by 31-Mar (given by user)'], ['USER', 'Added by user - replace this FY (unplanned)']];
     const PR_RULE = { CBM: 'Latest thickness puts next CBM after 31-Mar', EDGE: 'Lowest edge reading is 1 mm or more below centre', WEAR: 'Current wear rate > 1.2 x planned wear rate', LONG: 'Category B/C and length > 90 m', JANMAR: 'Next CBM falls in Jan-Mar of this FY', MANUAL: 'Belt not in the ABP; field team decided it can run till April (next FY) - decision date shown in the code list MANUAL_PUSH' };  // belts whose next CBM has already passed are never pushed
     const TR = [['EDGE', 'Edge wear (skirt damage) - repair skirt'], ['WEAR', 'High wear rate - fix root cause'], ['LONG', 'Long B/C belt (>90 m) - piece addition'], ['JANMAR', 'Due Jan-Mar - can shift to next FY'], ['OTHER', 'Other - review case by case']];
     const TR_RULE = { EDGE: 'Lowest edge reading is 1 mm or more below centre', WEAR: 'Current wear rate > 1.2 x planned wear rate', LONG: 'Category B/C and length > 90 m', JANMAR: 'Next CBM falls in Jan-Mar', OTHER: 'None of the above' };
@@ -3702,7 +3705,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             M.C.planned.concat(M.C.sb).forEach(x => L1.push({ st: 'Consumed till date', cls: 'Planned', x, m: x.m, type: x.kind || '', note: (x.fixed === 'P' ? 'Planned list (ABP modification sheet)' : '') + (evTxt(x.conv, x.kind === 'Piece addition' ? 'P' : 'R') ? ' Dates: ' + evTxt(x.conv, x.kind === 'Piece addition' ? 'P' : 'R') : '') }));
             M.C.unplanned.forEach(x => L1.push({ st: 'Consumed till date', cls: 'Unplanned', x, m: x.m, type: x.kind || '', note: (x.fixed === 'U' ? 'Unplanned list (ABP modification sheet)' : 'Not in ABP') + (evTxt(x.conv, x.kind === 'Piece addition' ? 'P' : 'R') ? ' Dates: ' + evTxt(x.conv, x.kind === 'Piece addition' ? 'P' : 'R') : '') }));
             netP.forEach(a => L1.push({ st: 'Forecast till 31-Mar', cls: 'Planned', x: a, m: M.planM(a), type: a.src === 'SB' ? 'Given by user' : 'Full belt (ABP)', note: a.src === 'SB' ? 'Steel cord / bucket forecast given by user' : a.force ? 'Added to plan - replace this FY (belt condition)' : a.noPush ? 'Push cancelled by decision' : a.overdue ? 'CBM overdue' : '' }));
-            netU.forEach(a => L1.push({ st: 'Forecast till 31-Mar', cls: 'Unplanned', x: a, m: a.len, type: a.src === 'SB' ? 'Given by user' : 'Full belt (not in ABP)', note: a.src === 'SB' ? 'Steel cord / bucket forecast given by user' : (a.next && a.next < new Date() ? 'CBM overdue' : '') }));
+            netU.forEach(a => L1.push({ st: 'Forecast till 31-Mar', cls: 'Unplanned', x: a, m: a.len, type: a.src === 'SB' ? 'Given by user' : 'Full belt (not in ABP)', note: a.src === 'SB' ? 'Steel cord / bucket forecast given by user' : a.reason === 'USER' ? 'Added by user - replace this FY' : (a.next && a.next < new Date() ? 'CBM overdue' : '') }));
             L1.sort((p, q) => (p.st > q.st ? 1 : p.st < q.st ? -1 : 0) || (p.x.dept > q.x.dept ? 1 : p.x.dept < q.x.dept ? -1 : 0) || (p.x.conv > q.x.conv ? 1 : -1));
             const h1 = ['Status', 'Planned / Unplanned', 'Dept', 'Conveyor', 'Belt type', 'ABP source', 'Activity', 'Metres', 'SBC (m/km)', 'Remark'].concat(thkHead);
             const r1 = L1.map(e => [e.st, e.cls, e.x.dept, e.x.name || e.x.conv, kind(e.x.conv), src(e.x.conv), e.type, +(+e.m).toFixed(1), +((+e.m) / TOTAL_KM).toFixed(2), e.note.trim()].concat(thkCols(e.x.conv)));
