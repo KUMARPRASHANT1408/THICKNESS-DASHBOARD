@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-i</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-j</div>
         </div>
     </div>
 
@@ -3165,6 +3165,12 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     };
     window.closeSbcApp = function () { el('sbcScreen').style.display = 'none'; el('landingPage').style.display = 'flex'; };
     window.sbcSetMode = function (m) { S.mode = m; window.sbcRender(); };
+    // which SBC table is shown (1 as per CBM, 2 only planned, 3 after push) - the cost table follows it
+    S.tblMode = (() => { try { return +localStorage.getItem('sbc_tbl_mode') || 1; } catch (e) { return 1; } })();
+    const TBL_NAME = { 1: 'Table 1 - as per CBM (nothing pushed)', 2: 'Table 2 - only planned belts', 3: 'Table 3 - after push (target)' };
+    const netFor = (M, m) => m === 1 ? { P: M.cbmP, U: M.cbmU } : m === 2 ? { P: M.cbmP, U: [] } : { P: M.cbmP.filter(a => !M.pushPl.includes(a)), U: [] };
+    window.sbcSetTbl = function (m) { S.tblMode = m; try { localStorage.setItem('sbc_tbl_mode', String(m)); } catch (e) { }
+        const sc = el('sbcScreen'), y = sc ? sc.scrollTop : 0, wy = window.scrollY; window.sbcRender(); if (sc) sc.scrollTop = y; window.scrollTo(0, wy); };
 
     function stats(fy) {
         const rows = S.monthly.filter(x => x.fy === fy);
@@ -3331,6 +3337,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const fP0 = s(M.cbmP.filter(f), pm), fU = mode === 1 ? s(M.cbmU.filter(f), ln) : 0, pu = mode === 3 ? s(M.pushPl.filter(f), pm) : 0, fP = fP0 - pu;
                 const tP = b.tgt, tU = 0, proj = b.cP + b.cU + fP + fU;
                 return { tP, tU, cP: b.cP, cU: b.cU, balD: tP + tU - b.cP - b.cU, balP: tP - b.cP, balU: Math.max(0, tU - b.cU), pu, fP, fU, proj, diff: proj - tP - tU }; };
+            const tot3 = m => DEPTS.reduce((q, d) => q + t3(m, d[0]).proj, 0) + sbLeft;
             const mkTable = mode => {
                 const id = 'sbcT' + mode, cid = 'card-' + id;
                 const c = (x, cls, key) => `<td class="sbc-c ${cls || ''}${key ? ' sbc-click' : ''}"${key ? ` onclick="S_from('${cid}');sbcShow('${key}')"` : ''}><b>${x ? fmt(x) : '-'}</b><small>${x ? f1(x / TOTAL_KM) : '-'}</small></td>`;
@@ -3353,6 +3360,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const what = { 1: 'every ABP belt not yet replaced and every belt not in the ABP whose next CBM (thickness sheet) is on or before 31-Mar, plus the steel cord / bucket forecast given by the user (PC1 planned; J24C1 100 m, J65C2, J67C1, CCBHAC1 unplanned).', 2: 'every planned belt due by 31-Mar is replaced (incl. PC1); no further unplanned consumption is counted.', 3: 'as Table 2, but the planned belts in the Push column are run till next FY (reasons in the breakup table below).' }[mode];
                 S.csvHead[id] = ['Dept', 'Target planned m', 'Target planned SBC', 'Target unplanned m', 'Target unplanned SBC', 'Consumed planned m', 'Consumed planned SBC', 'Consumed unplanned m', 'Consumed unplanned SBC', 'Balance as on date m', 'Balance as on date SBC', 'Balance vs ABP planned m', 'Balance vs ABP planned SBC', 'Balance vs ABP unplanned m', 'Balance vs ABP unplanned SBC'].concat(mode === 3 ? ['Pushed planned m', 'Pushed planned SBC'] : [], ['Forecast planned m', 'Forecast planned SBC', 'Forecast unplanned m', 'Forecast unplanned SBC', 'Projected m', 'Projected SBC', 'Projected - target m', 'Projected - target SBC']);
                 return `<div class="glass-panel sbc-panel" id="${cid}"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES[id]}</h3><button class="sbc-chip sbc-png" onclick="sbcGenCsv('${id}')"><i class="fas fa-download"></i> CSV</button></div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px">${[1, 2, 3].map(m => `<button class="sbc-chip ${m === mode ? 'on' : ''}" onclick="sbcSetTbl(${m})">${m}. ${{ 1: 'As per CBM', 2: 'Only planned', 3: 'After push' }[m]} · <b>${f1(tot3(m) / TOTAL_KM)}</b></button>`).join('')}</div>
                 <div class="sbc-banner ${tot.diff > 0 ? 'red' : 'green'}" style="margin:0 0 8px"><i class="fas fa-flag-checkered"></i> Projected SBC <b>${f1(tot.proj / TOTAL_KM)}</b> (${fmt(tot.proj)} m) = consumed ${f1((tot.cP + tot.cU) / TOTAL_KM)} + forecast planned ${f1(tot.fP / TOTAL_KM)} + forecast unplanned ${f1(tot.fU / TOTAL_KM)}${mode === 3 ? ` (after pushing ${fmt(tot.pu)} m = ${f1(tot.pu / TOTAL_KM)} of planned belts)` : ''} vs target ${f1((tot.tP + tot.tU) / TOTAL_KM)} - <b>${fmt(Math.abs(tot.diff))} m (${f1(Math.abs(tot.diff) / TOTAL_KM)}) ${tot.diff > 0 ? 'over' : 'under'}</b>. Fabric ${f1(t3(mode, 'FAB').proj / TOTAL_KM)}, steel cord + bucket ${f1((tot.proj - t3(mode, 'FAB').proj) / TOTAL_KM)}.</div>
                 <div class="sbc-note" style="margin:0 0 8px">Each cell: <b>metres</b> on top, <b>SBC</b> below (metres &divide; ${TOTAL_KM} km). Tap a number to see its belts.</div>
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
@@ -3371,13 +3379,13 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 return `<div class="glass-panel sbc-panel" id="${cid}"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES.sbcBrk}</h3><button class="sbc-chip sbc-png" onclick="sbcGenCsv('sbcBrk')"><i class="fas fa-download"></i> CSV</button></div>
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead><tr><th>Dept</th>${BRK.map(r => `<th>${r[1]}</th>`).join('')}<th>Total</th></tr></thead><tbody>${tb}</tbody></table></div>
                 <div class="sbc-note">Reasons come from the latest thickness sheet: <b>high wear rate</b> = current wear rate &gt; 1.2 &times; planned wear rate; <b>long length</b> = category B / C and length &gt; 90 m (can run with a piece addition); <b>deferred</b> = next CBM in Jan-Mar; <b>skirt area</b> = lowest edge reading 1 mm or more below the centre; <b>others</b> = belts pushed by field decision. A belt is counted under one reason only (order: skirt, high wear, long, Jan-Mar). Belts whose CBM has already passed are pushed only by field decision.</div></div>`; };
-            h += mkTable(1) + mkTable(2) + mkTable(3) + mkBreak();
+            const TM = S.tblMode || 1; h += mkTable(TM) + (TM === 3 ? mkBreak() : '');
             // ---- Table 3: cost (Rs) - fabric belts by department on the 252 plan, steel cord / bucket on top (= first table, after push) ----
             // planned cost of steel cord / bucket = only J24C1 (planned piece) and PC1 (planned forecast); every other steel cord / bucket metre is unplanned
             const rate = c => (S.umc || {})[c] || 0;
             const miss = {}; const cs = (arr, mf) => arr.reduce((q, x) => { const r = rate(x.conv), m = +mf(x) || 0; if (!r && m) { const e = miss[x.conv] = miss[x.conv] || { conv: x.conv, name: x.name || x.conv, dept: x.dept, m: 0 }; e.m = Math.max(e.m, m); } return q + r * m; }, 0);
             const cm = x => x.m, fab = x => !M.isSB2(x.conv);
-            const netP = M.fcP.filter(a => !M.pushPl.includes(a)), netU = M.fcU.filter(a => !M.pushUn.includes(a));   // forecast after push
+            const CM = S.tblMode || 1, NF = netFor(M, CM), netP = NF.P, netU = NF.U;   // forecast of the table selected above
             const calc3 = dn => { const f = x => (!dn || x.dept === dn) && fab(x);
                 const pl = cs(M.pl.filter(f).filter(a => !a.outOfPlan), pm);
                 const cP = cs(M.C.planned.filter(f), cm), cU = cs(M.C.unplanned.filter(f).concat(M.C.sb.filter(f)), cm);
@@ -3385,7 +3393,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const mP = s(M.C.planned.filter(f)) + s(netP.filter(f), pm), mU = s(M.C.unplanned.filter(f)) + s(M.C.sb.filter(f)) + s(netU.filter(f), ln);
                 return { pl, cP, cU, bal: pl - cP, fP, fU, end: cP + cU + fP + fU, diff: cP + cU + fP + fU - pl, mt: mP + mU }; };
             const calcSB = fn => {   // same planned / unplanned split as the metre tables
-                const cons = M.sbAll.filter(fn), fc = M.sbFc.filter(fn).filter(x => !M.pushUn.includes(x));   // Table 3: only the planned forecast (PC1)
+                const cons = M.sbAll.filter(fn), fc = M.sbFc.filter(fn).filter(x => CM === 1 || x.cls === 'P');   // Table 2 / 3: only the planned forecast (PC1)
                 const cPa = M.sbPl.filter(fn), cUa = M.sbUn.filter(fn);
                 const fPa = fc.filter(x => x.cls === 'P'), fUa = fc.filter(x => x.cls !== 'P');
                 const cP = cs(cPa, cm), cU = cs(cUa, cm), fP = cs(fPa, ln), fU = cs(fUa, ln), pl = cP + fP;
@@ -3402,14 +3410,14 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             tb3 += row3('Steel cord', vS, 'STEEL') + row3('Bucket', vB, 'BUCKET');
             tb3 += row3('<b>TOTAL</b>', vt, 'ALL').replace('<tr>', '<tr class="tot">');
             S.umcMiss = Object.values(miss); const mm = S.umcMiss.reduce((q, x) => q + x.m, 0);
-            TITLES.sbcCost = `Department-wise belt cost (Rs) - FY'${fy}`;
+            TITLES.sbcCost = `Department-wise belt cost (Rs) - ${TBL_NAME[CM]} - FY'${fy}`;
             h += `<div class="glass-panel sbc-panel" id="card-sbcCost"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES.sbcCost}</h3><button class="sbc-chip sbc-png" onclick="sbcCostCsv()"><i class="fas fa-download"></i> CSV</button></div>
                 <div class="sbc-banner ${vt.diff > 0 ? 'red' : 'green'}" style="margin:0 0 8px"><i class="fas fa-indian-rupee-sign"></i> Fabric: planned <b>Rs ${rs(fabT.pl)} lakh</b>, year-end <b>Rs ${rs(fabT.end)} lakh</b> (SBC ${f1(fabT.mt / TOTAL_KM)}). Steel cord + bucket add <b>Rs ${rs(vS.end + vB.end)} lakh</b> (SBC ${f1((vS.mt + vB.mt) / TOTAL_KM)}). Total year-end <b>Rs ${rs(vt.end)} lakh (${(vt.end / 1e7).toFixed(2)} Cr)</b> at SBC ${f1(vt.mt / TOTAL_KM)} vs planned Rs ${rs(vt.pl)} lakh - ${vt.diff > 0 ? `<b>Rs ${rs(vt.diff)} lakh over</b>` : `Rs ${rs(-vt.diff)} lakh under`}.</div>
                 <div class="sbc-note" style="margin:0 0 8px">Each cell: <b>Rs lakh</b> on top, <b>Rs crore</b> below. Cost = metres &times; UMC rate per metre. Tap a number to see its belts with metres, rate and cost.${S.umcMiss.length ? ` <span class="sbc-r sbc-click" onclick="S_from('card-sbcCost');sbcShow('umc:miss:ALL')"><b>${S.umcMiss.length} belts (${fmt(mm)} m) have no UMC rate and are not costed - tap to see them.</b></span>` : ''}</div>
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
-                <tr><th rowspan="2">Dept</th><th rowspan="2">Planned cost<br><small>ABP belts in plan</small></th><th colspan="2">Consumption cost</th><th rowspan="2">Balance cost to spend<br><small>planned &minus; consumed planned</small></th><th colspan="2">Forecast cost to spend<br><small>till 31-Mar, after push</small></th><th rowspan="2">Year-end cost<br><small>consumed + forecast</small></th><th rowspan="2">Difference<br><small>year-end &minus; planned</small></th><th rowspan="2">Year-end metres<br><small>m / SBC</small></th></tr>
+                <tr><th rowspan="2">Dept</th><th rowspan="2">Planned cost<br><small>ABP belts in plan</small></th><th colspan="2">Consumption cost</th><th rowspan="2">Balance cost to spend<br><small>planned &minus; consumed planned</small></th><th colspan="2">Forecast cost to spend<br><small>till 31-Mar, ${TBL_NAME[CM].split(' - ')[1]}</small></th><th rowspan="2">Year-end cost<br><small>consumed + forecast</small></th><th rowspan="2">Difference<br><small>year-end &minus; planned</small></th><th rowspan="2">Year-end metres<br><small>m / SBC</small></th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb3}</tbody></table></div>
-                <div class="sbc-note">Department rows are <b>fabric belts only</b> (the 252 plan): <b>Planned cost</b> = ABP belts kept in the plan &times; rate. <b>Consumption cost</b> = metres used this FY &times; rate, planned / unplanned as in the first table. <b>Balance cost to spend</b> = planned cost &minus; consumed planned cost. <b>Forecast cost to spend</b> = belts still due by 31-Mar after the push (same as the first table). <b>Difference</b> = year-end &minus; planned (red = over). <b>Steel cord / bucket</b> are shown below the fabric total. Planned = bucket belts already replaced this FY, the planned lists of the ABP modification sheet (steel cord J24C1 900 m) and PC1 (forecast). Unplanned = the unplanned list of the ABP modification sheet, any other piece addition, and no future unplanned belt is counted (Table 3). Planned cost = consumed planned + forecast planned. Belts without a UMC rate count as Rs 0.</div></div>`;
+                <div class="sbc-note">Department rows are <b>fabric belts only</b> (the 252 plan): <b>Planned cost</b> = ABP belts kept in the plan &times; rate. <b>Consumption cost</b> = metres used this FY &times; rate, planned / unplanned as in the SBC table. <b>Balance cost to spend</b> = planned cost &minus; consumed planned cost. <b>Forecast cost to spend</b> = belts still due by 31-Mar in the table selected above (${TBL_NAME[CM]}). <b>Difference</b> = year-end &minus; planned (red = over). <b>Steel cord / bucket</b> are shown below the fabric total. Planned = bucket belts already replaced this FY, the planned lists of the ABP modification sheet (steel cord J24C1 900 m) and PC1 (forecast). Unplanned = the unplanned list of the ABP modification sheet, any other piece addition, and ${CM === 1 ? 'the future steel cord J24C1 100 m, J65C2, J67C1, CCBHAC1' : 'no future unplanned belt (Table 2 / 3)'}. Planned cost = consumed planned + forecast planned. Belts without a UMC rate count as Rs 0.</div></div>`;
         }
         // ---- question graphs ----
         if (M.abp.length) {
@@ -3615,7 +3623,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         } else if (kind === 'cost') {
             const col = arg, dn = arg2, rate = c => (S.umc || {})[c] || 0, isSB = x => M.isSB2(x.conv);
             const f = x => dn === 'ALL' ? true : dn === 'FAB' ? !isSB(x) : dn === 'STEEL' ? M.isSteel(x.conv) : dn === 'BUCKET' ? M.isBucket(x.conv) : (x.dept === dn && !isSB(x));
-            const netP = M.fcP.filter(a => !M.pushPl.includes(a)), netU = M.fcU.filter(a => !M.pushUn.includes(a));
+            const NF = netFor(M, S.tblMode || 1), netP = NF.P, netU = NF.U;
             const sb = dn === 'STEEL' ? S.costSB.steel : dn === 'BUCKET' ? S.costSB.bucket : null;
             let arr, mf, nm;
             if (sb) { const sbAll = col === 'cp' ? sb.cPa : col === 'cu' ? sb.cUa : col === 'fp' ? sb.fPa : col === 'fu' ? sb.fUa : sb.cPa.concat(sb.fPa); arr = sbAll; mf = x => x.m != null ? x.m : x.len; }
@@ -3765,7 +3773,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 ['Forecast unplanned', 'Belts not in the ABP whose CBM is due by 31-Mar - counted only in Table 1.'],
                 ['Pushed belts', 'Planned belts pushed in Table 3 with the reason and the actual thickness / wear numbers behind it.'],
                 ['Removed from plan', 'ABP belts taken out of the plan (CBM after 31-Mar) so the plan equals the 252 target.'],
-                ['Decisions', 'Every manual decision used in the calculation (who / what / effect).'], ['Cost', 'Cost of Table 3 (metres x UMC rate), department summary and belt-wise.'], [],
+                ['Decisions', 'Every manual decision used in the calculation (who / what / effect).'], ['Cost', 'Cost of the table selected on the dashboard when this file was made (metres x UMC rate), department summary and belt-wise.'], [],
                 ['DEFINITIONS'], ['SBC', 'Specific Belt Consumption = metres of belt used / 170 km of conveyor.'],
                 ['Target planned', 'ABP belts kept in the plan (Old ABP column U + New ABP add-on), department-wise. Total plan + allowance = 252.'],
                 ['Target unplanned', 'Steel cord + bucket allowance (2,320.5 m).'],
@@ -3836,7 +3844,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const L1 = [];
             M.C.planned.concat(M.C.sb).forEach(x => L1.push({ st: 'Consumed', cls: 'Planned', x, m: x.m }));
             M.C.unplanned.forEach(x => L1.push({ st: 'Consumed', cls: 'Unplanned', x, m: x.m }));
-            M.cbmP.filter(a => !M.pushPl.includes(a)).forEach(a => L1.push({ st: 'Forecast (Table 3)', cls: 'Planned', x: a, m: pm(a) }));
+            const CMx = S.tblMode || 1, NFx = netFor(M, CMx); NFx.P.forEach(a => L1.push({ st: 'Forecast', cls: 'Planned', x: a, m: pm(a) })); NFx.U.forEach(a => L1.push({ st: 'Forecast', cls: 'Unplanned', x: a, m: a.len }));
             const grp = e => M.isSB2(e.x.conv) ? kind(e.x.conv) : e.x.dept;
             const sumBy = {}; L1.forEach(e => { const g = grp(e); const o = sumBy[g] = sumBy[g] || { cp: 0, cu: 0, fp: 0, m: 0 }; const c = rate(e.x.conv) * e.m; o.m += +e.m; if (e.st === 'Consumed') o[e.cls === 'Planned' ? 'cp' : 'cu'] += c; else o.fp += c; });
             const order = DEPTS.map(d => d[0]).concat(['Steel cord', 'Bucket']).filter(g => sumBy[g]);
@@ -3844,7 +3852,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const TS = sumRows.reduce((q, r) => q.map((v, i) => i === 0 ? v : v + r[i]), ['TOTAL', 0, 0, 0, 0, 0, 0]).map((v, i) => i ? n2(v) : v);
             const tc = L1.reduce((q, e) => q + rate(e.x.conv) * e.m, 0);
             const cbR = L1.map(e => [e.st, e.cls, e.x.dept, e.x.name || e.x.conv, kind(e.x.conv), n1(e.m), rate(e.x.conv) || 'no rate', Math.round(rate(e.x.conv) * e.m), lk(rate(e.x.conv) * e.m)]);
-            add([[`Cost of Table 3 (projected SBC ${f1(v3.proj / KM)}): Rs ${f1(tc / 1e5)} lakh = Rs ${(tc / 1e7).toFixed(2)} Cr. Cost = metres x UMC rate per metre.`], [], ['Dept / type', 'Metres', 'SBC', 'Consumed planned (Rs lakh)', 'Consumed unplanned (Rs lakh)', 'Forecast to spend (Rs lakh)', 'Total (Rs lakh)']].concat(sumRows, [TS, [], ['Status', 'Planned / Unplanned', 'Dept', 'Conveyor', 'Belt type', 'Metres', 'UMC rate (Rs/m)', 'Cost (Rs)', 'Cost (Rs lakh)']], cbR, [[], ['TOTAL', '', '', '', '', n1(L1.reduce((q, e) => q + +e.m, 0)), '', Math.round(tc), lk(tc)]]), 'Cost', [20, 14, 9, 16, 11, 10, 14, 12, 12]);
+            add([[`Cost of ${TBL_NAME[CMx]} (projected SBC ${f1(tot(CMx).proj / KM)}) - the table selected on the dashboard: Rs ${f1(tc / 1e5)} lakh = Rs ${(tc / 1e7).toFixed(2)} Cr. Cost = metres x UMC rate per metre.`], [], ['Dept / type', 'Metres', 'SBC', 'Consumed planned (Rs lakh)', 'Consumed unplanned (Rs lakh)', 'Forecast to spend (Rs lakh)', 'Total (Rs lakh)']].concat(sumRows, [TS, [], ['Status', 'Planned / Unplanned', 'Dept', 'Conveyor', 'Belt type', 'Metres', 'UMC rate (Rs/m)', 'Cost (Rs)', 'Cost (Rs lakh)']], cbR, [[], ['TOTAL', '', '', '', '', n1(L1.reduce((q, e) => q + +e.m, 0)), '', Math.round(tc), lk(tc)]]), 'Cost', [20, 14, 9, 16, 11, 10, 14, 12, 12]);
             XLSX.writeFile(wb, `SBC_Backup_FY${fy}.xlsx`);
         }).catch(e => { console.error(e); const m = el('sbcLoading'); if (m) { m.style.display = 'block'; m.innerText = 'Excel file could not be created (library not loaded). Check the internet connection and try again.'; } });
     };
