@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-e</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-f</div>
         </div>
     </div>
 
@@ -3305,8 +3305,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (M.abp.length) {
             const pm = M.planM, ln = a => a.len, s = M.sum;
             const sp = (x, cls, key) => `<td class="sbc-c ${cls || ''}${key ? ' sbc-click' : ''}"${key ? ` onclick="S_from('card-sbcTbl');sbcShow('${key}')"` : ''}><b>${x ? fmt(x) : '-'}</b><small>${x ? f1(x / TOTAL_KM) : '-'}</small></td>`;
-            const calc = dn => { const f = x => !dn || x.dept === dn;   // steel cord / bucket stay in their department
-                const ft = x => !dn || x.dept === dn;   // target: every ABP belt kept in the plan (total = 252)
+            const inD = (x, dn) => !dn || (dn === 'FAB' ? !M.isSB2(x.conv) : x.dept === dn);   // 'FAB' = all fabric belts (no steel cord / bucket)
+            const calc = dn => { const f = x => inD(x, dn);   // steel cord / bucket stay in their department
+                const ft = x => inD(x, dn);   // target: every ABP belt kept in the plan (total = 252)
                 const tgt = s(M.pl.filter(ft), pm) - s(M.removed.filter(ft), pm);
                 const cP = s(M.C.planned.filter(f)) + s(M.C.sb.filter(f)), cU = s(M.C.unplanned.filter(f));
                 const fP = s(M.fcP.filter(f), pm), fU = s(M.fcU.filter(f), ln);
@@ -3318,6 +3319,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const a = [st ? 'steel cord ' + fmt(st) : '', bk ? 'bucket ' + fmt(bk) : ''].filter(Boolean).join(' · '), b = [fs ? 'steel cord ' + fmt(fs) : '', fb ? 'bucket ' + fmt(fb) : ''].filter(Boolean).join(' · ');
                 return a || b ? `<br><small class="sbc-incl">${a ? 'consumed incl. ' + a + ' m' : ''}${a && b ? '<br>' : ''}${b ? 'forecast incl. ' + b + ' m' : ''}</small>` : ''; };
             let tb = ''; DEPTS.forEach(d => { tb += row(d[0] + sbNote(d[0]), calc(d[0]), d[0]); });
+            const vF = calc('FAB'); tb += row('<b>Fabric total</b><br><small class="sbc-incl">all departments, without steel cord / bucket</small>', vF, 'FAB').replace('<tr>', '<tr class="tot">');
             const sbP = s(M.sbPl), sbUn = s(M.sbUn), sbLeft = M.pendSteel;
             // allowance row: its consumption is already inside the department rows, so only the target and the unused allowance are added to the totals
             const sbv = { tgt: M.sbTarget, cP: 0, cU: 0, bal: M.sbTarget, fP: sbLeft, fU: 0, pP: 0, pU: 0, mar: sbLeft, end: sbLeft };
@@ -3338,12 +3340,13 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb}</tbody></table></div>
                 <div class="sbc-note"><b>Target</b> = ABP belts kept in the plan (Old ABP + New ABP add-on, minus belts taken out so the plant total is ${fmt(M.T * TOTAL_KM)} m = ${M.T}) + steel cord / bucket allowance. <b>Consumed</b> = replacement + piece addition this FY; planned = belt is in the ABP (or in the planned lists of the ABP modification sheet), unplanned = everything else. <b>Balance</b> = target &minus; consumed planned (unplanned shown separately). <b>Forecast planned</b> = ABP belts not yet replaced whose next CBM (thickness sheet) is on or before 31-Mar. <b>Forecast unplanned</b> = belts not in the ABP whose next CBM is on or before 31-Mar. Steel cord / bucket forecast (given by the user): bucket PC1 144 m planned; steel cord J24C1 100 m, J65C2 300 m, J67C1 914 m, CCBHAC1 114 m unplanned - these are never pushed. <b>Push</b> = forecast belts that can be avoided this FY - latest thickness shows edge / skirt wear, high wear rate, a long B/C belt, or next CBM in Jan-Mar (belts already past their CBM are never pushed). <b>By March</b> = consumed + forecast. <b>Year-end</b> = by March &minus; push. Steel cord and bucket belts are counted in their department (shown under the dept name); the allowance row adds only its target and the part not yet used.</div></div>`;
             // ---- Table 2: as per CBM - every belt due by 31-Mar, nothing pushed ----
-            const calc2 = dn => { const f = x => !dn || x.dept === dn; const b = calc(dn);
+            const calc2 = dn => { const f = x => inD(x, dn); const b = calc(dn);
                 const fP = s(M.cbmP.filter(f), pm), fU = s(M.cbmU.filter(f), ln); const mar = b.cP + b.cU + fP + fU;
                 return { tgt: b.tgt, cP: b.cP, cU: b.cU, bal: b.bal, fP, fU, mar, over: mar - b.tgt }; };
             const row2 = (name, v, dk) => `<tr><td>${name}</td>${sp2(v.tgt, '', dk ? 'tbl:plan:' + dk : null)}${sp2(v.cP, '', dk ? 'tbl:cp:' + dk : null)}${sp2(v.cU, '', dk ? 'tbl:cu:' + dk : null)}${sp2(v.bal, v.bal < 0 ? 'sbc-r' : 'sbc-g')}${sp2(v.fP, '', dk ? 'cbm:fcp:' + dk : null)}${sp2(v.fU, '', dk ? 'cbm:fcu:' + dk : null)}${sp2(v.mar, v.mar > v.tgt ? 'sbc-r' : 'sbc-g')}${sp2(v.over, v.over > 0 ? 'sbc-r' : 'sbc-g')}</tr>`;
             const sp2 = (x, cls, key) => `<td class="sbc-c ${cls || ''}${key ? ' sbc-click' : ''}"${key ? ` onclick="S_from('card-sbcCbm');sbcShow('${key}')"` : ''}><b>${x ? fmt(x) : '-'}</b><small>${x ? f1(x / TOTAL_KM) : '-'}</small></td>`;
             let tb2 = ''; DEPTS.forEach(d => { tb2 += row2(d[0] + sbNote(d[0]), calc2(d[0]), d[0]); });
+            const vF2 = calc2('FAB'); tb2 += row2('<b>Fabric total</b><br><small class="sbc-incl">all departments, without steel cord / bucket</small>', vF2, 'FAB').replace('<tr>', '<tr class="tot">');
             const v2 = calc2(null);
             if (M.sbTarget) { const used = sbP + sbUn; v2.tgt += M.sbTarget; v2.bal += M.sbTarget; v2.fP += sbLeft; v2.mar += sbLeft; v2.over = v2.mar - v2.tgt;
                 tb2 += `<tr><td><b>Steel cord + Bucket allowance</b><br><small class="sbc-incl">used ${fmt(used)} m + forecast ${fmt(M.sbFcM)} m (in dept rows) · ${used + M.sbFcM > M.sbTarget ? '<span class="sbc-r">' + fmt(used + M.sbFcM - M.sbTarget) + ' m over</span>' : fmt(M.sbTarget - used - M.sbFcM) + ' m left'}</small></td>${sp2(M.sbTarget)}<td class="sbc-c" colspan="2" style="text-align:center"><small>in dept rows</small></td>${sp2(M.sbTarget)}${sp2(sbLeft)}${sp2(0)}${sp2(sbLeft)}${sp2(0)}</tr>`;
@@ -3620,11 +3623,11 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const fn = arg2 === 'Bucket' ? (x => M.isBucket(x.conv)) : (x => M.isSteel(x.conv)); const arr = M.sbFc.filter(x => x.cls === arg && fn(x));
             o = arg === 'P' ? Object.assign(abpRows(arr, doneTxt), { t: `${arg2} - forecast planned (given by user)` }) : Object.assign(freshRows(arr), { t: `${arg2} - forecast unplanned (given by user)` });
         } else if (kind === 'cbm') {
-            const dn = arg2, f = x => dn === 'ALL' ? true : x.dept === dn, dl = dn === 'ALL' ? 'All departments' : dn;
+            const dn = arg2, f = x => dn === 'ALL' ? true : dn === 'FAB' ? !M.isSB2(x.conv) : x.dept === dn, dl = dn === 'ALL' ? 'All departments' : dn === 'FAB' ? 'Fabric (all departments)' : dn;
             if (arg === 'fcp') o = Object.assign(abpRows(M.cbmP.filter(f), doneTxt), { t: `${dl} - As per CBM: planned belts due by 31-Mar (nothing pushed)` });
             else o = Object.assign(freshRows(M.cbmU.filter(f)), { t: `${dl} - As per CBM: unplanned belts due by 31-Mar (nothing pushed)` });
         } else if (kind === 'tbl') {
-            const col = arg, dn = arg2; const f = x => dn === 'ALL' ? true : dn === 'SB' ? M.isSB2(x.conv) : x.dept === dn; const dl = dn === 'ALL' ? 'All departments' : dn === 'SB' ? 'Steel cord + Bucket' : dn;
+            const col = arg, dn = arg2; const f = x => dn === 'ALL' ? true : dn === 'SB' ? M.isSB2(x.conv) : dn === 'FAB' ? !M.isSB2(x.conv) : x.dept === dn; const dl = dn === 'ALL' ? 'All departments' : dn === 'SB' ? 'Steel cord + Bucket' : dn === 'FAB' ? 'Fabric (all departments)' : dn;
             if (col === 'plan') o = Object.assign(abpRows(M.pl.filter(f).filter(a => !a.outOfPlan), doneTxt), { t: `${dl} - Target: ABP belts kept in the plan` });
             else if (col === 'fcp') o = Object.assign(abpRows(M.fcP.filter(f), doneTxt), { t: `${dl} - Forecast planned: ABP belts due by 31-Mar (latest thickness)` });
             else if (col === 'fcu') o = Object.assign(freshRows(M.fcU.filter(f)), { t: `${dl} - Forecast unplanned: belts not in ABP due by 31-Mar (latest thickness)` });
