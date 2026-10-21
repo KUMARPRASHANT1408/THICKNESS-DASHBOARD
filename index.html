@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-f</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-g</div>
         </div>
     </div>
 
@@ -3059,6 +3059,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     // pushed belts brought back into this FY's forecast by decision (21-Oct-2026)
     // fabric belts NOT in the ABP that the user wants replaced this FY (unplanned forecast, never pushed, no change to the plan)
     const EXTRA_UNPLANNED = [{ c: 'SP1C3', m: 220 }];
+    // steel cord / bucket forecast belts that stay in the year-end after push (the others are shown as pushed)
+    const SB_KEEP = ['J24C1', 'PC1'];
     const NO_PUSH = ['SP3-7002', 'BC15(IRON)', 'PSB1-BC30', 'K7-BC37', 'Y4', 'J14C1'];
     const MANUAL_PUSH = { 'J12C2': '20-Oct-2026', 'OFBBC1': '20-Oct-2026' };
     const FAB_TARGET = { 27: 40519.5 };   // fabric target FY'27 = Old ABP total (col U)
@@ -3262,15 +3264,18 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const fcP = plPend.filter(a => !a.outOfPlan && !isSB2(a.conv) && dueCbm(a)).concat(sbFcP);
         const exU = EXTRA_UNPLANNED.map(x => { const c = key(x.c), t = S.thk[c] || {}; return { conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || '', len: x.m, next: t.nextCbm || null, cat: t.cat || '', grade: t.grade || '', reason: 'USER' }; }).filter(x => !fresh.some(f => f.conv === x.conv) && !repMap[x.conv] && !plSet.has(x.conv));
         const fcU = fresh.concat(exU, sbFcU);
+        // steel cord / bucket future belts that are pushed (only J24C1 100 m and PC1 stay in the forecast) - 21-Oct-2026
+        const pushSB = sbFcU.filter(x => !SB_KEEP.includes(x.conv));
         const pushPl = fcP.filter(a => a.push && a.push !== 'CBM');
         const pushUn = fcU.filter(x => x.reason !== 'SBFC' && x.reason !== 'USER' && (x.reason === 'MANUAL' || x.reason !== 'OTHER' && x.reason !== 'NODATA' && x.next && x.next >= today0));
+        pushSB.forEach(x => { x.reason = 'SBPUSH'; pushUn.push(x); });
         // one set of year-end numbers used by the table, banner, KPIs and graphs
         const fcPm = sum(fcP, planM), fcUm = sum(fcU, x => x.len), pushPm = sum(pushPl, planM), pushUm = sum(pushUn, x => x.len);
         const byMarch = consBW + fcPm + fcUm + pendSteel, yearEnd = byMarch - pushPm - pushUm, gapEnd = yearEnd - T * TOTAL_KM;
         // ---- "as per CBM" view: every belt whose next CBM is on or before 31-Mar, nothing pushed, nothing taken out of the plan ----
         const cbmP = plPend.filter(a => !isSB2(a.conv) && dueCbm(a)).concat(sbFcP), cbmU = fcU;
         const cbmPm = sum(cbmP, planM), cbmUm = sum(cbmU, x => x.len), cbmMar = consBW + cbmPm + cbmUm + pendSteel;
-        return { cbmP, cbmU, cbmPm, cbmUm, cbmMar, sbFc, sbFcM, isSB2, sbAll, sbPl, sbUn, consBW, fcPm, fcUm, pushPm, pushUm, byMarch, yearEnd, gapEnd, fcP, fcU, pushPl, pushUn, CUT, preRep, nextOf, leftP, maintP, leftU, maintU, fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, mustP, pushP, avRep, avStill,
+        return { pushSB, cbmP, cbmU, cbmPm, cbmUm, cbmMar, sbFc, sbFcM, isSB2, sbAll, sbPl, sbUn, consBW, fcPm, fcUm, pushPm, pushUm, byMarch, yearEnd, gapEnd, fcP, fcU, pushPl, pushUn, CUT, preRep, nextOf, leftP, maintP, leftU, maintU, fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, mustP, pushP, avRep, avStill,
             steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, pendMust, pushM, pendSteel, pendBucket, steelUsed, bucketUsed, proj, projPush, fresh, planM, sum, abpBy, isSteel, isBucket,
             removed, keptNotDue, dropAll, activeP, abpTotal, removedM, sbTarget, fabTarget, planTotal, pushNeeded, pushActual, consX, thkReason };
     }
@@ -3318,27 +3323,31 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const fs = s(M.sbFc.filter(r => r.dept === dn && M.isSteel(r.conv)), r => r.len), fb = s(M.sbFc.filter(r => r.dept === dn && M.isBucket(r.conv)), r => r.len);
                 const a = [st ? 'steel cord ' + fmt(st) : '', bk ? 'bucket ' + fmt(bk) : ''].filter(Boolean).join(' · '), b = [fs ? 'steel cord ' + fmt(fs) : '', fb ? 'bucket ' + fmt(fb) : ''].filter(Boolean).join(' · ');
                 return a || b ? `<br><small class="sbc-incl">${a ? 'consumed incl. ' + a + ' m' : ''}${a && b ? '<br>' : ''}${b ? 'forecast incl. ' + b + ' m' : ''}</small>` : ''; };
-            let tb = ''; DEPTS.forEach(d => { tb += row(d[0] + sbNote(d[0]), calc(d[0]), d[0]); });
-            const vF = calc('FAB'); tb += row('<b>Fabric total</b><br><small class="sbc-incl">all departments, without steel cord / bucket</small>', vF, 'FAB').replace('<tr>', '<tr class="tot">');
+            const calcB = (dn, B) => { const v = calc(dn); if (B) { const add = s(M.pushSB.filter(x => inD(x, dn)), ln); v.pU -= add; v.end += add; } return v; };
             const sbP = s(M.sbPl), sbUn = s(M.sbUn), sbLeft = M.pendSteel;
+            const mkT1 = B => {
+            let tb = ''; DEPTS.forEach(d => { tb += row(d[0] + sbNote(d[0]), calcB(d[0], B), d[0]); });
+            const vF = calcB('FAB', B); tb += row('<b>Fabric total</b><br><small class="sbc-incl">all departments, without steel cord / bucket</small>', vF, 'FAB').replace('<tr>', '<tr class="tot">');
             // allowance row: its consumption is already inside the department rows, so only the target and the unused allowance are added to the totals
             const sbv = { tgt: M.sbTarget, cP: 0, cU: 0, bal: M.sbTarget, fP: sbLeft, fU: 0, pP: 0, pU: 0, mar: sbLeft, end: sbLeft };
             if (M.sbTarget) {
                 const used = sbP + sbUn;
                 tb += `<tr><td><b>Steel cord + Bucket allowance</b><br><small class="sbc-incl">used ${fmt(used)} m + forecast ${fmt(M.sbFcM)} m (in dept rows) · ${used + M.sbFcM > M.sbTarget ? '<span class="sbc-r">' + fmt(used + M.sbFcM - M.sbTarget) + ' m over</span>' : fmt(M.sbTarget - used - M.sbFcM) + ' m left'}</small></td>${sp(M.sbTarget)}<td class="sbc-c" colspan="2" style="text-align:center"><small>in dept rows</small></td>${sp(M.sbTarget)}${sp(sbLeft)}${sp(0)}${sp(0)}${sp(0)}${sp(sbLeft)}${sp(sbLeft)}</tr>`;
                 // breakdown rows (consumption only - the allowance is one combined figure)
-                const sub = (nm, fn, key) => { const p = s(M.sbPl.filter(fn)), u = s(M.sbUn.filter(fn)), fp = s(M.sbFc.filter(x => x.cls === 'P' && fn(x)), ln), fu = s(M.sbFc.filter(x => x.cls === 'U' && fn(x)), ln); return `<tr class="sbc-sub"><td>&nbsp;&nbsp;&nbsp;↳ ${nm} <small>(in dept rows)</small></td>${sp(0)}${sp(p, '', p ? key : null)}${sp(u, '', u ? key : null)}${sp(0)}${sp(fp, '', fp ? 'sbfc:P:' + nm : null)}${sp(fu, '', fu ? 'sbfc:U:' + nm : null)}${sp(0)}${sp(0)}${sp(p + u + fp + fu)}${sp(p + u + fp + fu)}</tr>`; };
+                const sub = (nm, fn, key) => { const pu = B ? 0 : s(M.pushSB.filter(fn), ln), p = s(M.sbPl.filter(fn)), u = s(M.sbUn.filter(fn)), fp = s(M.sbFc.filter(x => x.cls === 'P' && fn(x)), ln), fu = s(M.sbFc.filter(x => x.cls === 'U' && fn(x)), ln); return `<tr class="sbc-sub"><td>&nbsp;&nbsp;&nbsp;↳ ${nm} <small>(in dept rows)</small></td>${sp(0)}${sp(p, '', p ? key : null)}${sp(u, '', u ? key : null)}${sp(0)}${sp(fp, '', fp ? 'sbfc:P:' + nm : null)}${sp(fu, '', fu ? 'sbfc:U:' + nm : null)}${sp(0)}${sp(pu)}${sp(p + u + fp + fu)}${sp(p + u + fp + fu - pu)}</tr>`; };
                 tb += sub('Steel cord', r => M.isSteel(r.conv), 'sb:steel') + sub('Bucket', r => M.isBucket(r.conv), 'sb:bucket');
             }
-            const v = calc(null); Object.keys(v).forEach(k => v[k] += sbv[k]);
+            const v = calcB(null, B); Object.keys(v).forEach(k => v[k] += sbv[k]);
             tb += row('<b>TOTAL</b>', v, 'ALL').replace('<tr>', '<tr class="tot">');
-            TITLES.sbcTbl = `Department-wise SBC - target, consumed, forecast & push - FY'${fy}`;
-            h += `<div class="glass-panel sbc-panel" id="card-sbcTbl"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES.sbcTbl}</h3><button class="sbc-chip sbc-png" onclick="sbcTblCsv()"><i class="fas fa-download"></i> CSV</button></div>
-                <div class="sbc-note" style="margin:0 0 8px">Each cell: <b>metres</b> on top, <b>SBC</b> below (metres &divide; ${TOTAL_KM} km). Tap a number to see its belts. Overall by March (consumed + forecast) = <b class="${v.mar > v.tgt ? 'sbc-r' : 'sbc-g'}">${fmt(v.mar)} m (${f1(v.mar / TOTAL_KM)})</b>; after push = <b class="${v.end > v.tgt ? 'sbc-r' : 'sbc-g'}">${fmt(v.end)} m (${f1(v.end / TOTAL_KM)})</b>; target ${fmt(v.tgt)} m (${f1(v.tgt / TOTAL_KM)}).</div>
+            const TK = B ? 'sbcTblB' : 'sbcTbl'; TITLES[TK] = B ? `Department-wise SBC - after push, steel cord / bucket added back - FY'${fy}` : `Department-wise SBC - target, consumed, forecast & push - FY'${fy}`;
+            return `<div class="glass-panel sbc-panel" id="card-${TK}"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES[TK]}</h3><button class="sbc-chip sbc-png" onclick="sbcTblCsv('${TK}')"><i class="fas fa-download"></i> CSV</button></div>
+                <div class="sbc-note" style="margin:0 0 8px">${B ? 'Same as the table above, but the future steel cord / bucket belts that are pushed there (J65C2, J67C1, CCBHAC1) are counted again in the year-end. ' : 'Steel cord / bucket forecast: only J24C1 (100 m) and PC1 stay in the year-end; J65C2, J67C1 and CCBHAC1 are shown as pushed. '}Each cell: <b>metres</b> on top, <b>SBC</b> below (metres &divide; ${TOTAL_KM} km). Tap a number to see its belts. Overall by March (consumed + forecast) = <b class="${v.mar > v.tgt ? 'sbc-r' : 'sbc-g'}">${fmt(v.mar)} m (${f1(v.mar / TOTAL_KM)})</b>; after push = <b class="${v.end > v.tgt ? 'sbc-r' : 'sbc-g'}">${fmt(v.end)} m (${f1(v.end / TOTAL_KM)})</b>; target ${fmt(v.tgt)} m (${f1(v.tgt / TOTAL_KM)}).</div>
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
                 <tr><th rowspan="2">Dept</th><th rowspan="2">Target</th><th colspan="2">Consumed</th><th rowspan="2">Balance<br><small>target &minus; consumed planned</small></th><th colspan="2">Forecast till 31-Mar<br><small>(latest thickness)</small></th><th colspan="2">Push<br><small>(can be avoided)</small></th><th rowspan="2">By March<br><small>consumed + forecast</small></th><th rowspan="2">Year-end<br><small>after push</small></th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb}</tbody></table></div>
                 <div class="sbc-note"><b>Target</b> = ABP belts kept in the plan (Old ABP + New ABP add-on, minus belts taken out so the plant total is ${fmt(M.T * TOTAL_KM)} m = ${M.T}) + steel cord / bucket allowance. <b>Consumed</b> = replacement + piece addition this FY; planned = belt is in the ABP (or in the planned lists of the ABP modification sheet), unplanned = everything else. <b>Balance</b> = target &minus; consumed planned (unplanned shown separately). <b>Forecast planned</b> = ABP belts not yet replaced whose next CBM (thickness sheet) is on or before 31-Mar. <b>Forecast unplanned</b> = belts not in the ABP whose next CBM is on or before 31-Mar. Steel cord / bucket forecast (given by the user): bucket PC1 144 m planned; steel cord J24C1 100 m, J65C2 300 m, J67C1 914 m, CCBHAC1 114 m unplanned - these are never pushed. <b>Push</b> = forecast belts that can be avoided this FY - latest thickness shows edge / skirt wear, high wear rate, a long B/C belt, or next CBM in Jan-Mar (belts already past their CBM are never pushed). <b>By March</b> = consumed + forecast. <b>Year-end</b> = by March &minus; push. Steel cord and bucket belts are counted in their department (shown under the dept name); the allowance row adds only its target and the part not yet used.</div></div>`;
+            };
+            h += mkT1(false) + mkT1(true);
             // ---- Table 2: as per CBM - every belt due by 31-Mar, nothing pushed ----
             const calc2 = dn => { const f = x => inD(x, dn); const b = calc(dn);
                 const fP = s(M.cbmP.filter(f), pm), fU = s(M.cbmU.filter(f), ln); const mar = b.cP + b.cU + fP + fU;
@@ -3374,7 +3383,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const mP = s(M.C.planned.filter(f)) + s(netP.filter(f), pm), mU = s(M.C.unplanned.filter(f)) + s(M.C.sb.filter(f)) + s(netU.filter(f), ln);
                 return { pl, cP, cU, bal: pl - cP, fP, fU, end: cP + cU + fP + fU, diff: cP + cU + fP + fU - pl, mt: mP + mU }; };
             const calcSB = fn => {   // same planned / unplanned split as the metre tables
-                const cons = M.sbAll.filter(fn), fc = M.sbFc.filter(fn);
+                const cons = M.sbAll.filter(fn), fc = M.sbFc.filter(fn).filter(x => !M.pushSB.includes(x));   // after push: only J24C1 100 m and PC1
                 const cPa = M.sbPl.filter(fn), cUa = M.sbUn.filter(fn);
                 const fPa = fc.filter(x => x.cls === 'P'), fUa = fc.filter(x => x.cls !== 'P');
                 const cP = cs(cPa, cm), cU = cs(cUa, cm), fP = cs(fPa, ln), fU = cs(fUa, ln), pl = cP + fP;
@@ -3398,7 +3407,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
                 <tr><th rowspan="2">Dept</th><th rowspan="2">Planned cost<br><small>ABP belts in plan</small></th><th colspan="2">Consumption cost</th><th rowspan="2">Balance cost to spend<br><small>planned &minus; consumed planned</small></th><th colspan="2">Forecast cost to spend<br><small>till 31-Mar, after push</small></th><th rowspan="2">Year-end cost<br><small>consumed + forecast</small></th><th rowspan="2">Difference<br><small>year-end &minus; planned</small></th><th rowspan="2">Year-end metres<br><small>m / SBC</small></th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb3}</tbody></table></div>
-                <div class="sbc-note">Department rows are <b>fabric belts only</b> (the 252 plan): <b>Planned cost</b> = ABP belts kept in the plan &times; rate. <b>Consumption cost</b> = metres used this FY &times; rate, planned / unplanned as in the first table. <b>Balance cost to spend</b> = planned cost &minus; consumed planned cost. <b>Forecast cost to spend</b> = belts still due by 31-Mar after the push (same as the first table). <b>Difference</b> = year-end &minus; planned (red = over). <b>Steel cord / bucket</b> are shown below the fabric total. Planned = bucket belts already replaced this FY, the planned lists of the ABP modification sheet (steel cord J24C1 900 m) and PC1 (forecast). Unplanned = the unplanned list of the ABP modification sheet, any other piece addition, and the future steel cord J24C1 100 m, J65C2, J67C1, CCBHAC1. Planned cost = consumed planned + forecast planned. Belts without a UMC rate count as Rs 0.</div></div>`;
+                <div class="sbc-note">Department rows are <b>fabric belts only</b> (the 252 plan): <b>Planned cost</b> = ABP belts kept in the plan &times; rate. <b>Consumption cost</b> = metres used this FY &times; rate, planned / unplanned as in the first table. <b>Balance cost to spend</b> = planned cost &minus; consumed planned cost. <b>Forecast cost to spend</b> = belts still due by 31-Mar after the push (same as the first table). <b>Difference</b> = year-end &minus; planned (red = over). <b>Steel cord / bucket</b> are shown below the fabric total. Planned = bucket belts already replaced this FY, the planned lists of the ABP modification sheet (steel cord J24C1 900 m) and PC1 (forecast). Unplanned = the unplanned list of the ABP modification sheet, any other piece addition, and the future steel cord J24C1 100 m (J65C2, J67C1 and CCBHAC1 are pushed, as in the first table). Planned cost = consumed planned + forecast planned. Belts without a UMC rate count as Rs 0.</div></div>`;
         }
         // ---- question graphs ----
         if (M.abp.length) {
@@ -3470,8 +3479,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     }
 
     // ---- 6 question graphs ----
-    const PR = [['CBM', 'Next CBM beyond 31-Mar (not due this FY)'], ['EDGE', 'Edge wear (skirt damage) - repair skirt'], ['WEAR', 'High wear rate - fix root cause'], ['LONG', 'Long B/C belt (>90 m) - piece addition'], ['JANMAR', 'Due Jan-Mar - can shift to next FY'], ['MANUAL', 'Field decision - run till next FY'], ['SBFC', 'Steel cord / bucket - expected by 31-Mar (given by user)'], ['USER', 'Added by user - replace this FY (unplanned)']];
-    const PR_RULE = { CBM: 'Latest thickness puts next CBM after 31-Mar', EDGE: 'Lowest edge reading is 1 mm or more below centre', WEAR: 'Current wear rate > 1.2 x planned wear rate', LONG: 'Category B/C and length > 90 m', JANMAR: 'Next CBM falls in Jan-Mar of this FY', MANUAL: 'Belt not in the ABP; field team decided it can run till April (next FY) - decision date shown in the code list MANUAL_PUSH' };  // belts whose next CBM has already passed are never pushed
+    const PR = [['CBM', 'Next CBM beyond 31-Mar (not due this FY)'], ['EDGE', 'Edge wear (skirt damage) - repair skirt'], ['WEAR', 'High wear rate - fix root cause'], ['LONG', 'Long B/C belt (>90 m) - piece addition'], ['JANMAR', 'Due Jan-Mar - can shift to next FY'], ['MANUAL', 'Field decision - run till next FY'], ['SBFC', 'Steel cord / bucket - expected by 31-Mar (given by user)'], ['USER', 'Added by user - replace this FY (unplanned)'], ['SBPUSH', 'Steel cord / bucket - kept out of the year-end (shown in the table with steel cord / bucket added back)']];
+    const PR_RULE = { CBM: 'Latest thickness puts next CBM after 31-Mar', EDGE: 'Lowest edge reading is 1 mm or more below centre', WEAR: 'Current wear rate > 1.2 x planned wear rate', LONG: 'Category B/C and length > 90 m', JANMAR: 'Next CBM falls in Jan-Mar of this FY', SBPUSH: 'Steel cord / bucket forecast other than J24C1 (100 m) and PC1 - decision 21-Oct-2026', MANUAL: 'Belt not in the ABP; field team decided it can run till April (next FY) - decision date shown in the code list MANUAL_PUSH' };  // belts whose next CBM has already passed are never pushed
     const TR = [['EDGE', 'Edge wear (skirt damage) - repair skirt'], ['WEAR', 'High wear rate - fix root cause'], ['LONG', 'Long B/C belt (>90 m) - piece addition'], ['JANMAR', 'Due Jan-Mar - can shift to next FY'], ['OTHER', 'Other - review case by case']];
     const TR_RULE = { EDGE: 'Lowest edge reading is 1 mm or more below centre', WEAR: 'Current wear rate > 1.2 x planned wear rate', LONG: 'Category B/C and length > 90 m', JANMAR: 'Next CBM falls in Jan-Mar', OTHER: 'None of the above' };
     const CL = { green: '#10b981', amber: '#f59e0b', red: '#ef4444', darkred: '#b91c1c', blue: '#38bdf8', purple: '#a78bfa', grey: '#64748b', teal: '#14b8a6' };
@@ -3680,10 +3689,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (!quiet) setTimeout(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
     };
     window.S_from = function (id) { S.from = id; };
-    window.sbcTblCsv = function () { const t = document.querySelector('#card-sbcTbl table'); if (!t) return;
+    window.sbcTblCsv = function (tk) { tk = tk || 'sbcTbl'; const t = document.querySelector('#card-' + tk + ' table'); if (!t) return;
         const head = ['Dept', 'Target m', 'Target SBC', 'Consumed planned m', 'Consumed planned SBC', 'Consumed unplanned m', 'Consumed unplanned SBC', 'Balance m', 'Balance SBC', 'Forecast planned m', 'Forecast planned SBC', 'Forecast unplanned m', 'Forecast unplanned SBC', 'Push planned m', 'Push planned SBC', 'Push unplanned m', 'Push unplanned SBC', 'By March m', 'By March SBC', 'Year-end m', 'Year-end SBC'];
         const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b && td.classList.contains('sbc-c')) { const x = b.innerText.replace(/,/g, ''); r.push(x === '-' ? '' : x); r.push(sm && sm.innerText !== '-' ? sm.innerText : ''); } else { r.push(td.innerText.replace(/\s*\n\s*/g, ' - ')); for (let k = 1; k < (td.colSpan || 1) * (td.classList.contains('sbc-c') ? 2 : 1); k++) r.push(''); } }); rows.push(r); });
-        csvDownload(rows, `SBC_Dept_Table_FY${fyNow()}.csv`); };
+        csvDownload(rows, `SBC_Dept_Table${tk === 'sbcTblB' ? '_SB_added_back' : ''}_FY${fyNow()}.csv`); };
     window.sbcCbmCsv = function () { const t = document.querySelector('#card-sbcCbm table'); if (!t) return;
         const head = ['Dept', 'Target m', 'Target SBC', 'Consumed planned m', 'Consumed planned SBC', 'Consumed unplanned m', 'Consumed unplanned SBC', 'Balance m', 'Balance SBC', 'Forecast planned (CBM) m', 'Forecast planned (CBM) SBC', 'Forecast unplanned (CBM) m', 'Forecast unplanned (CBM) SBC', 'By March m', 'By March SBC', 'Over target m', 'Over target SBC'];
         const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b && td.classList.contains('sbc-c')) { const x = b.innerText.replace(/,/g, ''); r.push(x === '-' ? '' : x); r.push(sm && sm.innerText !== '-' ? sm.innerText : ''); } else { r.push(td.innerText.replace(/\s*\n\s*/g, ' - ')); for (let k = 1; k < (td.colSpan || 1) * (td.classList.contains('sbc-c') ? 2 : 1); k++) r.push(''); } }); rows.push(r); });
