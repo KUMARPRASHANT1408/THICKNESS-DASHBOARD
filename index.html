@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-a</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-b</div>
         </div>
     </div>
 
@@ -3195,7 +3195,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 if (pP > 0.01) C.planned.push(Object.assign({}, r, { m: pP, fixed: 'P', src: abpBy[r.conv] ? abpBy[r.conv].src : 'OLD' }));
                 if (pU > 0.01) C.unplanned.push(Object.assign({}, r, { m: pU, fixed: 'U' }));
                 if (m <= 0.01) return; r = Object.assign({}, r, { m }); }
-            if (plSet.has(r.conv)) { r.src = abpBy[r.conv].src; C.planned.push(r); } else if (isSteel(r.conv) || isBucket(r.conv)) C.sb.push(r); else C.unplanned.push(r); };
+            if (plSet.has(r.conv)) { r.src = abpBy[r.conv].src; C.planned.push(r); } else if (isBucket(r.conv) && r.kind === 'Replacement') C.sb.push(r); else C.unplanned.push(r); };   // rule 21-Oct: bucket replacements are planned; other steel cord / bucket metres are unplanned unless the ABP modification sheet says planned
         Object.keys(repMap).forEach(c => { const r = one(repMap, c); r.kind = 'Replacement'; route(r); });
         Object.keys(paMap).forEach(c => { const r = one(paMap, c); r.kind = 'Piece addition'; route(r); });
         const known = sum(C.planned) + sum(C.unplanned) + sum(C.sb);
@@ -3364,10 +3364,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const fP = cs(netP.filter(f), pm), fU = cs(netU.filter(f), ln);
                 const mP = s(M.C.planned.filter(f)) + s(netP.filter(f), pm), mU = s(M.C.unplanned.filter(f)) + s(M.C.sb.filter(f)) + s(netU.filter(f), ln);
                 return { pl, cP, cU, bal: pl - cP, fP, fU, end: cP + cU + fP + fU, diff: cP + cU + fP + fU - pl, mt: mP + mU }; };
-            const calcSB = fn => { const isPl = x => x.conv === 'J24C1' || x.conv === 'PC1';
+            const calcSB = fn => {   // same planned / unplanned split as the metre tables
                 const cons = M.sbAll.filter(fn), fc = M.sbFc.filter(fn);
-                const cPa = cons.filter(x => isPl(x) && M.sbPl.includes(x)), cUa = cons.filter(x => !cPa.includes(x));
-                const fPa = fc.filter(x => isPl(x) && x.cls === 'P'), fUa = fc.filter(x => !fPa.includes(x));
+                const cPa = M.sbPl.filter(fn), cUa = M.sbUn.filter(fn);
+                const fPa = fc.filter(x => x.cls === 'P'), fUa = fc.filter(x => x.cls !== 'P');
                 const cP = cs(cPa, cm), cU = cs(cUa, cm), fP = cs(fPa, ln), fU = cs(fUa, ln), pl = cP + fP;
                 return { pl, cP, cU, bal: pl - cP, fP, fU, end: cP + cU + fP + fU, diff: cP + cU + fP + fU - pl, mt: s(cons) + s(fc, ln), cPa, cUa, fPa, fUa }; };
             const L = v => v / 1e5, rs = v => v ? (Math.abs(L(v)) >= 100 ? fmt(Math.round(L(v))) : f1(L(v))) : '-';
@@ -3379,7 +3379,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const fabT = Object.assign({}, vt);
             tb3 += row3('<b>Fabric total</b>', fabT, 'FAB').replace('<tr>', '<tr class="tot">');
             const vS = calcSB(x => M.isSteel(x.conv)), vB = calcSB(x => M.isBucket(x.conv)); addT(vS); addT(vB); S.costSB = { steel: vS, bucket: vB };
-            tb3 += row3('Steel cord<br><small class="sbc-incl">planned = J24C1 only</small>', vS, 'STEEL') + row3('Bucket<br><small class="sbc-incl">planned = PC1 only</small>', vB, 'BUCKET');
+            tb3 += row3('Steel cord', vS, 'STEEL') + row3('Bucket', vB, 'BUCKET');
             tb3 += row3('<b>TOTAL</b>', vt, 'ALL').replace('<tr>', '<tr class="tot">');
             S.umcMiss = Object.values(miss); const mm = S.umcMiss.reduce((q, x) => q + x.m, 0);
             TITLES.sbcCost = `Department-wise belt cost (Rs) - FY'${fy}`;
@@ -3389,7 +3389,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
                 <tr><th rowspan="2">Dept</th><th rowspan="2">Planned cost<br><small>ABP belts in plan</small></th><th colspan="2">Consumption cost</th><th rowspan="2">Balance cost to spend<br><small>planned &minus; consumed planned</small></th><th colspan="2">Forecast cost to spend<br><small>till 31-Mar, after push</small></th><th rowspan="2">Year-end cost<br><small>consumed + forecast</small></th><th rowspan="2">Difference<br><small>year-end &minus; planned</small></th><th rowspan="2">Year-end metres<br><small>m / SBC</small></th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb3}</tbody></table></div>
-                <div class="sbc-note">Department rows are <b>fabric belts only</b> (the 252 plan): <b>Planned cost</b> = ABP belts kept in the plan &times; rate. <b>Consumption cost</b> = metres used this FY &times; rate, planned / unplanned as in the first table. <b>Balance cost to spend</b> = planned cost &minus; consumed planned cost. <b>Forecast cost to spend</b> = belts still due by 31-Mar after the push (same as the first table). <b>Difference</b> = year-end &minus; planned (red = over). <b>Steel cord / bucket</b> are shown below the fabric total: planned cost is only J24C1 (steel cord) and PC1 (bucket); every other steel cord / bucket metre is unplanned. Belts without a UMC rate count as Rs 0.</div></div>`;
+                <div class="sbc-note">Department rows are <b>fabric belts only</b> (the 252 plan): <b>Planned cost</b> = ABP belts kept in the plan &times; rate. <b>Consumption cost</b> = metres used this FY &times; rate, planned / unplanned as in the first table. <b>Balance cost to spend</b> = planned cost &minus; consumed planned cost. <b>Forecast cost to spend</b> = belts still due by 31-Mar after the push (same as the first table). <b>Difference</b> = year-end &minus; planned (red = over). <b>Steel cord / bucket</b> are shown below the fabric total. Planned = bucket belts already replaced this FY, the planned lists of the ABP modification sheet (steel cord J24C1 900 m) and PC1 (forecast). Unplanned = the unplanned list of the ABP modification sheet, any other piece addition, and the future steel cord J24C1 100 m, J65C2, J67C1, CCBHAC1. Planned cost = consumed planned + forecast planned. Belts without a UMC rate count as Rs 0.</div></div>`;
         }
         // ---- question graphs ----
         if (M.abp.length) {
