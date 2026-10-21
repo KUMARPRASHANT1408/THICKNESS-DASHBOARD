@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-k</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-l</div>
         </div>
     </div>
 
@@ -977,8 +977,7 @@
             <button class="btn-slate" onclick="closeSbcApp()"><i class="fas fa-arrow-left"></i> Home</button>
             <h2><i class="fas fa-chart-line" style="color:#f59e0b"></i> SBC - Specific Belt Consumption</h2>
             <select id="sbcFy" class="sbc-sel" onchange="sbcRender()"></select>
-            <button class="btn-slate" onclick="sbcExportCsv()"><i class="fas fa-file-csv"></i> Export Report (CSV)</button>
-            <button class="btn-slate" onclick="sbcExcel()"><i class="fas fa-file-excel"></i> Excel backup</button>
+            <button class="btn-slate" onclick="sbcExcel()"><i class="fas fa-file-excel"></i> Export Excel (5 sheets)</button>
             <button class="btn-slate" onclick="sbcExport()"><i class="fas fa-file-pdf"></i> PDF</button>
             <select id="sbcDeptExp" class="sbc-sel" onchange="sbcExportDept(this.value); this.value='';"><option value="">Dept report PDF...</option></select>
         </div>
@@ -3713,9 +3712,15 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         csvDownload(rows, `SBC_Dept_Table_as_per_CBM_FY${fyNow()}.csv`); };
 
     // ---- Excel: 3 sheets - belts making up the year-end SBC (after push), pushed belts, cost of sheet 1 ----
-    function loadXlsx() { return window.XLSX ? Promise.resolve() : new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = ok; sc.onerror = bad; document.head.appendChild(sc); }); }
+    function loadXlsx() {
+        if (window.XLSX) return Promise.resolve();
+        const urls = ['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js', 'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'];
+        const one = u => new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = u; sc.onload = () => window.XLSX ? ok() : bad(); sc.onerror = bad; document.head.appendChild(sc); });
+        return urls.reduce((p, u) => p.catch(() => one(u)), Promise.reject());
+    }
     window.sbcExcel = function () {
         if (!S.loaded) return;
+        const msg = el('sbcLoading'); if (msg) { msg.style.display = 'block'; msg.innerText = 'Preparing Excel file (5 sheets)...'; }
         loadXlsx().then(() => {
             const fy = fyNow(), M = model(fy), s = M.sum, KM = TOTAL_KM, dz = d => d ? dstr(d) : '', rate = c => (S.umc || {})[c] || 0;
             const n1 = v => +(+v || 0).toFixed(1), n2 = v => +(+v || 0).toFixed(2), sbc = m => n2((+m || 0) / KM), lk = v => +((+v || 0) / 1e5).toFixed(2);
@@ -3823,7 +3828,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             sv.push(['SBC(Mtr/Km)'].concat(bv.map(sbc), [sbc(s(M.pushPl, pm))])); sv.push(['Length(mtr)'].concat(bv.map(n1), [n1(s(M.pushPl, pm))]));
             sv.push([], ['Fabric / steel cord / bucket split of the projected SBC'], ['', 'Table 1', 'Table 2', 'Table 3'], ['Fabric'].concat([1, 2, 3].map(m => sbc(fab(m)))), ['Steel cord + bucket'].concat([1, 2, 3].map(m => sbc(tot(m).proj - fab(m)))), ['TOTAL'].concat([1, 2, 3].map(m => sbc(tot(m).proj))));
             const wsS = XLSX.utils.aoa_to_sheet(sv); wsS['!merges'] = merges; wsS['!cols'] = [14, 12, 12, 12, 12, 14, 12, 12, 14, 12, 16].map(x => ({ wch: x })); XLSX.utils.book_append_sheet(wb, wsS, 'Summary');
-            XLSX.writeFile(wb, `SBC_Backup_FY${fy}.xlsx`);
+            XLSX.writeFile(wb, `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`); if (msg) { msg.innerText = ''; msg.style.display = 'none'; }
         }).catch(e => { console.error(e); const m = el('sbcLoading'); if (m) { m.style.display = 'block'; m.innerText = 'Excel file could not be created (library not loaded). Check the internet connection and try again.'; } });
     };
     window.sbcGenCsv = function (id) { const t = document.querySelector('#card-' + id + ' table'); if (!t) return;
