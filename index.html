@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 21-Oct-l</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 22-Oct-a</div>
         </div>
     </div>
 
@@ -977,7 +977,7 @@
             <button class="btn-slate" onclick="closeSbcApp()"><i class="fas fa-arrow-left"></i> Home</button>
             <h2><i class="fas fa-chart-line" style="color:#f59e0b"></i> SBC - Specific Belt Consumption</h2>
             <select id="sbcFy" class="sbc-sel" onchange="sbcRender()"></select>
-            <button class="btn-slate" onclick="sbcExcel()"><i class="fas fa-file-excel"></i> Export Excel (5 sheets)</button>
+            <button class="btn-slate" onclick="sbcExcel()"><i class="fas fa-file-excel"></i> Export Excel (7 sheets)</button>
             <button class="btn-slate" onclick="sbcExport()"><i class="fas fa-file-pdf"></i> PDF</button>
             <select id="sbcDeptExp" class="sbc-sel" onchange="sbcExportDept(this.value); this.value='';"><option value="">Dept report PDF...</option></select>
         </div>
@@ -3720,7 +3720,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     }
     window.sbcExcel = function () {
         if (!S.loaded) return;
-        const msg = el('sbcLoading'); if (msg) { msg.style.display = 'block'; msg.innerText = 'Preparing Excel file (5 sheets)...'; }
+        const msg = el('sbcLoading'); if (msg) { msg.style.display = 'block'; msg.innerText = 'Preparing Excel file (7 sheets)...'; }
         loadXlsx().then(() => {
             const fy = fyNow(), M = model(fy), s = M.sum, KM = TOTAL_KM, dz = d => d ? dstr(d) : '', rate = c => (S.umc || {})[c] || 0;
             const n1 = v => +(+v || 0).toFixed(1), n2 = v => +(+v || 0).toFixed(2), sbc = m => n2((+m || 0) / KM), lk = v => +((+v || 0) / 1e5).toFixed(2);
@@ -3790,6 +3790,39 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const LF = listSheet('Fabric belts', c => !M.isSB2(c), `FY'${fy} - FABRIC belts: already consumed and to be replaced by 31-Mar, with the reason and the status in each table`);
             const LS = listSheet('Steel cord', c => M.isSteel(c), `FY'${fy} - STEEL CORD belts: already consumed and to be consumed by 31-Mar`);
             const LB = listSheet('Bucket', c => M.isBucket(c), `FY'${fy} - BUCKET belts: already consumed and to be consumed by 31-Mar`);
+            // ---------- Backup of the two steps: Table 1 -> Table 2 (unplanned not counted) and Table 2 -> Table 3 (planned push) ----------
+            const bridge = () => { const a = tot(1).proj, b = tot(2).proj, c = tot(3).proj, u = s(M.cbmU, ln), p = s(M.pushPl, pm);
+                return [['STEP', 'Metres', 'SBC'], ['Table 1 - every belt due as per CBM (nothing pushed)', n1(a), sbc(a)], ['  minus unplanned forecast (belts not in the ABP) - see sheet "Unplanned 56.2"', n1(-u), sbc(-u)], ['= Table 2 - only planned belts', n1(b), sbc(b)], ['  minus planned belts pushed to next FY - see sheet "Push 23"', n1(-p), sbc(-p)], ['= Table 3 - after push', n1(c), sbc(c)], ['Target', M.T * KM, M.T]]; };
+            // unplanned forecast: why each belt is due, why it is not counted in Table 2 / 3, and what must be done so it is really avoided
+            const UCAT = { EDGE: ['Skirt area damage', 'Repair skirt / sealing, run with the belt'], WEAR: ['High wear rate', 'Fix the root cause (chute, scraper, loading) to slow the wear'], LONG: ['Long B / C belt', 'Piece addition instead of full replacement'], JANMAR: ['Due Jan-Mar', 'Shift the replacement to April (next FY)'], MANUAL: ['Field decision', 'Field team decided it can run till April'], OTHER: ['Normal wear (CBM due)', 'Close monitoring; replace only if it fails inspection'], NODATA: ['No thickness data', 'Take thickness reading'], SBFC: ['Steel cord / bucket (given by user)', 'Planned for this FY by user input but not in the ABP'], USER: ['Added by user', 'Added by user - not in the ABP'], SBPUSH: ['Steel cord (given by user)', 'Not in the ABP'] };
+            const uWhy = a => { const r = a.reason || 'OTHER', t = T(a.conv); if (['EDGE', 'WEAR', 'LONG', 'JANMAR', 'MANUAL'].includes(r)) return whyPush(a.conv, r); if (r === 'OTHER') return `Thickness shows normal wear (no skirt damage, wear ratio ${t.pWearN > 0 && t.cWearN > 0 ? n2(t.cWearN / t.pWearN) : '-'} x planned, not a long B/C belt); next CBM ${dz(a.next)}.`; return (UCAT[r] || [r])[0]; };
+            const UL = M.cbmU.slice().sort((p, q) => (p.dept > q.dept ? 1 : p.dept < q.dept ? -1 : 0) || q.len - p.len);
+            const uSum = f => UL.filter(f).reduce((q, a) => q + (+a.len || 0), 0);
+            const us = [[`FY'${fy} - BACKUP OF ${fmt(uSum(() => true))} m = SBC ${f1(uSum(() => true) / KM)}: unplanned forecast that is NOT counted in Table 2 and Table 3`],
+                ['Why it is taken out: these belts are not in the ABP. Table 2 / 3 assume no further unplanned replacement this FY - each belt below must be held by the action shown (repair, root-cause fix, piece addition, deferment or close monitoring).'], []].concat(bridge(), [[]]);
+            us.push(['BY BELT TYPE', 'Belts', 'Metres', 'SBC']); ['Fabric', 'Steel cord', 'Bucket'].forEach(k => { const f = a => kind(a.conv) === k; us.push([k, UL.filter(f).length, n1(uSum(f)), sbc(uSum(f))]); }); us.push(['TOTAL', UL.length, n1(uSum(() => true)), sbc(uSum(() => true))], []);
+            us.push(['BY REASON (latest thickness)', 'Belts', 'Metres', 'SBC', 'Action to avoid it']); Object.keys(UCAT).forEach(k => { const f = a => (a.reason || 'OTHER') === k; if (UL.some(f)) us.push([UCAT[k][0], UL.filter(f).length, n1(uSum(f)), sbc(uSum(f)), UCAT[k][1]]); }); us.push([]);
+            us.push(['BY DEPARTMENT', 'Belts', 'Metres', 'SBC']); DEPTS.forEach(d => { const f = a => a.dept === d[0]; if (UL.some(f)) us.push([d[0], UL.filter(f).length, n1(uSum(f)), sbc(uSum(f))]); }); us.push([]);
+            const uH = ['Dept', 'Conveyor', 'Belt type', 'Metres', 'SBC', 'Why it is due (forecast)', 'Why not counted in Table 2 / 3', 'Thickness reason', 'Reason in numbers', 'Action to avoid it', 'UMC rate (Rs/m)', 'Cost (Rs lakh)'].concat(thkH);
+            const uHeadRow = us.length; us.push(uH);
+            UL.forEach(a => { const r = a.reason || 'OTHER'; us.push([a.dept, a.name || a.conv, kind(a.conv), n1(a.len), sbc(a.len), whyFc(a), 'Not in the ABP - no further unplanned replacement is assumed', (UCAT[r] || [r])[0], uWhy(a), (UCAT[r] || ['', ''])[1], rate(a.conv) || 'no rate', lk(rate(a.conv) * a.len)].concat(thkF(a.conv))); });
+            us.push([], ['TOTAL', '', '', n1(uSum(() => true)), sbc(uSum(() => true))]);
+            add(us, 'Unplanned 56.2', [40, 16, 10, 9, 7, 40, 34, 22, 80, 40, 10, 10].concat(thkH.map(() => 12)), uHeadRow);
+            // planned push: why each belt can wait till next FY, with the numbers
+            const PL = M.pushPl.slice().sort((p, q) => (p.push > q.push ? 1 : p.push < q.push ? -1 : 0) || (p.dept > q.dept ? 1 : -1));
+            const pSum = f => PL.filter(f).reduce((q, a) => q + pm(a), 0);
+            const PR5 = [['WEAR', 'Belt with high wear rate', 'Current wear rate more than 1.2 x planned wear rate', 'Fix the root cause (chute / scraper / loading) and run till next FY'], ['LONG', 'Long length belts (B / C category)', 'Category B or C and length more than 90 m', 'Piece addition instead of full replacement'], ['JANMAR', 'Replacement deferred (Jan-Mar)', 'Next CBM in Jan-Mar of this FY', 'Shift the replacement to April (next FY)'], ['EDGE', 'Belts damaged at skirt area', 'Lowest edge 1 mm or more below the centre', 'Repair skirt, run till next FY'], ['MANUAL', 'Others (field decision)', 'Checked by the field team', 'Run till April (next FY) under monitoring']];
+            const ps = [[`FY'${fy} - BACKUP OF ${fmt(pSum(() => true))} m = SBC ${f1(pSum(() => true) / KM)}: planned (ABP) belts pushed to next FY in Table 3`], ['Why they are pushed: the latest thickness reading shows each belt can run till April with the action below. Belts whose CBM has passed are pushed only by field decision; unavoidable belts are never pushed.'], []].concat(bridge(), [[]]);
+            ps.push(['BY REASON', 'Belts', 'Metres', 'SBC', 'Rule (from the thickness sheet)', 'Action']); PR5.forEach(r => { const f = a => a.push === r[0]; ps.push([r[1], PL.filter(f).length, n1(pSum(f)), sbc(pSum(f)), r[2], r[3]]); }); ps.push(['TOTAL', PL.length, n1(pSum(() => true)), sbc(pSum(() => true))], []);
+            ps.push(['BY DEPARTMENT'].concat(PR5.map(r => r[1] + ' (m)'), ['Total m', 'SBC'])); DEPTS.forEach(d => { const f = a => a.dept === d[0]; if (PL.some(f)) ps.push([d[0]].concat(PR5.map(r => n1(pSum(a => f(a) && a.push === r[0]))), [n1(pSum(f)), sbc(pSum(f))])); }); ps.push([]);
+            const pH = ['Dept', 'Conveyor', 'ABP source', 'Metres', 'SBC', 'Reason', 'Reason in numbers', 'Rule', 'Action', 'Next CBM', 'UMC rate (Rs/m)', 'Cost saved (Rs lakh)'].concat(thkH);
+            const pHeadRow = ps.length; ps.push(pH);
+            PL.forEach(a => { const r5 = PR5.find(r => r[0] === a.push) || [a.push, RS(a.push), '', '']; ps.push([a.dept, a.name || a.conv, src(a.conv), n1(pm(a)), sbc(pm(a)), r5[1], whyPush(a.conv, a.push), r5[2], r5[3], dz(M.nextOf(a)), rate(a.conv) || 'no rate', lk(rate(a.conv) * pm(a))].concat(thkF(a.conv))); });
+            ps.push([], ['TOTAL', '', '', n1(pSum(() => true)), sbc(pSum(() => true))], []);
+            const unav = M.cbmP.filter(a => a.noPush);
+            ps.push(['UNAVOIDABLE - kept as replace this FY (decision), not pushed even if a rule applies']); ps.push(['Dept', 'Conveyor', 'Metres', 'SBC', 'Next CBM', 'Rule that would apply']);
+            unav.forEach(a => { const r = M.thkReason(a.conv); ps.push([a.dept, a.name || a.conv, n1(pm(a)), sbc(pm(a)), dz(M.nextOf(a)), ['EDGE', 'WEAR', 'LONG', 'JANMAR'].includes(r) ? RS(r) : '-']); });
+            add(ps, 'Push 23', [36, 16, 14, 9, 7, 30, 80, 40, 40, 12, 10, 10].concat(thkH.map(() => 12)), pHeadRow);
             // ---------- Cost ----------
             const cst = (L, f) => L.filter(f).reduce((q, e) => q + rate(e.x.conv) * (+e.m || 0), 0), mt = (L, f) => L.filter(f).reduce((q, e) => q + (+e.m || 0), 0);
             const budgetF = s(M.pl.filter(a => !a.outOfPlan && !M.isSB2(a.conv)).map(a => ({ conv: a.conv, m: pm(a) })), x => rate(x.conv) * x.m);
@@ -3809,7 +3842,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             add(cs, 'Cost', [40, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 10]);
             // ---------- Summary (same layout as the user's sheet) ----------
             const sv = []; const merges = []; const mg = (r1, c1, r2, c2) => merges.push({ s: { r: r1, c: c1 }, e: { r: r2, c: c2 } });
-            sv.push([`FY'${fy} - SBC SUMMARY (SBC = metres / ${KM} km)`], []);
+            sv.push([`FY'${fy} - SBC SUMMARY (SBC = metres / ${KM} km)`], []); bridge().forEach(r => sv.push(r)); sv.push([]);
             [1, 2, 3].forEach(m => { const v = tot(m), tg = v.tP + v.tU, cons = v.cP + v.cU;
                 const r0 = sv.length; sv.push([TT[m]]);
                 const r = sv.length;
