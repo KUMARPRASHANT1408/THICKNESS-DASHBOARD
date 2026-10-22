@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 22-Oct-d</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 22-Oct-e</div>
         </div>
     </div>
 
@@ -3402,8 +3402,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const fPa = fc.filter(x => x.cls === 'P'), fUa = fc.filter(x => x.cls !== 'P');
                 const cP = cs(cPa, cm, rateC), cU = cs(cUa, cm, rateC), fP = cs(fPa, ln), fU = cs(fUa, ln), pl = cP + fP;
                 return { pl, cP, cU, bal: pl - cP, fP, fU, end: cP + cU + fP + fU, diff: cP + cU + fP + fU - pl, mt: s(cons) + s(fc, ln), cPa, cUa, fPa, fUa }; };
-            const L = v => v / 1e5, rs = v => v ? (Math.abs(L(v)) >= 100 ? fmt(Math.round(L(v))) : f1(L(v))) : '-';
-            const sp3 = (x, cls, key) => `<td class="sbc-c ${cls || ''}${key ? ' sbc-click' : ''}"${key ? ` onclick="S_from('card-sbcCost');sbcShow('${key}')"` : ''}><b>${rs(x)}</b><small>${x ? (x / 1e7).toFixed(2) + ' Cr' : '-'}</small></td>`;
+            const rs = v => v ? (v / 1e7).toFixed(2) : '-';
+            const sp3 = (x, cls, key) => `<td class="sbc-c ${cls || ''}${key ? ' sbc-click' : ''}"${key ? ` onclick="S_from('card-sbcCost');sbcShow('${key}')"` : ''}><b>${rs(x)}</b></td>`;
             const row3 = (name, v, dk) => `<tr><td>${name}</td>${sp3(v.pl, '', dk ? 'cost:pl:' + dk : null)}${sp3(v.cP, '', dk ? 'cost:cp:' + dk : null)}${sp3(v.cU, '', dk ? 'cost:cu:' + dk : null)}${sp3(v.bal, v.bal < 0 ? 'sbc-r' : 'sbc-g')}${sp3(v.fP, '', dk ? 'cost:fp:' + dk : null)}${sp3(v.fU, '', dk ? 'cost:fu:' + dk : null)}${sp3(v.end)}${sp3(v.diff, v.diff > 0 ? 'sbc-r' : 'sbc-g')}<td class="sbc-c"><b>${fmt(v.mt)}</b><small>${f1(v.mt / TOTAL_KM)}</small></td></tr>`;
             let tb3 = ''; const vt = { pl: 0, cP: 0, cU: 0, bal: 0, fP: 0, fU: 0, end: 0, diff: 0, mt: 0 }; const addT = v => Object.keys(vt).forEach(k => vt[k] += v[k]);
             DEPTS.forEach(d => { const v = calc3(d[0]); addT(v); const n = Object.values(miss).filter(x => x.dept === d[0]).length;
@@ -3414,10 +3414,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             tb3 += row3('Steel cord', vS, 'STEEL') + row3('Bucket', vB, 'BUCKET');
             tb3 += row3('<b>TOTAL</b>', vt, 'ALL').replace('<tr>', '<tr class="tot">');
             S.umcMiss = Object.values(miss); const mm = S.umcMiss.reduce((q, x) => q + x.m, 0);
-            TITLES.sbcCost = `Department-wise belt cost (Rs) - ${TBL_NAME[CM]} - FY'${fy}`;
+            TITLES.sbcCost = `Department-wise belt cost (Rs Cr) - ${TBL_NAME[CM]} - FY'${fy}`;
             h += `<div class="glass-panel sbc-panel" id="card-sbcCost"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES.sbcCost}</h3><button class="sbc-chip sbc-png" onclick="sbcCostCsv()"><i class="fas fa-download"></i> CSV</button></div>
-                <div class="sbc-banner ${vt.diff > 0 ? 'red' : 'green'}" style="margin:0 0 8px"><i class="fas fa-indian-rupee-sign"></i> Fabric: planned <b>Rs ${rs(fabT.pl)} lakh</b>, year-end <b>Rs ${rs(fabT.end)} lakh</b> (SBC ${f1(fabT.mt / TOTAL_KM)}). Steel cord + bucket add <b>Rs ${rs(vS.end + vB.end)} lakh</b> (SBC ${f1((vS.mt + vB.mt) / TOTAL_KM)}). Total year-end <b>Rs ${rs(vt.end)} lakh (${(vt.end / 1e7).toFixed(2)} Cr)</b> at SBC ${f1(vt.mt / TOTAL_KM)} vs planned Rs ${rs(vt.pl)} lakh - ${vt.diff > 0 ? `<b>Rs ${rs(vt.diff)} lakh over</b>` : `Rs ${rs(-vt.diff)} lakh under`}.</div>
-                <div class="sbc-note" style="margin:0 0 8px">Each cell: <b>Rs lakh</b> on top, <b>Rs crore</b> below. Consumed Apr-Sep = actual cost from the cost sheet; October consumption, plan and forecast = metres &times; UMC rate per metre (latest actual rate where known). Tap a number to see its belts with metres, rate and cost.${S.umcMiss.length ? ` <span class="sbc-r sbc-click" onclick="S_from('card-sbcCost');sbcShow('umc:miss:ALL')"><b>${S.umcMiss.length} belts (${fmt(mm)} m) have no UMC rate and are not costed - tap to see them.</b></span>` : ''}</div>
+                <div class="sbc-banner ${vt.diff > 0 ? 'red' : 'green'}" style="margin:0 0 8px"><i class="fas fa-indian-rupee-sign"></i> Fabric: planned <b>Rs ${rs(fabT.pl)} Cr</b>, year-end <b>Rs ${rs(fabT.end)} Cr</b> (SBC ${f1(fabT.mt / TOTAL_KM)}). Steel cord + bucket add <b>Rs ${rs(vS.end + vB.end)} Cr</b> (SBC ${f1((vS.mt + vB.mt) / TOTAL_KM)}). Total year-end <b>Rs ${rs(vt.end)} Cr</b> at SBC ${f1(vt.mt / TOTAL_KM)} vs planned Rs ${rs(vt.pl)} Cr - ${vt.diff > 0 ? `<b>Rs ${rs(vt.diff)} Cr over</b>` : `Rs ${rs(-vt.diff)} Cr under`}.</div>
+                <div class="sbc-note" style="margin:0 0 8px">All costs in <b>Rs crore</b>. Consumed Apr-Sep = actual cost from the cost sheet; October consumption, plan and forecast = metres &times; UMC rate per metre (latest actual rate where known). Tap a number to see its belts with metres, rate and cost.${S.umcMiss.length ? ` <span class="sbc-r sbc-click" onclick="S_from('card-sbcCost');sbcShow('umc:miss:ALL')"><b>${S.umcMiss.length} belts (${fmt(mm)} m) have no UMC rate and are not costed - tap to see them.</b></span>` : ''}</div>
                 <div class="sbc-tablewrap"><table class="sbc-table sbc-st"><thead>
                 <tr><th rowspan="2">Dept</th><th rowspan="2">Planned cost<br><small>ABP belts in plan</small></th><th colspan="2">Consumption cost</th><th rowspan="2">Balance cost to spend<br><small>planned &minus; consumed planned</small></th><th colspan="2">Forecast cost to spend<br><small>till 31-Mar, ${TBL_NAME[CM].split(' - ')[1]}</small></th><th rowspan="2">Year-end cost<br><small>consumed + forecast</small></th><th rowspan="2">Difference<br><small>year-end &minus; planned</small></th><th rowspan="2">Year-end metres<br><small>m / SBC</small></th></tr>
                 <tr><th>Planned</th><th>Unplanned</th><th>Planned</th><th>Unplanned</th></tr></thead><tbody>${tb3}</tbody></table></div>
@@ -3642,8 +3642,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const by = {}; arr.forEach(x => { const e = by[x.conv] = by[x.conv] || { x, m: 0, c: 0 }; const m = +mf(x) || 0; e.m += m; e.c += m * rr(x); });
             const list = Object.values(by).map(e => ({ d: e.x.dept, n: e.x.name || e.x.conv, m: e.m, r: e.m ? e.c / e.m : 0 })).sort((a, b) => b.m * b.r - a.m * a.r);
             const tc = list.reduce((q, e) => q + e.m * e.r, 0);
-            o = { t: `${dl} - ${nm}`, head: ['Dept', 'Conveyor', 'Metres', 'Rate Rs/m', 'Cost Rs lakh'], rows: list.map(e => [e.d, e.n, fmt(e.m), e.r ? fmt(Math.round(e.r)) : (col === 'cp' || col === 'cu') ? '0 (cost sheet)' : '<span class="sbc-r">no UMC rate</span>', e.r ? f1(e.m * e.r / 1e5) : '-']), tm: list.reduce((q, e) => q + e.m, 0) };
-            o.extra = `Total cost Rs ${f1(tc / 1e5)} lakh (${(tc / 1e7).toFixed(2)} Cr)`;
+            o = { t: `${dl} - ${nm}`, head: ['Dept', 'Conveyor', 'Metres', 'Rate Rs/m', 'Cost Rs Cr'], rows: list.map(e => [e.d, e.n, fmt(e.m), e.r ? fmt(Math.round(e.r)) : (col === 'cp' || col === 'cu') ? '0 (cost sheet)' : '<span class="sbc-r">no UMC rate</span>', e.r ? (e.m * e.r / 1e7).toFixed(3) : '-']), tm: list.reduce((q, e) => q + e.m, 0) };
+            o.extra = `Total cost Rs ${(tc / 1e7).toFixed(2)} Cr`;
         } else if (kind === 'umc') {
             const arr = (S.umcMiss || []).filter(x => arg2 === 'ALL' || x.dept === arg2).sort((a, b) => (a.dept > b.dept ? 1 : a.dept < b.dept ? -1 : b.m - a.m));
             o = { t: `${arg2 === 'ALL' ? 'All departments' : arg2} - belts without a UMC rate (not costed)`, head: ['Dept', 'Conveyor', 'Metres (largest use)', 'Width', 'Grade'], rows: arr.map(x => { const t = S.thk[x.conv] || {}; return [x.dept, x.name, fmt(x.m), t.width || '-', t.grade || '-']; }), tm: arr.reduce((q, x) => q + x.m, 0) };
@@ -3730,7 +3730,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         loadXlsx().then(() => {
             const fy = fyNow(), M = model(fy), s = M.sum, KM = TOTAL_KM, dz = d => d ? dstr(d) : '', rate = c => (S.umc || {})[c] || 0, rateC = c => M.consRate[c] != null ? M.consRate[c] : rate(c);
             const re = e => e.st === 'Already consumed' ? rateC(e.x.conv) : rate(e.x.conv);   // consumed: actual cost sheet (+UMC for metres it does not cover); forecast: UMC
-            const n1 = v => +(+v || 0).toFixed(1), n2 = v => +(+v || 0).toFixed(2), sbc = m => n2((+m || 0) / KM), lk = v => +((+v || 0) / 1e5).toFixed(2);
+            const n1 = v => +(+v || 0).toFixed(1), n2 = v => +(+v || 0).toFixed(2), sbc = m => n2((+m || 0) / KM), lk = v => +((+v || 0) / 1e7).toFixed(3), cr = v => +((+v || 0) / 1e7).toFixed(2);
             const RS = r => (PR.find(x => x[0] === r) || [0, r || ''])[1];
             const kind = c => M.isSteel(c) ? 'Steel cord' : M.isBucket(c) ? 'Bucket' : 'Fabric';
             const src = c => M.abpBy[c] ? (M.abpBy[c].src === 'NEW' ? 'New ABP add-on' : 'Old ABP') : 'Not in ABP';
@@ -3784,7 +3784,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 M.cbmU.filter(a => fn(a.conv)).forEach(a => L.push({ st: 'To be replaced', cls: 'Unplanned', x: a, m: a.len, act: a.src === 'SB' ? 'As given by user' : 'Full belt (not in ABP)', dates: '', why: whyFc(a), t: [1, 0, 0] }));
                 return L.sort((p, q) => (p.st > q.st ? 1 : p.st < q.st ? -1 : 0) || (p.x.dept > q.x.dept ? 1 : p.x.dept < q.x.dept ? -1 : 0) || (p.cls > q.cls ? 1 : -1) || ((p.x.name || p.x.conv) > (q.x.name || q.x.conv) ? 1 : -1)); };
             const tStat = (e, k) => e.t[k] ? 'Counted' : (k === 2 && e.pr ? 'Pushed to next FY' : 'Not counted (no further unplanned)');
-            const listH = ['Status', 'Planned / Unplanned', 'Dept', 'Conveyor', 'ABP source', 'Activity', 'Metres', 'SBC', 'Date(s) - Daily Report', 'Reason (why planned / unplanned, why due)', 'Table 1 - as per CBM', 'Table 2 - only planned', 'Table 3 - after push', 'Push reason', 'Push reason in numbers', 'Rate (Rs/m) - consumed: actual cost sheet, forecast: UMC', 'Cost (Rs lakh)'].concat(thkH);
+            const listH = ['Status', 'Planned / Unplanned', 'Dept', 'Conveyor', 'ABP source', 'Activity', 'Metres', 'SBC', 'Date(s) - Daily Report', 'Reason (why planned / unplanned, why due)', 'Table 1 - as per CBM', 'Table 2 - only planned', 'Table 3 - after push', 'Push reason', 'Push reason in numbers', 'Rate (Rs/m) - consumed: actual cost sheet, forecast: UMC', 'Cost (Rs Cr)'].concat(thkH);
             const listSheet = (nm, fn, title) => { const L = items(fn);
                 const sumM = f => L.filter(f).reduce((q, e) => q + (+e.m || 0), 0);
                 const cons = sumM(e => e.st === 'Already consumed'), tb = k => sumM(e => e.st === 'To be replaced' && e.t[k]);
@@ -3812,7 +3812,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             us.push(['BY BELT TYPE', 'Belts', 'Metres', 'SBC']); ['Fabric', 'Steel cord', 'Bucket'].forEach(k => { const f = a => kind(a.conv) === k; us.push([k, UL.filter(f).length, n1(uSum(f)), sbc(uSum(f))]); }); us.push(['TOTAL', UL.length, n1(uSum(() => true)), sbc(uSum(() => true))], []);
             us.push(['BY REASON (latest thickness)', 'Belts', 'Metres', 'SBC', 'Action to avoid it']); Object.keys(UCAT).forEach(k => { const f = a => (a.reason || 'OTHER') === k; if (UL.some(f)) us.push([UCAT[k][0], UL.filter(f).length, n1(uSum(f)), sbc(uSum(f)), UCAT[k][1]]); }); us.push([]);
             us.push(['BY DEPARTMENT', 'Belts', 'Metres', 'SBC']); DEPTS.forEach(d => { const f = a => a.dept === d[0]; if (UL.some(f)) us.push([d[0], UL.filter(f).length, n1(uSum(f)), sbc(uSum(f))]); }); us.push([]);
-            const uH = ['Dept', 'Conveyor', 'Belt type', 'Metres', 'SBC', 'Why it is due (forecast)', 'Why not counted in Table 2 / 3', 'Thickness reason', 'Reason in numbers', 'Action to avoid it', 'UMC rate (Rs/m)', 'Cost (Rs lakh)'].concat(thkH);
+            const uH = ['Dept', 'Conveyor', 'Belt type', 'Metres', 'SBC', 'Why it is due (forecast)', 'Why not counted in Table 2 / 3', 'Thickness reason', 'Reason in numbers', 'Action to avoid it', 'UMC rate (Rs/m)', 'Cost (Rs Cr)'].concat(thkH);
             const uHeadRow = us.length; us.push(uH);
             UL.forEach(a => { const r = a.reason || 'OTHER'; us.push([a.dept, a.name || a.conv, kind(a.conv), n1(a.len), sbc(a.len), whyFc(a), 'Not in the ABP - no further unplanned replacement is assumed', (UCAT[r] || [r])[0], uWhy(a), (UCAT[r] || ['', ''])[1], rate(a.conv) || 'no rate', lk(rate(a.conv) * a.len)].concat(thkF(a.conv))); });
             us.push([], ['TOTAL', '', '', n1(uSum(() => true)), sbc(uSum(() => true))]);
@@ -3824,7 +3824,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const ps = [[`FY'${fy} - BACKUP OF ${fmt(pSum(() => true))} m = SBC ${f1(pSum(() => true) / KM)}: planned (ABP) belts pushed to next FY in Table 3`], ['Why they are pushed: the latest thickness reading shows each belt can run till April with the action below. Belts whose CBM has passed are pushed only by field decision; unavoidable belts are never pushed.'], []].concat(bridge(), [[]]);
             ps.push(['BY REASON', 'Belts', 'Metres', 'SBC', 'Rule (from the thickness sheet)', 'Action']); PR5.forEach(r => { const f = a => a.push === r[0]; ps.push([r[1], PL.filter(f).length, n1(pSum(f)), sbc(pSum(f)), r[2], r[3]]); }); ps.push(['TOTAL', PL.length, n1(pSum(() => true)), sbc(pSum(() => true))], []);
             ps.push(['BY DEPARTMENT'].concat(PR5.map(r => r[1] + ' (m)'), ['Total m', 'SBC'])); DEPTS.forEach(d => { const f = a => a.dept === d[0]; if (PL.some(f)) ps.push([d[0]].concat(PR5.map(r => n1(pSum(a => f(a) && a.push === r[0]))), [n1(pSum(f)), sbc(pSum(f))])); }); ps.push([]);
-            const pH = ['Dept', 'Conveyor', 'ABP source', 'Metres', 'SBC', 'Reason', 'Reason in numbers', 'Rule', 'Action', 'Next CBM', 'UMC rate (Rs/m)', 'Cost saved (Rs lakh)'].concat(thkH);
+            const pH = ['Dept', 'Conveyor', 'ABP source', 'Metres', 'SBC', 'Reason', 'Reason in numbers', 'Rule', 'Action', 'Next CBM', 'UMC rate (Rs/m)', 'Cost saved (Rs Cr)'].concat(thkH);
             const pHeadRow = ps.length; ps.push(pH);
             PL.forEach(a => { const r5 = PR5.find(r => r[0] === a.push) || [a.push, RS(a.push), '', '']; ps.push([a.dept, a.name || a.conv, src(a.conv), n1(pm(a)), sbc(pm(a)), r5[1], whyPush(a.conv, a.push), r5[2], r5[3], dz(M.nextOf(a)), rate(a.conv) || 'no rate', lk(rate(a.conv) * pm(a))].concat(thkF(a.conv))); });
             ps.push([], ['TOTAL', '', '', n1(pSum(() => true)), sbc(pSum(() => true))], []);
@@ -3837,16 +3837,16 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const budgetF = s(M.pl.filter(a => !a.outOfPlan && !M.isSB2(a.conv)).map(a => ({ conv: a.conv, m: pm(a) })), x => rate(x.conv) * x.m);
             const budSB = L => cst(L, e => e.cls === 'Planned');   // steel cord / bucket: planned cost = consumed planned + planned forecast
             const cRow = (nm, L, k, bud) => { const cp = cst(L, e => e.st === 'Already consumed' && e.cls === 'Planned'), cu = cst(L, e => e.st === 'Already consumed' && e.cls === 'Unplanned'), fp = cst(L, e => e.st === 'To be replaced' && e.cls === 'Planned' && e.t[k]), fu = cst(L, e => e.st === 'To be replaced' && e.cls === 'Unplanned' && e.t[k]), m = mt(L, e => e.st === 'Already consumed' || e.t[k]), tot = cp + cu + fp + fu;
-                return [nm, lk(bud), lk(cp), lk(cu), lk(cp + cu), lk(fp), lk(fu), lk(fp + fu), lk(tot), lk(tot - bud), n1(m), sbc(m)]; };
+                return [nm, cr(bud), cr(cp), cr(cu), cr(cp + cu), cr(fp), cr(fu), cr(fp + fu), cr(tot), cr(tot - bud), n1(m), sbc(m)]; };
             const cHead = ['Belt type', 'Planned cost (budget)', 'Consumed planned', 'Consumed unplanned', 'Consumed total', 'To spend - planned', 'To spend - unplanned', 'To spend - total', 'Year-end total', 'Year-end - planned cost', 'Metres', 'SBC'];
-            const cs = [[`FY'${fy} - COST ANALYSIS (Rs lakh) of the Fabric, Steel cord and Bucket sheets. Cost = metres x UMC rate per metre.`], ['Planned cost: fabric = ABP belts kept in the plan; steel cord / bucket = consumed planned + planned forecast (no separate budget).'], []];
+            const cs = [[`FY'${fy} - COST ANALYSIS (Rs Cr) of the Fabric, Steel cord and Bucket sheets. Cost = metres x UMC rate per metre.`], ['Planned cost: fabric = ABP belts kept in the plan; steel cord / bucket = consumed planned + planned forecast (no separate budget).'], []];
             [0, 1, 2].forEach(k => { const rF = cRow('Fabric', LF, k, budgetF), rS = cRow('Steel cord', LS, k, budSB(LS)), rB = cRow('Bucket', LB, k, budSB(LB)); const T = ['TOTAL'].concat(rF.slice(1).map((v, i) => n2(v + rS[i + 1] + rB[i + 1])));
                 cs.push([['Table 1 - as per CBM (nothing pushed)', 'Table 2 - only planned belts', 'Table 3 - after push (target)'][k]], cHead, rF, rS, rB, T, []); });
             // fabric department-wise, all three tables side by side
-            cs.push(['FABRIC - department-wise (Rs lakh)'], ['Dept', 'Planned cost (budget)', 'Consumed planned', 'Consumed unplanned', 'To spend - Table 1', 'To spend - Table 2', 'To spend - Table 3', 'Year-end - Table 1', 'Year-end - Table 2', 'Year-end - Table 3', 'Pushed in Table 3 (cost saved)']);
+            cs.push(['FABRIC - department-wise (Rs Cr)'], ['Dept', 'Planned cost (budget)', 'Consumed planned', 'Consumed unplanned', 'To spend - Table 1', 'To spend - Table 2', 'To spend - Table 3', 'Year-end - Table 1', 'Year-end - Table 2', 'Year-end - Table 3', 'Pushed in Table 3 (cost saved)']);
             const dRow = (nm, f) => { const L = LF.filter(e => f(e.x)); const bud = s(M.pl.filter(a => !a.outOfPlan && !M.isSB2(a.conv) && f(a)).map(a => ({ conv: a.conv, m: pm(a) })), x => rate(x.conv) * x.m);
                 const cc = cst(L, e => e.st === 'Already consumed'), sp = k => cst(L, e => e.st === 'To be replaced' && e.t[k]);
-                return [nm, lk(bud), lk(cst(L, e => e.st === 'Already consumed' && e.cls === 'Planned')), lk(cst(L, e => e.st === 'Already consumed' && e.cls === 'Unplanned')), lk(sp(0)), lk(sp(1)), lk(sp(2)), lk(cc + sp(0)), lk(cc + sp(1)), lk(cc + sp(2)), lk(cst(L, e => e.pr))]; };
+                return [nm, cr(bud), cr(cst(L, e => e.st === 'Already consumed' && e.cls === 'Planned')), cr(cst(L, e => e.st === 'Already consumed' && e.cls === 'Unplanned')), cr(sp(0)), cr(sp(1)), cr(sp(2)), cr(cc + sp(0)), cr(cc + sp(1)), cr(cc + sp(2)), cr(cst(L, e => e.pr))]; };
             DEPTS.forEach(d => cs.push(dRow(d[0], x => x.dept === d[0]))); cs.push(dRow('TOTAL', () => true));
             add(cs, 'Cost', [40, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 10]);
             // ---------- Summary (same layout as the user's sheet) ----------
@@ -3877,8 +3877,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const rows = [(S.csvHead || {})[id] || []]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b && td.classList.contains('sbc-c')) { const x = b.innerText.replace(/,/g, ''); r.push(x === '-' ? '' : x); r.push(sm && sm.innerText !== '-' ? sm.innerText : ''); } else { r.push(td.innerText.replace(/\s*\n\s*/g, ' - ')); for (let k = 1; k < (td.colSpan || 1) * (td.classList.contains('sbc-c') ? 2 : 1); k++) r.push(''); } }); rows.push(r); });
         csvDownload(rows, `SBC_${(TITLES[id] || id).split(' - ')[0].replace(/[^A-Za-z0-9]+/g, '_')}_FY${fyNow()}.csv`); };
     window.sbcCostCsv = function () { const t = document.querySelector('#card-sbcCost table'); if (!t) return;
-        const head = ['Dept', 'Planned cost Rs lakh', 'Planned cost Rs Cr', 'Consumption planned Rs lakh', 'Consumption planned Rs Cr', 'Consumption unplanned Rs lakh', 'Consumption unplanned Rs Cr', 'Balance to spend Rs lakh', 'Balance to spend Rs Cr', 'Forecast planned Rs lakh', 'Forecast planned Rs Cr', 'Forecast unplanned Rs lakh', 'Forecast unplanned Rs Cr', 'Year-end Rs lakh', 'Year-end Rs Cr', 'Difference Rs lakh', 'Difference Rs Cr', 'Year-end metres', 'Year-end SBC'];
-        const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b && td.classList.contains('sbc-c')) { const x = b.innerText.replace(/,/g, ''); r.push(x === '-' ? '' : x); r.push(sm && sm.innerText !== '-' ? sm.innerText.replace(' Cr', '') : ''); } else r.push(td.innerText.replace(/\s*\n\s*/g, ' - ')); }); rows.push(r); });
+        const head = ['Dept', 'Planned cost Rs Cr', 'Consumption planned Rs Cr', 'Consumption unplanned Rs Cr', 'Balance to spend Rs Cr', 'Forecast planned Rs Cr', 'Forecast unplanned Rs Cr', 'Year-end Rs Cr', 'Difference Rs Cr', 'Year-end metres', 'Year-end SBC'];
+        const rows = [head]; t.querySelectorAll('tbody tr').forEach(tr => { const r = []; tr.querySelectorAll('td').forEach(td => { const b = td.querySelector('b'), sm = td.querySelector('small'); if (b && td.classList.contains('sbc-c')) { const x = b.innerText.replace(/,/g, ''); r.push(x === '-' ? '' : x); if (sm) r.push(sm.innerText.replace(/,/g, '')); } else r.push(td.innerText.replace(/\s*\n\s*/g, ' - ')); }); rows.push(r); });
         csvDownload(rows, `SBC_Dept_Cost_FY${fyNow()}.csv`); };
     window.sbcBack = function () { const c = el(S.from || 'sbcMain'); (c || el('sbcScreen')).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     window.sbcCloseList = function () { S.detail = null; el('sbcDetail').style.display = 'none'; window.sbcBack(); };
