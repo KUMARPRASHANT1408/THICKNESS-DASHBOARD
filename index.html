@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 22-Oct-b</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 22-Oct-c</div>
         </div>
     </div>
 
@@ -3057,11 +3057,11 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     const STEEL_CORD_FIX = ['CCBHAC1'];
     // pushed belts brought back into this FY's forecast by decision (21-Oct-2026)
     // fabric belts NOT in the ABP that the user wants replaced this FY (unplanned forecast, never pushed, no change to the plan)
-    const EXTRA_UNPLANNED = [{ c: 'SP1C3', m: 220 }];
+    const EXTRA_UNPLANNED = [];   // SP1C3 moved to the ABP (planned, replace this FY) on 22-Oct-2026
     // steel cord / bucket forecast belts that stay in the year-end after push (the others are shown as pushed)
     const SB_KEEP = ['J24C1', 'PC1'];
     const NO_PUSH = ['SP3-7002', 'BC15(IRON)', 'PSB1-BC30', 'K7-BC37', 'Y4', 'J14C1', 'J33C1', 'CHE1'];   // J33C1, CHE1: unavoidable (21-Oct-2026)
-    const MANUAL_PUSH = { 'J12C2': '20-Oct-2026', 'OFBBC1': '20-Oct-2026', 'REC1': '21-Oct-2026', 'RMHS-J24C2': '21-Oct-2026', '2J18AC1': '21-Oct-2026', 'J9BC1': '21-Oct-2026', 'J15AC2': '21-Oct-2026' };   // field decision: run till next FY
+    const MANUAL_PUSH = { 'J12C2': '20-Oct-2026', 'OFBBC1': '20-Oct-2026', 'REC1': '21-Oct-2026', 'RMHS-J24C2': '21-Oct-2026', '2J18AC1': '21-Oct-2026', 'J9BC1': '21-Oct-2026', 'J15AC2': '21-Oct-2026', 'J11AC1': '22-Oct-2026', 'RMHS-CBBRSC1': '22-Oct-2026', 'J30RC1': '22-Oct-2026', 'RBC5': '22-Oct-2026' };   // field decision: run till next FY
     const FAB_TARGET = { 27: 40519.5 };   // fabric target FY'27 = Old ABP total (col U)
     const SB_TARGET = { 27: 2320.5 };     // steel cord + bucket allowance = 252 x 170 - fabric
     const M_TARGET_27 = [40, 30, 20, 20, 20, 20, 17, 17, 17, 15, 18, 18];
