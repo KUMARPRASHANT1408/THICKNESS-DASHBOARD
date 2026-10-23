@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-f</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-g</div>
         </div>
     </div>
 
@@ -3210,6 +3210,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     // pushed belts brought back into this FY's forecast by decision (21-Oct-2026)
     // fabric belts NOT in the ABP that the user wants replaced this FY (unplanned forecast, never pushed, no change to the plan)
     // 23-Oct-2026: SCR1 will be changed again - unplanned, counted in Table 1 (as per CBM) and Table 2 (only planned), NOT in Table 3 (after push, 252)
+    // 23-Oct-2026: forecast metres changed by the user (the ABP target stays as it is)
+    const FC_METRES = { 'BLENDINGCONVEYOR': { m: 90, note: 'ABP 270 m (3 replacements) - only 90 m kept in the forecast, 180 m taken out (decision 23-Oct-2026)' } };
+    // 23-Oct-2026: belts not in the ABP moved to the planned forecast (in place of the 180 m of BLENDING CONVEYOR)
+    const EXTRA_PLANNED = [{ c: 'FSC1', m: 125, note: 'Not in ABP - moved to planned forecast in place of 180 m of BLENDING CONVEYOR (decision 23-Oct-2026)' }];
     const UNPL_T2 = [];   // SCR1 is now covered by the ABP-plan-left rule below (23-Oct-2026)
     // 23-Oct-2026: ABP belts already replaced this FY whose new belt's CBM is again on or before 31-Mar:
     //   ABP planned metres still left (e.g. SCR1 plan 180 m, used 90 m) -> planned forecast (all three tables);
@@ -3433,7 +3437,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const proj = consX + pendFab + pendSteel, projPush = consX + pendMust + pendSteel;
         const pushActual = Math.max(0, proj - T * TOTAL_KM);   // push needed after counting unplanned consumption
         // ---- thickness: belts due this FY that are NOT in the ABP ----
-        const fresh = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (plSet.has(c) || repMap[c] || isSteel(c) || isBucket(c) || /NOT\s*EXIST/.test(t.grade)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; fresh.push({ conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm, cat: t.cat, grade: t.grade, reason: MANUAL_PUSH[c] ? 'MANUAL' : NO_PUSH.includes(c) ? 'OTHER' : thkReason(c) }); });
+        const fresh = []; Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (plSet.has(c) || repMap[c] || isSteel(c) || isBucket(c) || /NOT\s*EXIST/.test(t.grade) || EXTRA_PLANNED.some(x => key(x.c) === c)) return; if (t.lastRep && t.lastRep >= fyStart) return; if (!t.nextCbm || t.nextCbm > fyEnd) return; fresh.push({ conv: c, name: t.name, dept: t.dept, len: t.len, next: t.nextCbm, cat: t.cat, grade: t.grade, reason: MANUAL_PUSH[c] ? 'MANUAL' : NO_PUSH.includes(c) ? 'OTHER' : thkReason(c) }); });
         const fyEv = c => (S.ev[c] || []).filter(e => fyOf(e.date) === fy);
         const avoidT = fresh, due = fresh.map(x => x.conv);
         // ---- dept status table ----
@@ -3452,7 +3456,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         againP.forEach(x => { const n = nextOf(x); x.overdue = !!(n && n < today); x.noPush = NO_PUSH.includes(x.conv);
             x.push = MANUAL_PUSH[x.conv] && !x.noPush ? 'MANUAL' : (x.noPush || !S.thk[x.conv] || x.overdue) ? null : (r => (r === 'OTHER' || r === 'NODATA') ? null : r)(thkReason(x.conv)); });
         const againU = again.filter(a => a.agU > 0.01).map(a => { const t = S.thk[a.conv]; return { conv: a.conv, name: a.name, dept: a.dept || t.dept, len: a.agU, next: t.nextCbm, cat: t.cat || '', grade: t.grade || '', reason: 'AGAIN', t2: true, note: a.agP > 0.01 ? `ABP belt replaced this FY - CBM again by 31-Mar; ${fmt(a.agU)} m beyond the ABP plan` : 'ABP belt replaced this FY - ABP plan used up, new belt CBM again by 31-Mar' }; });
-        const fcP = plPend.filter(a => !a.outOfPlan && !isSB2(a.conv) && dueCbm(a)).concat(againP, sbFcP);
+        // forecast copies of the pending ABP belts (forecast metres can differ from the ABP metres - FC_METRES); same objects are used by Table 1 / 2 / 3
+        const plFc = plPend.map(a => { const f = FC_METRES[a.conv]; return f ? Object.assign({}, a, { plan: f.m, abpPlan: planM(a), fcNote: f.note }) : a; });
+        const exP = EXTRA_PLANNED.map(x => { const c = key(x.c), t = S.thk[c] || {}; return { fy, conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || '', cat: t.cat || '', len: x.m, plan: x.m, grade: t.grade || '', type: 'Fabric', next: t.nextCbm || null, cls: 'Planned', src: 'USER', force: true, extra: true, push: null, noPush: false, note: x.note }; }).filter(x => !repMap[x.conv] && !plSet.has(x.conv));
+        const fcP = plFc.filter(a => !a.outOfPlan && !isSB2(a.conv) && dueCbm(a)).concat(exP, againP, sbFcP);
         const exU = EXTRA_UNPLANNED.map(x => { const c = key(x.c), t = S.thk[c] || {}; return { conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || '', len: x.m, next: t.nextCbm || null, cat: t.cat || '', grade: t.grade || '', reason: 'USER' }; }).filter(x => !fresh.some(f => f.conv === x.conv) && !repMap[x.conv] && !plSet.has(x.conv));
         const u2 = UNPL_T2.map(x => { const c = key(x.c), t = S.thk[c] || {}; return { conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || (abpBy[c] || {}).dept || '', len: x.m, next: t.nextCbm || null, cat: t.cat || '', grade: t.grade || '', reason: 'USER', t2: true, note: x.note }; }).filter(x => !fresh.some(f => f.conv === x.conv) && !exU.some(f => f.conv === x.conv)).concat(againU);
         const fcU = fresh.concat(exU, u2, sbFcU);
@@ -3465,7 +3472,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const fcPm = sum(fcP, planM), fcUm = sum(fcU, x => x.len), pushPm = sum(pushPl, planM), pushUm = sum(pushUn, x => x.len);
         const byMarch = consBW + fcPm + fcUm + pendSteel, yearEnd = byMarch - pushPm - pushUm, gapEnd = yearEnd - T * TOTAL_KM;
         // ---- "as per CBM" view: every belt whose next CBM is on or before 31-Mar, nothing pushed, nothing taken out of the plan ----
-        const cbmP = plPend.filter(a => !isSB2(a.conv) && dueCbm(a)).concat(againP, sbFcP), cbmU = fcU;
+        const cbmP = plFc.filter(a => !isSB2(a.conv) && dueCbm(a)).concat(exP, againP, sbFcP), cbmU = fcU;
         const cbmPm = sum(cbmP, planM), cbmUm = sum(cbmU, x => x.len), cbmMar = consBW + cbmPm + cbmUm + pendSteel;
         // consumed cost rate per conveyor: actual cost (cost sheet) for the metres it covers, UMC rate for the rest (e.g. October)
         const consRate = {}; { const tm = {}; C.planned.concat(C.unplanned, C.sb).forEach(x => tm[x.conv] = (tm[x.conv] || 0) + x.m);
@@ -3943,6 +3950,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             // why a belt is in the forecast
             const whyFc = a => { const n = M.nextOf(a);
                 if (a.src === 'SB') return 'Steel cord / bucket belt expected by 31-Mar (given by user, 20/21-Oct-2026)';
+                if (a.extra) return (a.note || 'Moved to planned forecast (decision)') + '; CBM ' + dz(n);
+                if (a.fcNote) return a.fcNote + '; CBM ' + dz(n);
                 if (a.again) return `Next replacement this FY within the ABP plan (ABP ${fmt(M.abpBy[a.conv] ? M.abpBy[a.conv].plan : 0)} m, ${fmt(M.abpBy[a.conv] ? M.abpBy[a.conv].plan - a.agLeft : 0)} m already used); new belt CBM ` + dz(n);
                 if (a.force) return 'Added to the plan for replacement this FY because of belt condition (decision); CBM ' + dz(n);
                 if (a.reason === 'USER') return (a.note || 'Added by user - replace this FY (unplanned)') + '; CBM ' + dz(n);
@@ -3972,7 +3981,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const items = fn => { const L = [];
                 M.C.planned.concat(M.C.sb).filter(x => fn(x.conv)).forEach(x => L.push({ st: 'Already consumed', cls: 'Planned', x, m: x.m, act: x.kind || '', dates: evT(x.conv, x.kind === 'Piece addition' ? 'P' : 'R'), why: clsWhy(x, true), t: [1, 1, 1] }));
                 M.C.unplanned.filter(x => fn(x.conv)).forEach(x => L.push({ st: 'Already consumed', cls: 'Unplanned', x, m: x.m, act: x.kind || '', dates: evT(x.conv, x.kind === 'Piece addition' ? 'P' : 'R'), why: clsWhy(x, false), t: [1, 1, 1] }));
-                M.cbmP.filter(a => fn(a.conv)).forEach(a => { const pu = M.pushPl.includes(a); L.push({ st: 'To be replaced', cls: 'Planned', x: a, m: pm(a), act: a.src === 'SB' ? 'As given by user' : 'Full belt (ABP)', dates: '', why: whyFc(a) + (a.noPush ? ' - unavoidable (push cancelled by decision)' : ''), t: [1, 1, pu ? 0 : 1], pr: pu ? a.push : null }); });
+                M.cbmP.filter(a => fn(a.conv)).forEach(a => { const pu = M.pushPl.includes(a); L.push({ st: 'To be replaced', cls: 'Planned', x: a, m: pm(a), act: a.src === 'SB' ? 'As given by user' : a.extra ? 'Full belt (moved to plan)' : 'Full belt (ABP)', dates: '', why: whyFc(a) + (a.noPush ? ' - unavoidable (push cancelled by decision)' : ''), t: [1, 1, pu ? 0 : 1], pr: pu ? a.push : null }); });
                 M.cbmU.filter(a => fn(a.conv)).forEach(a => L.push({ st: 'To be replaced', cls: 'Unplanned', x: a, m: a.len, act: a.src === 'SB' ? 'As given by user' : 'Full belt (not in ABP)', dates: '', why: whyFc(a), t: a.t2 ? [1, 1, 0] : [1, 0, 0] }));
                 return L.sort((p, q) => (p.st > q.st ? 1 : p.st < q.st ? -1 : 0) || (p.x.dept > q.x.dept ? 1 : p.x.dept < q.x.dept ? -1 : 0) || (p.cls > q.cls ? 1 : -1) || ((p.x.name || p.x.conv) > (q.x.name || q.x.conv) ? 1 : -1)); };
             const tStat = (e, k) => e.t[k] ? 'Counted' : (k === 2 && e.pr ? 'Pushed to next FY' : k === 2 && e.x.t2 ? 'Not counted in Table 3 (user decision)' : 'Not counted (no further unplanned)');
