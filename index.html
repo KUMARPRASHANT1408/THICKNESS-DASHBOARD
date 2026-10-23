@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-j</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-k</div>
         </div>
     </div>
 
@@ -1323,7 +1323,7 @@
         };
 
         // ================= BELT PERFORMANCE (23-Oct-2026): wear rate at the latest reading in a quarter vs planned wear rate =================
-        const PERF_BANDS = [['GOOD', 'Good', '#10b981', 'wear rate up to planned (ratio up to 1.0)'], ['WATCH', 'Watch', '#f59e0b', '1.0 to 1.2 x planned'], ['POOR', 'Poor', '#f43f5e', 'more than 1.2 x planned'], ['NOTM', 'Not measured', '#94a3b8', 'no reading in the period on the present belt']];
+        const PERF_BANDS = [['GOOD', 'Good', '#10b981', 'wear rate up to planned (ratio up to 1.0)'], ['WATCH', 'Watch', '#f59e0b', '1.0 to 1.2 x planned'], ['POOR', 'Poor', '#f43f5e', 'more than 1.2 x planned'], ['REPL', 'Replaced', '#38bdf8', 'measured in the period, belt replaced after the reading'], ['NOTM', 'Not measured', '#94a3b8', 'no reading in the period on the present belt']];
         const perfBandOf = r => r <= 1.0 ? 'GOOD' : r <= 1.2 ? 'WATCH' : 'POOR';
         const perfBandName = k => (PERF_BANDS.find(b => b[0] === k) || [k, k])[1];
         window.__perf = { open: false, per: null, type: 'ALL', dept: '', band: '', q: '', sort: 'ratio', asc: false };
@@ -1345,13 +1345,17 @@
                 const tr = cbmTrailOf(d) || [], rd = tr.filter(x => !x.install);
                 const inP = rd.filter(x => !per.s || (x.d >= per.s && x.d <= per.e)); const r = inP[inP.length - 1];
                 const base = { dept: d.dept, conv: String(d.conv).trim(), section: d.section, len: parseFloat(d.length) || 0, width: d.width, grade, kind, cat: d.beltCategory, crit: d.crit, cbm: d.nextCBM, lastRep: d.lastRep, lastRead: rd.length ? rd[rd.length - 1].d : null, nRead: rd.length };
-                if (!r) { if (!rd.some(x => x.d >= cut)) { outProg++; return; } rows.push(Object.assign(base, { band: 'NOTM', ratio: null })); return; }   // belts with no reading in 12 months are not in the thickness programme
+                if (!r) {   // reading in the period on the old belt, belt replaced after it -> measured, shown as Replaced
+                    const lrS = cbmSer(d['Last Belt Replacement']), lrD = lrS != null ? cbmSerToDate(lrS) : null;
+                    const old = String(d['Date'] || '').split(/\r?\n/).map(cbmLineDate).filter(x => x && (!lrD || x <= lrD) && (!per.s || (x >= per.s && x <= per.e))).sort((a, b) => a - b).pop();
+                    if (old) { rows.push(Object.assign(base, { band: 'REPL', ratio: null, readOn: old, replOn: lrD })); return; }
+                    if (!rd.some(x => x.d >= cut)) { outProg++; return; } rows.push(Object.assign(base, { band: 'NOTM', ratio: null })); return; }   // belts with no reading in 12 months are not in the thickness programme
                 const pw = r.pw, w = r.w, ratio = w != null && pw > 0 ? Math.max(0, w) / pw : null;
                 if (ratio == null) { rows.push(Object.assign(base, { band: 'NOTM', ratio: null })); return; }
                 const pr = rd[rd.indexOf(r) - 1], pRatio = pr && pr.w != null && pw > 0 ? Math.max(0, pr.w) / pw : null;
                 rows.push(Object.assign(base, { band: perfBandOf(ratio), ratio, w, pw, mn: r.mn, top: r.top, readOn: r.d, pRatio })); });
             const depts = [...new Set(rows.map(r => r.dept))].sort();
-            const sum = L => { const o = { n: L.length, m: 0, GOOD: 0, WATCH: 0, POOR: 0, NOTM: 0, rs: 0 }; L.forEach(r => { o[r.band]++; if (r.band !== 'NOTM') { o.m++; o.rs += r.ratio; } }); o.avg = o.m ? o.rs / o.m : null; o.pg = o.m ? o.GOOD / o.m * 100 : 0; return o; };
+            const sum = L => { const o = { n: L.length, m: 0, GOOD: 0, WATCH: 0, POOR: 0, REPL: 0, NOTM: 0, rs: 0 }; L.forEach(r => { o[r.band]++; if (r.ratio != null) { o.m++; o.rs += r.ratio; } }); o.avg = o.m ? o.rs / o.m : null; o.pg = o.m ? o.GOOD / o.m * 100 : 0; return o; };
             return { per, P, rows, depts, sum, outProg, all: sum(rows), byDept: depts.map(dp => [dp, sum(rows.filter(r => r.dept === dp))]) };
         }
         const perfCharts = {};
@@ -1371,7 +1375,7 @@
             sec.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap"><h3 style="margin:0;font-weight:800"><i class="fas fa-gauge-high" style="color:var(--teal)"></i> Belt Performance - ${cbmEsc(D.per.label)}</h3><button class="sbc-chip" onclick="perfToggle(false)"><i class="fas fa-times"></i> Close</button></div>
                 <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px"><small style="margin-right:4px">Period:</small>${D.P.map(p => chip(p.k === st.per, `perfSet('per','${p.k}')`, cbmEsc(p.label))).join('')}</div>
                 <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px"><small style="margin-right:4px">Belt type:</small>${['ALL', 'Fabric', 'Steel cord', 'Bucket'].map(x => chip(x === st.type, `perfSet('type','${x}')`, x === 'ALL' ? 'All' : x)).join('')}</div>
-                <div style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px">${kpi('', A.m, `of ${A.n} belts (${A.n ? Math.round(A.m / A.n * 100) : 0}%)`)}${kpi('GOOD', A.GOOD, A.m ? Math.round(A.GOOD / A.m * 100) + '% of measured' : '')}${kpi('WATCH', A.WATCH, A.m ? Math.round(A.WATCH / A.m * 100) + '% of measured' : '')}${kpi('POOR', A.POOR, A.m ? Math.round(A.POOR / A.m * 100) + '% of measured' : '')}${kpi('NOTM', A.NOTM, 'no reading in period')}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px">${kpi('', A.m, `of ${A.n} belts (${A.n ? Math.round(A.m / A.n * 100) : 0}%)`)}${kpi('GOOD', A.GOOD, A.m ? Math.round(A.GOOD / A.m * 100) + '% of measured' : '')}${kpi('WATCH', A.WATCH, A.m ? Math.round(A.WATCH / A.m * 100) + '% of measured' : '')}${kpi('POOR', A.POOR, A.m ? Math.round(A.POOR / A.m * 100) + '% of measured' : '')}${kpi('REPL', A.REPL, 'measured, then replaced')}${kpi('NOTM', A.NOTM, 'no reading in period')}</div>
                 <div id="perf-graphs"><div class="perf-grid"><div class="chart-box glass-panel"><div style="position:relative;height:340px;width:100%"><canvas id="perfChartO"></canvas></div></div><div class="chart-box glass-panel"><div style="position:relative;height:340px;width:100%"><canvas id="perfChartD"></canvas></div></div></div>
                 <div style="font-size:.78rem;opacity:.8;margin:6px 0 10px">Tap a slice or a bar to see its belts in the table. Wear ratio = wear rate at the latest reading in the period &divide; planned wear rate. Good: up to 1.0 &middot; Watch: 1.0 to 1.2 &middot; Poor: more than 1.2.${D.outProg ? ` ${D.outProg} belts with no thickness reading in the last 12 months are not in the thickness programme and are not counted.` : ''}</div></div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px"><button class="sbc-chip on" onclick="perfMail('ALL')"><i class="fas fa-envelope"></i> Mail all departments (one mail)</button><small>or one department:</small>${D.depts.map(dp => `<button class="sbc-chip" onclick="perfMail('${cbmEsc(dp)}')"><i class="fas fa-envelope"></i> ${cbmEsc(dp)}</button>`).join('')}</div>
@@ -1390,12 +1394,12 @@
         function perfTable() {
             const st = window.__perf, D = window.__perfD; const wrap = document.getElementById('perf-table-wrap'); if (!D || !wrap) return;
             let L = D.rows.filter(r => (!st.dept || r.dept === st.dept) && (!st.band || r.band === st.band) && (!st.q || r.conv.toLowerCase().includes(st.q.toLowerCase())));
-            const sv = (r, k) => k === 'readOn' ? (r.readOn ? r.readOn.getTime() : -1) : k === 'cbm' ? (v => v ? new Date(+v[2], v[1] - 1, +v[0]).getTime() : 0)(String(r.cbm || '').split('-')) : k === 'band' ? ['POOR', 'WATCH', 'GOOD', 'NOTM'].indexOf(r.band) : r[k] == null ? (st.asc ? Infinity : -Infinity) : r[k];
+            const sv = (r, k) => k === 'readOn' ? (r.readOn ? r.readOn.getTime() : -1) : k === 'cbm' ? (v => v ? new Date(+v[2], v[1] - 1, +v[0]).getTime() : 0)(String(r.cbm || '').split('-')) : k === 'band' ? ['POOR', 'WATCH', 'GOOD', 'REPL', 'NOTM'].indexOf(r.band) : r[k] == null ? (st.asc ? Infinity : -Infinity) : r[k];
             L = L.slice().sort((a, b) => { const x = sv(a, st.sort), y = sv(b, st.sort); if (x === y) return 0; return (typeof x === 'string' ? String(x).localeCompare(String(y)) : (x < y ? -1 : 1)) * (st.asc ? 1 : -1); });
             const f2 = v => v == null ? '-' : (+v).toFixed(2), f3 = v => v == null ? '-' : (+v).toFixed(3);
             const bandPill = b => { const x = PERF_BANDS.find(z => z[0] === b); return `<span style="background:${x[2]}22;color:${x[2]};border:1px solid ${x[2]};padding:2px 8px;border-radius:10px;font-weight:700;font-size:.75rem">${x[1]}</span>`; };
             const trend = r => r.pRatio == null || r.ratio == null ? '' : r.ratio > r.pRatio + 0.05 ? ' <span style="color:var(--red)" title="worse than previous reading">&#9650;</span>' : r.ratio < r.pRatio - 0.05 ? ' <span style="color:var(--green)" title="better than previous reading">&#9660;</span>' : '';
-            const cell = (r, k) => k === 'band' ? bandPill(r.band) : k === 'ratio' ? `<b>${f2(r.ratio)}</b>${trend(r)}` : k === 'pRatio' ? f2(r.pRatio) : k === 'w' || k === 'pw' ? f3(r[k]) : k === 'readOn' ? (r.readOn ? cbmDstr(r.readOn) : `<small>last ${r.lastRead ? cbmDstr(r.lastRead) : 'none'}</small>`) : k === 'len' ? cbmFmt(r.len) : k === 'conv' ? `<b>${cbmEsc(r.conv)}</b>` : cbmEsc(r[k] == null ? '-' : r[k]);
+            const cell = (r, k) => k === 'band' ? bandPill(r.band) : k === 'ratio' ? `<b>${f2(r.ratio)}</b>${trend(r)}` : k === 'pRatio' ? f2(r.pRatio) : k === 'w' || k === 'pw' ? f3(r[k]) : k === 'readOn' ? (r.readOn ? cbmDstr(r.readOn) + (r.band === 'REPL' ? `<br><small>replaced ${r.replOn ? cbmDstr(r.replOn) : ''}</small>` : '') : `<small>last ${r.lastRead ? cbmDstr(r.lastRead) : 'none'}</small>`) : k === 'len' ? cbmFmt(r.len) : k === 'conv' ? `<b>${cbmEsc(r.conv)}</b>` : cbmEsc(r[k] == null ? '-' : r[k]);
             const opt = (v, cur, t) => `<option value="${cbmEsc(v)}"${v === cur ? ' selected' : ''}>${cbmEsc(t)}</option>`;
             wrap.innerHTML = `<div id="perf-table" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px">
                     <button class="sbc-chip on" onclick="perfBackToGraph()"><i class="fas fa-arrow-up"></i> Back to graph</button>
@@ -1427,12 +1431,12 @@
             const p = t => `<p style="font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0 0 8px">${t}</p>`, h = t => `<p style="font-family:Calibri,Arial,sans-serif;font-size:12pt;font-weight:bold;color:#1F4E79;margin:14px 0 6px">${t}</p>`;
             const tbl = (head, rows, colorCol) => `<table style="border-collapse:collapse;margin:6px 0">${'<tr>' + head.map(x => `<th style="${th}">${cbmEsc(x)}</th>`).join('') + '</tr>'}${rows.map(r => '<tr>' + r.map((v, i) => `<td style="${td}${i === colorCol ? ';font-weight:bold;color:' + ((PERF_BANDS.find(b => b[1] === v) || [0, 0, '#111'])[2]) : ''}">${cbmEsc(v)}</td>`).join('') + '</tr>').join('')}</table>`;
             const pc = (a, b) => b ? Math.round(a / b * 100) + '%' : '-', f2 = v => v == null ? '-' : (+v).toFixed(2), f3 = v => v == null ? '-' : (+v).toFixed(3);
-            const sumHead = ['Dept', 'Belts', 'Measured', 'Good', 'Watch', 'Poor', 'Not measured', '% Good (of measured)', 'Average wear ratio'];
-            const sumRow = (nm, o) => [nm, o.n, o.m, o.GOOD, o.WATCH, o.POOR, o.NOTM, pc(o.GOOD, o.m), f2(o.avg)];
+            const sumHead = ['Dept', 'Belts', 'Measured', 'Good', 'Watch', 'Poor', 'Replaced after reading', 'Not measured', '% Good (of measured)', 'Average wear ratio'];
+            const sumRow = (nm, o) => [nm, o.n, o.m, o.GOOD, o.WATCH, o.POOR, o.REPL, o.NOTM, pc(o.GOOD, o.m), f2(o.avg)];
             const sumRows = all ? D.byDept.map(x => sumRow(x[0], x[1])).concat([sumRow('TOTAL', D.all)]) : [sumRow(scope, S)];
             const beltHead = ['Dept', 'Conveyor', 'Type', 'Length (m)', 'Reading date', 'Min thickness (mm)', 'Wear rate (mm/month)', 'Planned wear rate', 'Wear ratio', 'Previous ratio', 'Performance', 'Next CBM', 'Criticality'];
             const beltRow = r => [r.dept, r.conv, r.kind, cbmFmt(r.len), r.readOn ? cbmDstr(r.readOn) : '-', r.mn == null ? '-' : r.mn, f3(r.w), f3(r.pw), f2(r.ratio), f2(r.pRatio), perfBandName(r.band), r.cbm || '-', r.crit || '-'];
-            const meas = R.filter(r => r.band !== 'NOTM').sort((a, b) => b.ratio - a.ratio);
+            const meas = R.filter(r => r.ratio != null).sort((a, b) => b.ratio - a.ratio);
             const poor = meas.filter(r => r.band === 'POOR'), notm = R.filter(r => r.band === 'NOTM');
             const txt0 = '#333333', imgs = [];
             const o = perfChartImg(perfCfgO(all ? D : Object.assign({}, D, { all: S }), txt0), 520, 340); if (o) imgs.push({ cid: 'perf_overall', url: o });
@@ -1440,7 +1444,7 @@
             const img = (cid, w) => imgs.some(x => x.cid === cid) ? `<img src="cid:${cid}" width="${w}" alt="${cid}" style="display:block;margin:6px 0;max-width:100%">` : '';
             const per = D.per.label, who = all ? 'all departments' : scope;
             let html = p('Dear Sir,') + p(`Please find below the conveyor belt thickness performance for <b>${cbmEsc(per)}</b> (${cbmEsc(who)}). Performance is the wear rate at the latest thickness reading in the period compared with the planned wear rate: <b>Good</b> = up to planned, <b>Watch</b> = 1.0 to 1.2 times planned, <b>Poor</b> = more than 1.2 times planned.`);
-            html += p(`<b>${S.m}</b> of ${S.n} belts were measured in the period: <b style="color:#10b981">${S.GOOD} good (${pc(S.GOOD, S.m)})</b>, <b style="color:#d97706">${S.WATCH} watch</b>, <b style="color:#f43f5e">${S.POOR} poor</b>.`);
+            html += p(`<b>${S.m}</b> of ${S.n} belts were measured in the period: <b style="color:#10b981">${S.GOOD} good (${pc(S.GOOD, S.m)})</b>, <b style="color:#d97706">${S.WATCH} watch</b>, <b style="color:#f43f5e">${S.POOR} poor</b>. ${S.REPL} more belts were measured and then replaced.`);
             html += h('1. Overall performance') + img('perf_overall', 460) + (all ? h('2. Department-wise performance') + img('perf_dept', 820) : '');
             html += h((all ? '3' : '2') + '. Summary') + tbl(sumHead, sumRows, -1);
             if (all) html += h('4. Belts with poor performance (wear rate more than 1.2 x planned) - ' + poor.length) + (poor.length ? tbl(beltHead, poor.map(beltRow), 10) : p('None.'));
