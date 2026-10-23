@@ -20,6 +20,10 @@ jobs:
         run: |
           curl -fL "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9FGXXTFb7_k0QCC1kAYkxj3xjh9nBQ0ceQ3Nu-xtWjWhbR01Tx8lmJCGCCtfXkPR7SW2Za7DLrcSE/pub?gid=0&single=true&output=csv" -o data.csv
 
+      - name: Save day-wise CBM history (belts whose CBM changed)
+        continue-on-error: true
+        run: python3 tools/cbm_history.py data.csv cbm_history.csv
+
       - name: Download latest Abnormality CSV from Google Sheet
         continue-on-error: true
         run: |
@@ -44,5 +48,5 @@ jobs:
         run: |
           git config --global user.name 'GitHub Actions Bot'
           git config --global user.email 'actions@github.com'
-          git add data.csv abn.csv daily.csv patching.csv sbc.csv abp.csv
+          git add data.csv abn.csv daily.csv patching.csv sbc.csv abp.csv cbm_history.csv
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-sync latest CSV data from Google Sheet" && git push)
