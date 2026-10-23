@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-l</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-m</div>
         </div>
     </div>
 
@@ -4217,7 +4217,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const budSB = L => cst(L, e => e.cls === 'Planned');   // steel cord / bucket: planned cost = consumed planned + planned forecast
             const cRow = (nm, L, k, bud) => { const cp = cst(L, e => e.st === 'Already consumed' && e.cls === 'Planned'), cu = cst(L, e => e.st === 'Already consumed' && e.cls === 'Unplanned'), fp = cst(L, e => e.st === 'To be replaced' && e.cls === 'Planned' && e.t[k]), fu = cst(L, e => e.st === 'To be replaced' && e.cls === 'Unplanned' && e.t[k]), m = mt(L, e => e.st === 'Already consumed' || e.t[k]), tot = cp + cu + fp + fu;
                 return [nm, cr(bud), cr(cp), cr(cu), cr(cp + cu), cr(fp), cr(fu), cr(fp + fu), cr(tot), cr(tot - bud), n1(m), sbc(m)]; };
-            const cHead = ['Belt type', 'Planned cost (budget)', 'Consumed planned', 'Consumed unplanned', 'Consumed total', 'To spend - planned', 'To spend - unplanned', 'To spend - total', 'Year-end total', 'Year-end - planned cost', 'Metres', 'SBC'];
+            const cHead = ['Belt type', 'Planned cost (budget)', 'Consumed planned', 'Consumed unplanned', 'Consumed total', 'To spend - planned', 'To spend - unplanned', 'To spend - total', 'Year-end total', 'Difference = year-end total minus planned cost (+ over / - under)', 'Metres', 'SBC'];
             const cs = [[`FY'${fy} - COST ANALYSIS (Rs Cr) of the Fabric, Steel cord and Bucket sheets. Cost = metres x UMC rate per metre.`], ['Planned cost: fabric = ABP belts kept in the plan; steel cord / bucket = consumed planned + planned forecast (no separate budget).'], []];
             [0, 1, 2].forEach(k => { const rF = cRow('Fabric', LF, k, budgetF), rS = cRow('Steel cord', LS, k, budSB(LS)), rB = cRow('Bucket', LB, k, budSB(LB)); const T = ['TOTAL'].concat(rF.slice(1).map((v, i) => n2(v + rS[i + 1] + rB[i + 1])));
                 cs.push([['Table 1 - as per CBM (nothing pushed)', 'Table 2 - only planned belts', 'Table 3 - after push (target)'][k]], cHead, rF, rS, rB, T, []); });
