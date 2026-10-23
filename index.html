@@ -186,6 +186,7 @@
         .admin-kpi:hover { filter: brightness(1.2); }
         
         .interactive-section { padding: 25px; border-radius: 20px; margin-top: 20px; margin-bottom: 20px; position: relative; z-index: 10;}
+        .perf-grid { display: grid; grid-template-columns: minmax(280px, 1fr) 2fr; gap: 16px; margin-bottom: 10px; } @media (max-width: 900px) { .perf-grid { grid-template-columns: 1fr; } }
         .charts-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 20px; }
         .charts-grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
         .chart-box { padding: 20px; border-radius: 16px; background: rgba(0,0,0,0.1); border: 1px solid var(--glass-border); transition: 0.3s;}
@@ -621,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-h</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-j</div>
         </div>
     </div>
 
@@ -759,11 +760,13 @@
                         <div class="kpi-card glass-panel" id="kpi-card-thk-backlog" onclick="filterThkTable('Backlog')" style="border-bottom: 3px solid var(--red); background: rgba(244, 63, 94, 0.05); display: none;"><div class="kpi-title" style="color: var(--red);"><i class="fas fa-exclamation-circle"></i> Overdue Backlog</div><div class="kpi-val" id="t-k-backlog" style="color:var(--red);">0</div></div>
                         
                         <div class="kpi-card glass-panel" id="kpi-card-cbmfwd" onclick="thkCbmToggle(true)" style="border-bottom: 3px solid var(--red); background: rgba(244, 63, 94, 0.05);"><div class="kpi-title" style="color: var(--red);"><i class="fas fa-bell"></i> CBM Came Forward</div><div class="kpi-val" id="t-k-cbmfwd" style="color:var(--red);">0</div><i class="fas fa-bell kpi-icon" style="color:var(--red);"></i></div>
+                        <div class="kpi-card glass-panel" id="kpi-card-perf" onclick="perfToggle(true)" style="border-bottom: 3px solid var(--teal); background: rgba(14, 165, 233, 0.06);"><div class="kpi-title" style="color: var(--teal);"><i class="fas fa-gauge-high"></i> Belt Performance</div><div class="kpi-val" id="t-k-perf" style="color:var(--teal);">-</div><div style="font-size:.7rem;opacity:.75">good (last quarter)</div><i class="fas fa-gauge-high kpi-icon" style="color:var(--teal);"></i></div>
                         <div class="kpi-card admin-kpi glass-panel" id="admin-schedule-kpi" onclick="openAdminThkPage()" style="display: none;"><div class="kpi-title" style="color: var(--text-main); font-weight:800;"><i class="fas fa-clipboard-list"></i> Admin Master</div><div class="kpi-val" style="font-size: 1.1rem; color: var(--teal); margin-top: 10px;">Thickness Schedules <i class="fas fa-arrow-right" style="font-size: 0.9rem;"></i></div></div>
                     </div>
                 </div>
 
                 <div id="cbm-fwd-section" class="interactive-section table-section-wrapper glass-panel" style="display: none;"></div>
+                <div id="perf-section" class="interactive-section table-section-wrapper glass-panel" style="display: none;"></div>
 
                 <div id="thk-chart-section" class="interactive-section glass-panel" style="display: block;">
                     <div class="charts-grid-2">
@@ -1162,9 +1165,10 @@
             const D = sp('Date'), E1 = sp('EDGE1'), C = sp('CENTER'), E2 = sp('EDGE2');
             const rd = []; D.forEach((s, i) => { const d = cbmSer(s); if (d == null || d <= lr) return; const v = [E1[i], C[i], E2[i]].map(cbmN).filter(x => x != null); rd.push({ ser: d, mn: v.length ? Math.min(...v) : null }); });
             rd.sort((a, b) => a.ser - b.ser);
-            const L = [{ ser: lr, mn: top, cbm: at(null, null), install: true }].concat(rd.map(x => ({ ser: x.ser, mn: x.mn, cbm: at(x.ser, x.mn) })));
+            const wAt = (d, mn) => { const age = (d - lr) / 30; return age > 0 && mn != null ? (top - mn) / age : null; };   // wear rate at a reading (mm/month)
+            const L = [{ ser: lr, mn: top, cbm: at(null, null), install: true, w: null }].concat(rd.map(x => ({ ser: x.ser, mn: x.mn, cbm: at(x.ser, x.mn), w: wAt(x.ser, x.mn) })));
             L[L.length - 1].cbm = cur;   // latest = the value in the thickness sheet
-            return L.map(x => ({ d: cbmSerToDate(x.ser), mn: x.mn, cbm: x.cbm != null ? cbmSerToDate(x.cbm) : null, install: x.install }));
+            return L.map(x => ({ d: cbmSerToDate(x.ser), mn: x.mn, cbm: x.cbm != null ? cbmSerToDate(x.cbm) : null, install: x.install, w: x.w, pw, top }));
         }
         // belts whose CBM was more than 6 months away at the previous reading and is now within 6 months
         // rows: [{ raw, conv, name, dept, len, width, grade, cat, crit, cw, pw, abp, abn }]; days: latest reading taken in the last N days (0 = any)
@@ -1278,6 +1282,173 @@
         }
         window.thkCbmSet = function (k, v) { window.__thkCbm[k] = v; thkCbmRefresh(); };
         window.thkCbmToggle = function (on) { window.__thkCbm.open = on; thkCbmLoadAbp(); thkCbmRefresh(); if (on) { const s = document.getElementById('cbm-fwd-section'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
+
+        // ================= GENERIC MAIL DRAFT (preview + Outlook .eml with pictures + phone mail app + copy) =================
+        // m = { title, subj, html (pictures as cid:NAME), images: [{ cid, url (data:image/png;base64,...) }], txt, onSent }
+        window.__mb = null;
+        const mbHtmlData = m => (m.images || []).reduce((h, im) => h.split('cid:' + im.cid).join(im.url), m.html);
+        window.mbOpen = function (m) {
+            window.__mb = m;
+            let box = document.getElementById('mbBox'); if (!box) { box = document.createElement('div'); box.id = 'mbBox'; document.body.appendChild(box); }
+            box.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:16px';
+            const btn = (how, bg, fg, ic, t) => `<button onclick="mbGo('${how}')" style="background:${bg};color:${fg};border:0;border-radius:6px;padding:9px 14px;cursor:pointer;font-weight:600"><i class="fas ${ic}"></i> ${t}</button>`;
+            box.innerHTML = `<div style="background:#fff;color:#111;max-width:1040px;width:100%;border-radius:10px;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.4)">
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><b style="flex:1;font-size:1rem">${cbmEsc(m.title || 'Mail draft')}</b><button onclick="mbClose()" style="border:0;background:#eee;border-radius:6px;padding:6px 10px;cursor:pointer;color:#111">Close</button></div>
+                <label style="font-size:.8rem">To (optional)<input id="mbTo" type="email" multiple placeholder="type mail IDs, or fill them in the mail app" style="width:100%;padding:7px;margin:2px 0 8px;border:1px solid #bbb;border-radius:6px;color:#111;background:#fff"></label>
+                <label style="font-size:.8rem">Subject<input id="mbSub" value="${cbmEsc(m.subj)}" style="width:100%;padding:7px;margin:2px 0 8px;border:1px solid #bbb;border-radius:6px;color:#111;background:#fff"></label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px">${btn('eml', '#1F4E79', '#fff', 'fa-desktop', 'Open in Outlook (office PC)')}${btn('app', '#0f766e', '#fff', 'fa-mobile-screen', 'Open mail app (phone)')}${btn('copy', '#e5e7eb', '#111', 'fa-copy', 'Copy mail with tables and graphs')}</div>
+                <div id="mbMsg" style="font-size:.8rem;color:#0f766e;margin:0 0 8px"></div>
+                <div style="border:1px solid #ddd;border-radius:6px;padding:12px;overflow:auto;background:#fff;color:#111">${mbHtmlData(m)}</div></div>`;
+        };
+        window.mbClose = function () { const b = document.getElementById('mbBox'); if (b) b.remove(); };
+        window.mbGo = function (how) {
+            const m = window.__mb; if (!m) return; const msg = document.getElementById('mbMsg');
+            const to = (document.getElementById('mbTo').value || '').trim(), subj = (document.getElementById('mbSub').value || m.subj).trim();
+            const htmlD = mbHtmlData(m), sent = () => { try { if (m.onSent) m.onSent(); } catch (e) { } };
+            if (how === 'eml') {
+                const B = 'mb_' + Date.now().toString(36), wrap = s => s.replace(/(.{76})/g, '$1\r\n');
+                const parts = ['To: ' + to, 'Subject: ' + subj, 'X-Unsent: 1', 'MIME-Version: 1.0', `Content-Type: multipart/related; boundary="${B}"`, '',
+                    '--' + B, 'Content-Type: text/html; charset="utf-8"', 'Content-Transfer-Encoding: 8bit', '', '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>' + m.html + '</body></html>'];
+                (m.images || []).forEach(im => { const b64 = String(im.url).split(',')[1] || ''; parts.push('--' + B, 'Content-Type: image/png; name="' + im.cid + '.png"', 'Content-Transfer-Encoding: base64', 'Content-ID: <' + im.cid + '>', 'Content-Disposition: inline; filename="' + im.cid + '.png"', '', wrap(b64)); });
+                parts.push('--' + B + '--', '');
+                const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([parts.join('\r\n')], { type: 'message/rfc822' })); a.download = (m.file || 'Mail').replace(/[^A-Za-z0-9#_-]+/g, '_') + '.eml';
+                document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+                msg.innerText = 'Mail file downloaded. Open it - it opens in Outlook as a new mail with the tables and graphs. Add the To mail IDs (if empty) and press Send.'; sent();
+            } else if (how === 'app') {
+                cbmCopyRich(htmlD, m.txt).then(ok => {
+                    const body = m.txt.length > 1800 ? m.txt.split('\n').slice(0, 4).join('\n') + '\n\n(Paste the copied tables and graphs here)\n\nRegards,\nPrashant' : m.txt;
+                    msg.innerText = (ok ? 'Mail with tables and graphs copied. ' : '') + 'Mail app is opening with the subject.' + (ok ? ' Select the text in the mail body and paste.' : '');
+                    sent(); window.location.href = 'mailto:' + encodeURIComponent(to).replace(/%40/g, '@').replace(/%2C/g, ',') + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body); });
+            } else cbmCopyRich(htmlD, m.txt).then(ok => { msg.innerText = ok ? 'Copied. Open a new mail in Outlook / Gmail and paste - tables and graphs come with it.' : 'Copy did not work on this browser - use "Open in Outlook".'; if (ok) sent(); });
+        };
+
+        // ================= BELT PERFORMANCE (23-Oct-2026): wear rate at the latest reading in a quarter vs planned wear rate =================
+        const PERF_BANDS = [['GOOD', 'Good', '#10b981', 'wear rate up to planned (ratio up to 1.0)'], ['WATCH', 'Watch', '#f59e0b', '1.0 to 1.2 x planned'], ['POOR', 'Poor', '#f43f5e', 'more than 1.2 x planned'], ['NOTM', 'Not measured', '#94a3b8', 'no reading in the period on the present belt']];
+        const perfBandOf = r => r <= 1.0 ? 'GOOD' : r <= 1.2 ? 'WATCH' : 'POOR';
+        const perfBandName = k => (PERF_BANDS.find(b => b[0] === k) || [k, k])[1];
+        window.__perf = { open: false, per: null, type: 'ALL', dept: '', band: '', q: '', sort: 'ratio', asc: false };
+        function perfPeriods() {
+            const t = new Date(); t.setHours(0, 0, 0, 0); const fyS = t.getMonth() >= 3 ? t.getFullYear() : t.getFullYear() - 1, fy = fyS + 1 - 2000;
+            const L = [{ k: 'PQ4', label: `Q4 FY'${fy - 1} (Jan-Mar)`, s: new Date(fyS, 0, 1), e: new Date(fyS, 3, 0, 23, 59, 59), done: true }];
+            for (let q = 0; q < 4; q++) { const s = new Date(fyS, 3 + q * 3, 1), e = new Date(fyS, 6 + q * 3, 0, 23, 59, 59); if (s > t) break; L.push({ k: 'Q' + (q + 1), label: `Q${q + 1} FY'${fy} (${['Apr-Jun', 'Jul-Sep', 'Oct-Dec', 'Jan-Mar'][q]})${e > t ? ' so far' : ''}`, s, e, done: e < t }); }
+            L.push({ k: 'L3M', label: 'Last 3 months', s: new Date(t.getFullYear(), t.getMonth() - 3, t.getDate()), e: new Date(t.getTime() + 864e5 - 1), done: true });
+            L.push({ k: 'ALL', label: 'Latest reading (any date)', s: null, e: null, done: true });
+            return L;
+        }
+        const perfKind = g => /STEEL/i.test(g) ? 'Steel cord' : /BUCKET/i.test(g) ? 'Bucket' : 'Fabric';
+        function perfData() {
+            const st = window.__perf, P = perfPeriods(); if (!st.per || !P.some(p => p.k === st.per)) st.per = (P.filter(p => p.done && /Q/.test(p.k)).pop() || P[0]).k;
+            const per = P.find(p => p.k === st.per);
+            const rows = []; let outProg = 0; const cut = new Date((per.e ? Math.min(per.e.getTime(), Date.now()) : Date.now()) - 365 * 864e5);
+            (filteredData || []).forEach(d => { const grade = String(d['Belt CoverGrade'] || '').trim(); if (/NOT\s*EXIST/i.test(grade)) return;
+                const kind = perfKind(grade); if (st.type !== 'ALL' && kind !== st.type) return;
+                const tr = cbmTrailOf(d) || [], rd = tr.filter(x => !x.install);
+                const inP = rd.filter(x => !per.s || (x.d >= per.s && x.d <= per.e)); const r = inP[inP.length - 1];
+                const base = { dept: d.dept, conv: String(d.conv).trim(), section: d.section, len: parseFloat(d.length) || 0, width: d.width, grade, kind, cat: d.beltCategory, crit: d.crit, cbm: d.nextCBM, lastRep: d.lastRep, lastRead: rd.length ? rd[rd.length - 1].d : null, nRead: rd.length };
+                if (!r) { if (!rd.some(x => x.d >= cut)) { outProg++; return; } rows.push(Object.assign(base, { band: 'NOTM', ratio: null })); return; }   // belts with no reading in 12 months are not in the thickness programme
+                const pw = r.pw, w = r.w, ratio = w != null && pw > 0 ? Math.max(0, w) / pw : null;
+                if (ratio == null) { rows.push(Object.assign(base, { band: 'NOTM', ratio: null })); return; }
+                const pr = rd[rd.indexOf(r) - 1], pRatio = pr && pr.w != null && pw > 0 ? Math.max(0, pr.w) / pw : null;
+                rows.push(Object.assign(base, { band: perfBandOf(ratio), ratio, w, pw, mn: r.mn, top: r.top, readOn: r.d, pRatio })); });
+            const depts = [...new Set(rows.map(r => r.dept))].sort();
+            const sum = L => { const o = { n: L.length, m: 0, GOOD: 0, WATCH: 0, POOR: 0, NOTM: 0, rs: 0 }; L.forEach(r => { o[r.band]++; if (r.band !== 'NOTM') { o.m++; o.rs += r.ratio; } }); o.avg = o.m ? o.rs / o.m : null; o.pg = o.m ? o.GOOD / o.m * 100 : 0; return o; };
+            return { per, P, rows, depts, sum, outProg, all: sum(rows), byDept: depts.map(dp => [dp, sum(rows.filter(r => r.dept === dp))]) };
+        }
+        const perfCharts = {};
+        const perfCfgO = (D, txt) => ({ type: 'doughnut', data: { labels: PERF_BANDS.map(b => b[1]), datasets: [{ data: PERF_BANDS.map(b => D.all[b[0]]), backgroundColor: PERF_BANDS.map(b => b[2]), borderWidth: 1 }] },
+            options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: txt } }, title: { display: true, text: `Overall - TSM conveyors (${D.all.m} measured of ${D.all.n})`, color: txt, font: { size: 14 } } } } });
+        const perfCfgD = (D, txt) => { const B = PERF_BANDS.slice(0, 3);
+            return { type: 'bar', data: { labels: D.byDept.map(x => `${x[0]} (${x[1].m}/${x[1].n})`), datasets: B.map(b => ({ label: b[1], backgroundColor: b[2], data: D.byDept.map(x => x[1].m ? +(x[1][b[0]] / x[1].m * 100).toFixed(1) : 0), cnt: D.byDept.map(x => x[1][b[0]]) })) },
+                options: { maintainAspectRatio: false, scales: { x: { stacked: true, ticks: { color: txt, autoSkip: false, maxRotation: 60, minRotation: 30 } }, y: { stacked: true, max: 100, ticks: { color: txt, callback: v => v + '%' }, title: { display: true, text: '% of measured belts', color: txt } } },
+                    plugins: { legend: { position: 'bottom', labels: { color: txt } }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.dataset.cnt[c.dataIndex]} belts (${c.raw}%)` } }, title: { display: true, text: 'Department-wise performance (label: measured / belts)', color: txt, font: { size: 14 } } } } }; };
+        function perfRefresh() {
+            const st = window.__perf, D = perfData(); window.__perfD = D;
+            const k = document.getElementById('t-k-perf'); if (k) k.innerText = D.all.m ? Math.round(D.all.pg) + '%' : '-';
+            const sec = document.getElementById('perf-section'); if (!sec) return; sec.style.display = st.open ? 'block' : 'none'; if (!st.open) return;
+            const chip = (on, js, t) => `<button class="sbc-chip ${on ? 'on' : ''}" onclick="${js}">${t}</button>`;
+            const kpi = (b, v, sub) => `<div class="glass-panel sbc-click" onclick="perfPick('','${b}')" style="padding:10px 14px;border-radius:12px;border-bottom:3px solid ${(PERF_BANDS.find(x => x[0] === b) || [0, 0, '#0ea5e9'])[2]};cursor:pointer;min-width:120px"><div style="font-size:.75rem;opacity:.8">${b ? perfBandName(b) : 'Measured'}</div><div style="font-size:1.4rem;font-weight:800">${v}</div><div style="font-size:.7rem;opacity:.7">${sub}</div></div>`;
+            const A = D.all;
+            sec.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap"><h3 style="margin:0;font-weight:800"><i class="fas fa-gauge-high" style="color:var(--teal)"></i> Belt Performance - ${cbmEsc(D.per.label)}</h3><button class="sbc-chip" onclick="perfToggle(false)"><i class="fas fa-times"></i> Close</button></div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px"><small style="margin-right:4px">Period:</small>${D.P.map(p => chip(p.k === st.per, `perfSet('per','${p.k}')`, cbmEsc(p.label))).join('')}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px"><small style="margin-right:4px">Belt type:</small>${['ALL', 'Fabric', 'Steel cord', 'Bucket'].map(x => chip(x === st.type, `perfSet('type','${x}')`, x === 'ALL' ? 'All' : x)).join('')}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px">${kpi('', A.m, `of ${A.n} belts (${A.n ? Math.round(A.m / A.n * 100) : 0}%)`)}${kpi('GOOD', A.GOOD, A.m ? Math.round(A.GOOD / A.m * 100) + '% of measured' : '')}${kpi('WATCH', A.WATCH, A.m ? Math.round(A.WATCH / A.m * 100) + '% of measured' : '')}${kpi('POOR', A.POOR, A.m ? Math.round(A.POOR / A.m * 100) + '% of measured' : '')}${kpi('NOTM', A.NOTM, 'no reading in period')}</div>
+                <div id="perf-graphs"><div class="perf-grid"><div class="chart-box glass-panel"><div style="position:relative;height:340px;width:100%"><canvas id="perfChartO"></canvas></div></div><div class="chart-box glass-panel"><div style="position:relative;height:340px;width:100%"><canvas id="perfChartD"></canvas></div></div></div>
+                <div style="font-size:.78rem;opacity:.8;margin:6px 0 10px">Tap a slice or a bar to see its belts in the table. Wear ratio = wear rate at the latest reading in the period &divide; planned wear rate. Good: up to 1.0 &middot; Watch: 1.0 to 1.2 &middot; Poor: more than 1.2.${D.outProg ? ` ${D.outProg} belts with no thickness reading in the last 12 months are not in the thickness programme and are not counted.` : ''}</div></div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px"><button class="sbc-chip on" onclick="perfMail('ALL')"><i class="fas fa-envelope"></i> Mail all departments (one mail)</button><small>or one department:</small>${D.depts.map(dp => `<button class="sbc-chip" onclick="perfMail('${cbmEsc(dp)}')"><i class="fas fa-envelope"></i> ${cbmEsc(dp)}</button>`).join('')}</div>
+                <div id="perf-table-wrap"></div>`;
+            const txt = getCssVar('--text-muted') || '#94a3b8';
+            Object.values(perfCharts).forEach(c => { try { c.destroy(); } catch (e) { } });
+            try {
+                const cO = perfCfgO(D, txt); cO.options.onClick = (e, els) => { if (els && els.length) perfPick('', PERF_BANDS[els[0].index][0]); };
+                perfCharts.o = new Chart(document.getElementById('perfChartO').getContext('2d'), cO);
+                const cD = perfCfgD(D, txt); cD.options.onClick = (e, els) => { if (els && els.length) perfPick(D.byDept[els[0].index][0], PERF_BANDS[els[0].datasetIndex][0]); };
+                perfCharts.d = new Chart(document.getElementById('perfChartD').getContext('2d'), cD);
+            } catch (e) { console.error(e); }
+            perfTable();
+        }
+        const PERF_COLS = [['dept', 'Dept'], ['conv', 'Conveyor'], ['kind', 'Type'], ['len', 'Length (m)'], ['readOn', 'Reading date'], ['mn', 'Min thk (mm)'], ['w', 'Wear rate (mm/month)'], ['pw', 'Planned wear'], ['ratio', 'Wear ratio'], ['pRatio', 'Previous ratio'], ['band', 'Performance'], ['cbm', 'Next CBM'], ['crit', 'Criticality']];
+        function perfTable() {
+            const st = window.__perf, D = window.__perfD; const wrap = document.getElementById('perf-table-wrap'); if (!D || !wrap) return;
+            let L = D.rows.filter(r => (!st.dept || r.dept === st.dept) && (!st.band || r.band === st.band) && (!st.q || r.conv.toLowerCase().includes(st.q.toLowerCase())));
+            const sv = (r, k) => k === 'readOn' ? (r.readOn ? r.readOn.getTime() : -1) : k === 'cbm' ? (v => v ? new Date(+v[2], v[1] - 1, +v[0]).getTime() : 0)(String(r.cbm || '').split('-')) : k === 'band' ? ['POOR', 'WATCH', 'GOOD', 'NOTM'].indexOf(r.band) : r[k] == null ? (st.asc ? Infinity : -Infinity) : r[k];
+            L = L.slice().sort((a, b) => { const x = sv(a, st.sort), y = sv(b, st.sort); if (x === y) return 0; return (typeof x === 'string' ? String(x).localeCompare(String(y)) : (x < y ? -1 : 1)) * (st.asc ? 1 : -1); });
+            const f2 = v => v == null ? '-' : (+v).toFixed(2), f3 = v => v == null ? '-' : (+v).toFixed(3);
+            const bandPill = b => { const x = PERF_BANDS.find(z => z[0] === b); return `<span style="background:${x[2]}22;color:${x[2]};border:1px solid ${x[2]};padding:2px 8px;border-radius:10px;font-weight:700;font-size:.75rem">${x[1]}</span>`; };
+            const trend = r => r.pRatio == null || r.ratio == null ? '' : r.ratio > r.pRatio + 0.05 ? ' <span style="color:var(--red)" title="worse than previous reading">&#9650;</span>' : r.ratio < r.pRatio - 0.05 ? ' <span style="color:var(--green)" title="better than previous reading">&#9660;</span>' : '';
+            const cell = (r, k) => k === 'band' ? bandPill(r.band) : k === 'ratio' ? `<b>${f2(r.ratio)}</b>${trend(r)}` : k === 'pRatio' ? f2(r.pRatio) : k === 'w' || k === 'pw' ? f3(r[k]) : k === 'readOn' ? (r.readOn ? cbmDstr(r.readOn) : `<small>last ${r.lastRead ? cbmDstr(r.lastRead) : 'none'}</small>`) : k === 'len' ? cbmFmt(r.len) : k === 'conv' ? `<b>${cbmEsc(r.conv)}</b>` : cbmEsc(r[k] == null ? '-' : r[k]);
+            const opt = (v, cur, t) => `<option value="${cbmEsc(v)}"${v === cur ? ' selected' : ''}>${cbmEsc(t)}</option>`;
+            wrap.innerHTML = `<div id="perf-table" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px">
+                    <button class="sbc-chip on" onclick="perfBackToGraph()"><i class="fas fa-arrow-up"></i> Back to graph</button>
+                    <input id="perfSearch" class="search-input glass-panel" placeholder="Search conveyor..." value="${cbmEsc(st.q)}" oninput="perfSearch(this.value)" style="max-width:180px">
+                    <select class="native-select glass-panel" onchange="perfSet('dept',this.value)" style="padding:6px 10px">${opt('', st.dept, 'All departments')}${D.depts.map(d => opt(d, st.dept, d)).join('')}</select>
+                    <select class="native-select glass-panel" onchange="perfSet('band',this.value)" style="padding:6px 10px">${opt('', st.band, 'All performance')}${PERF_BANDS.map(b => opt(b[0], st.band, b[1])).join('')}</select>
+                    <select class="native-select glass-panel" onchange="perfSort(this.value,null)" style="padding:6px 10px">${PERF_COLS.map(c => opt(c[0], st.sort, 'Sort: ' + c[1])).join('')}</select>
+                    <button class="sbc-chip" onclick="perfSort(null,${!st.asc})">${st.asc ? '<i class="fas fa-arrow-up-short-wide"></i> Ascending' : '<i class="fas fa-arrow-down-wide-short"></i> Descending'}</button>
+                    <span class="count-badge">${L.length}</span></div>
+                <div class="table-container" style="overflow-x:auto"><table><thead><tr>${PERF_COLS.map(c => `<th onclick="perfSort('${c[0]}',${st.sort === c[0] ? !st.asc : false})" style="cursor:pointer;white-space:nowrap">${c[1]} ${st.sort === c[0] ? (st.asc ? '&#9650;' : '&#9660;') : '<i class="fas fa-sort" style="opacity:.4"></i>'}</th>`).join('')}</tr></thead>
+                <tbody>${L.map(r => `<tr>${PERF_COLS.map(c => `<td>${cell(r, c[0])}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${PERF_COLS.length}">No belt in this selection.</td></tr>`}</tbody></table></div>`;
+        }
+        window.perfSet = function (k, v) { window.__perf[k] = v; if (k === 'per' || k === 'type') perfRefresh(); else perfTable(); };
+        window.perfSearch = function (v) { window.__perf.q = v; perfTable(); const i = document.getElementById('perfSearch'); if (i) { i.focus(); i.setSelectionRange(v.length, v.length); } };
+        window.perfSort = function (k, asc) { if (k) window.__perf.sort = k; if (asc != null) window.__perf.asc = asc; perfTable(); };
+        window.perfPick = function (dept, band) { Object.assign(window.__perf, { dept, band }); perfTable(); const t = document.getElementById('perf-table'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+        window.perfBackToGraph = function () { const g = document.getElementById('perf-graphs'); if (g) g.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+        window.perfToggle = function (on) { window.__perf.open = on; perfRefresh(); if (on) { const s = document.getElementById('perf-section'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
+        function perfChartImg(cfg, w, h) {
+            const c = document.createElement('canvas'); c.width = w; c.height = h; c.style.cssText = 'position:fixed;left:-9999px;top:0'; document.body.appendChild(c);
+            const bg = { id: 'mailbg', beforeDraw: ch => { const x = ch.ctx; x.save(); x.fillStyle = '#ffffff'; x.fillRect(0, 0, ch.width, ch.height); x.restore(); } };
+            let url = ''; try { cfg.options = Object.assign({}, cfg.options, { responsive: false, animation: false, devicePixelRatio: 2 }); cfg.plugins = [bg]; const ch = new Chart(c.getContext('2d'), cfg); url = ch.toBase64Image('image/png'); ch.destroy(); } catch (e) { console.error(e); }
+            c.remove(); return url;
+        }
+        window.perfMail = function (scope) {
+            const D = window.__perfD; if (!D) return; const all = scope === 'ALL';
+            const R = all ? D.rows : D.rows.filter(r => r.dept === scope), S = all ? D.all : D.sum(R);
+            const td = 'border:1px solid #9aa5b1;padding:4px 7px;font-family:Calibri,Arial,sans-serif;font-size:10pt;vertical-align:top', th = td + ';background:#1F4E79;color:#ffffff;text-align:left';
+            const p = t => `<p style="font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0 0 8px">${t}</p>`, h = t => `<p style="font-family:Calibri,Arial,sans-serif;font-size:12pt;font-weight:bold;color:#1F4E79;margin:14px 0 6px">${t}</p>`;
+            const tbl = (head, rows, colorCol) => `<table style="border-collapse:collapse;margin:6px 0">${'<tr>' + head.map(x => `<th style="${th}">${cbmEsc(x)}</th>`).join('') + '</tr>'}${rows.map(r => '<tr>' + r.map((v, i) => `<td style="${td}${i === colorCol ? ';font-weight:bold;color:' + ((PERF_BANDS.find(b => b[1] === v) || [0, 0, '#111'])[2]) : ''}">${cbmEsc(v)}</td>`).join('') + '</tr>').join('')}</table>`;
+            const pc = (a, b) => b ? Math.round(a / b * 100) + '%' : '-', f2 = v => v == null ? '-' : (+v).toFixed(2), f3 = v => v == null ? '-' : (+v).toFixed(3);
+            const sumHead = ['Dept', 'Belts', 'Measured', 'Good', 'Watch', 'Poor', 'Not measured', '% Good (of measured)', 'Average wear ratio'];
+            const sumRow = (nm, o) => [nm, o.n, o.m, o.GOOD, o.WATCH, o.POOR, o.NOTM, pc(o.GOOD, o.m), f2(o.avg)];
+            const sumRows = all ? D.byDept.map(x => sumRow(x[0], x[1])).concat([sumRow('TOTAL', D.all)]) : [sumRow(scope, S)];
+            const beltHead = ['Dept', 'Conveyor', 'Type', 'Length (m)', 'Reading date', 'Min thickness (mm)', 'Wear rate (mm/month)', 'Planned wear rate', 'Wear ratio', 'Previous ratio', 'Performance', 'Next CBM', 'Criticality'];
+            const beltRow = r => [r.dept, r.conv, r.kind, cbmFmt(r.len), r.readOn ? cbmDstr(r.readOn) : '-', r.mn == null ? '-' : r.mn, f3(r.w), f3(r.pw), f2(r.ratio), f2(r.pRatio), perfBandName(r.band), r.cbm || '-', r.crit || '-'];
+            const meas = R.filter(r => r.band !== 'NOTM').sort((a, b) => b.ratio - a.ratio);
+            const poor = meas.filter(r => r.band === 'POOR'), notm = R.filter(r => r.band === 'NOTM');
+            const txt0 = '#333333', imgs = [];
+            const o = perfChartImg(perfCfgO(all ? D : Object.assign({}, D, { all: S }), txt0), 520, 340); if (o) imgs.push({ cid: 'perf_overall', url: o });
+            if (all) { const d = perfCfgD(D, txt0); const u = perfChartImg(d, 900, 380); if (u) imgs.push({ cid: 'perf_dept', url: u }); }
+            const img = (cid, w) => imgs.some(x => x.cid === cid) ? `<img src="cid:${cid}" width="${w}" alt="${cid}" style="display:block;margin:6px 0;max-width:100%">` : '';
+            const per = D.per.label, who = all ? 'all departments' : scope;
+            let html = p('Dear Sir,') + p(`Please find below the conveyor belt thickness performance for <b>${cbmEsc(per)}</b> (${cbmEsc(who)}). Performance is the wear rate at the latest thickness reading in the period compared with the planned wear rate: <b>Good</b> = up to planned, <b>Watch</b> = 1.0 to 1.2 times planned, <b>Poor</b> = more than 1.2 times planned.`);
+            html += p(`<b>${S.m}</b> of ${S.n} belts were measured in the period: <b style="color:#10b981">${S.GOOD} good (${pc(S.GOOD, S.m)})</b>, <b style="color:#d97706">${S.WATCH} watch</b>, <b style="color:#f43f5e">${S.POOR} poor</b>.`);
+            html += h('1. Overall performance') + img('perf_overall', 460) + (all ? h('2. Department-wise performance') + img('perf_dept', 820) : '');
+            html += h((all ? '3' : '2') + '. Summary') + tbl(sumHead, sumRows, -1);
+            if (all) html += h('4. Belts with poor performance (wear rate more than 1.2 x planned) - ' + poor.length) + (poor.length ? tbl(beltHead, poor.map(beltRow), 10) : p('None.'));
+            else { html += h('3. All measured belts (highest wear ratio first) - ' + meas.length) + (meas.length ? tbl(beltHead, meas.map(beltRow), 10) : p('None.')); if (notm.length) html += h('4. Belts not measured in the period - ' + notm.length) + p(notm.map(r => cbmEsc(r.conv)).join(', ')); }
+            html += p('Request you to kindly check the belts with poor performance and share the action plan (root cause - chute, skirt / sealing, scraper, loading - and correction). Belts not measured in the period are to be included in the next thickness schedule.') + p('Regards,<br>Prashant');
+            const txt = [`Belt thickness performance - ${per} - ${who}`, `${S.m} of ${S.n} belts measured: ${S.GOOD} good, ${S.WATCH} watch, ${S.POOR} poor.`, ''].concat(sumRows.map(r => sumHead.map((k, i) => k + ': ' + r[i]).join(' | ')), ['', 'Regards,', 'Prashant']).join('\n');
+            mbOpen({ title: `Performance mail - ${who} (${per})`, subj: `Conveyor belt thickness performance - ${per} - ${all ? 'All departments' : scope}`, html, images: imgs, txt, file: `Belt_performance_${D.per.k}_${all ? 'All' : scope}` });
+        };
 
         function parseDateForSort(dStr) {
             if (!dStr || dStr === '-' || dStr.trim() === '') return 0;
@@ -1944,7 +2115,7 @@
             populateTableDeptDropdown();
             document.getElementById('t-k-total').innerText = filteredData.length; document.getElementById('t-k-crit').innerText = filteredData.filter(d => d.crit.includes('1.Critical')).length; document.getElementById('t-k-wear').innerText = filteredData.filter(d => d.cWear > d.pWear).length; document.getElementById('t-k-life').innerText = filteredData.filter(d => d.actualRemainingLife < 6 && d.actualRemainingLife >= 0 && !d.crit.includes('1.Critical') && d.cbmLife !== 999).length; document.getElementById('t-k-next6m').innerText = filteredData.filter(d => d.actualRemainingLife >= 0 && d.actualRemainingLife <= 6 && d.cbmLife !== 999).length; document.getElementById('t-k-backlog').innerText = filteredData.filter(d => d.actualRemainingLife < 0 && d.cbmLife !== 999).length;
             let sk = 0, cn = 0; filteredData.forEach(d => { if(d.wearType.includes('Edge')) sk++; else cn++; }); document.getElementById('t-k-ratio').innerText = `${sk} / ${cn}`;
-            showThkCharts(); applyTableDeptFilter(); try { thkCbmLoadAbp(); thkCbmRefresh(); } catch (e) { console.error(e); }
+            showThkCharts(); applyTableDeptFilter(); try { thkCbmLoadAbp(); thkCbmRefresh(); perfRefresh(); } catch (e) { console.error(e); }
         }
         function showThkCharts() {
             const checkboxes = document.querySelectorAll('.sec-chk:checked'); const isAll = checkboxes.length === document.querySelectorAll('.sec-chk').length; Chart.defaults.color = getCssVar('--text-muted'); const deptsMap = {};
@@ -2178,7 +2349,7 @@
             document.getElementById('mainDashboard').style.display = 'flex';
             document.getElementById('tabs-menu').style.display = 'none';
             switchTab('thkTab', 'btn-thk');
-            try { thkCbmLoadAbp(); thkCbmRefresh(); } catch (e) { console.error(e); }
+            try { thkCbmLoadAbp(); thkCbmRefresh(); perfRefresh(); } catch (e) { console.error(e); }
         }
 
         function openAbnormalityApp() {
