@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-a</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-b</div>
         </div>
     </div>
 
@@ -758,9 +758,12 @@
                         <div class="kpi-card glass-panel" id="kpi-card-next6m" onclick="filterThkTable('Next6M')" style="border-bottom: 3px solid var(--pink); background: rgba(236, 72, 153, 0.05); display: none;"><div class="kpi-title" style="color: var(--pink);"><i class="fas fa-calendar-alt"></i> Next 6M Repl.</div><div class="kpi-val" id="t-k-next6m" style="color:var(--pink);">0</div></div>
                         <div class="kpi-card glass-panel" id="kpi-card-thk-backlog" onclick="filterThkTable('Backlog')" style="border-bottom: 3px solid var(--red); background: rgba(244, 63, 94, 0.05); display: none;"><div class="kpi-title" style="color: var(--red);"><i class="fas fa-exclamation-circle"></i> Overdue Backlog</div><div class="kpi-val" id="t-k-backlog" style="color:var(--red);">0</div></div>
                         
+                        <div class="kpi-card glass-panel" id="kpi-card-cbmfwd" onclick="thkCbmToggle(true)" style="border-bottom: 3px solid var(--red); background: rgba(244, 63, 94, 0.05);"><div class="kpi-title" style="color: var(--red);"><i class="fas fa-bell"></i> CBM Came Forward</div><div class="kpi-val" id="t-k-cbmfwd" style="color:var(--red);">0</div><i class="fas fa-bell kpi-icon" style="color:var(--red);"></i></div>
                         <div class="kpi-card admin-kpi glass-panel" id="admin-schedule-kpi" onclick="openAdminThkPage()" style="display: none;"><div class="kpi-title" style="color: var(--text-main); font-weight:800;"><i class="fas fa-clipboard-list"></i> Admin Master</div><div class="kpi-val" style="font-size: 1.1rem; color: var(--teal); margin-top: 10px;">Thickness Schedules <i class="fas fa-arrow-right" style="font-size: 0.9rem;"></i></div></div>
                     </div>
                 </div>
+
+                <div id="cbm-fwd-section" class="interactive-section table-section-wrapper glass-panel" style="display: none;"></div>
 
                 <div id="thk-chart-section" class="interactive-section glass-panel" style="display: block;">
                     <div class="charts-grid-2">
@@ -1127,6 +1130,154 @@
             }
             let dObj = new Date(valStr); return isNaN(dObj.getTime()) ? null : dObj;
         }
+
+        // ================= CBM CAME FORWARD (23-Oct-2026) - shared by the Thickness app and the SBC app =================
+        // The thickness sheet keeps every reading of a belt (Date / EDGE1 / CENTER / EDGE2, one line per reading).
+        // CBM at any reading = same formula as the sheet:
+        //   wear rate (mm/month) = (TOP - min thickness) / months since last belt replacement   (planned wear rate if this is not positive)
+        //   CBM = last belt replacement + (TOP - 0.5) / wear rate x 30 days
+        const CBM_FWD_DAYS = 183;   // "within 6 months"
+        const cbmN = v => { const x = parseFloat(String(v == null ? '' : v).trim()); return isNaN(x) ? null : x; };
+        const cbmSerToDate = s => new Date(Math.round((s - 25569) * 864e5));   // same as parseDateCustom for Excel serials
+        function cbmLineDate(s) {   // reading dates: m/d/yyyy (with /) or dd-mm-yyyy (with -) or Excel serial
+            s = String(s == null ? '' : s).trim(); let m;
+            if (/^\d{5}(\.\d+)?$/.test(s)) return cbmSerToDate(+s);
+            if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))) return new Date(+(m[3].length === 2 ? '20' + m[3] : m[3]), +m[1] - 1, +m[2]);
+            if ((m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})/))) return new Date(+(m[3].length === 2 ? '20' + m[3] : m[3]), +m[2] - 1, +m[1]);
+            return null;
+        }
+        const cbmSer = v => { const s = String(v == null ? '' : v).trim(); if (!s) return null; if (/^\d{5}(\.\d+)?$/.test(s)) return +s; const d = cbmLineDate(s); return d ? Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(1899, 11, 30)) / 864e5) : null; };
+        const cbmDayDiff = (a, b) => Math.round((new Date(a.getFullYear(), a.getMonth(), a.getDate()) - new Date(b.getFullYear(), b.getMonth(), b.getDate())) / 864e5) || 0;
+        const cbmDstr = d => d ? String(d.getDate()).padStart(2, '0') + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + d.getFullYear() : '-';
+        const cbmEsc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const cbmFmt = n => Math.round(n || 0).toLocaleString('en-IN');
+        // CBM at every reading of the present belt, oldest first: [{ d, mn, cbm, install }]; the first entry is the replacement (planned wear rate)
+        function cbmTrailOf(raw) {
+            if (!raw) return null; const K = Object.keys(raw);
+            const kc = K.find(k => /^Next Prediction\s*\(CBM\)/i.test(k)), kp = K.find(k => /^Planned Wear Rate/i.test(k)), kr = K.find(k => /^Last Belt Replacement/i.test(k));
+            const top = cbmN(raw['TOP']), lr = cbmSer(raw[kr]), pw = cbmN(raw[kp]), cur = cbmSer(raw[kc]);
+            if (top == null || lr == null || cur == null) return null;
+            const at = (d, mn) => { const age = d != null ? (d - lr) / 30 : 0; let w = age > 0 && mn != null ? (top - mn) / age : 0; if (!(w > 0)) w = pw; return w > 0 ? lr + (top - 0.5) / w * 30 : null; };
+            const sp = k => String(raw[k] == null ? '' : raw[k]).split(/\r?\n/);
+            const D = sp('Date'), E1 = sp('EDGE1'), C = sp('CENTER'), E2 = sp('EDGE2');
+            const rd = []; D.forEach((s, i) => { const d = cbmSer(s); if (d == null || d <= lr) return; const v = [E1[i], C[i], E2[i]].map(cbmN).filter(x => x != null); rd.push({ ser: d, mn: v.length ? Math.min(...v) : null }); });
+            rd.sort((a, b) => a.ser - b.ser);
+            const L = [{ ser: lr, mn: top, cbm: at(null, null), install: true }].concat(rd.map(x => ({ ser: x.ser, mn: x.mn, cbm: at(x.ser, x.mn) })));
+            L[L.length - 1].cbm = cur;   // latest = the value in the thickness sheet
+            return L.map(x => ({ d: cbmSerToDate(x.ser), mn: x.mn, cbm: x.cbm != null ? cbmSerToDate(x.cbm) : null, install: x.install }));
+        }
+        // belts whose CBM was more than 6 months away at the previous reading and is now within 6 months
+        // rows: [{ raw, conv, name, dept, len, width, grade, cat, crit, cw, pw, abp, abn }]; days: latest reading taken in the last N days (0 = any)
+        function cbmFwdList(rows, days) {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const lim = new Date(today.getTime() + CBM_FWD_DAYS * 864e5), from = days ? new Date(today.getTime() - days * 864e5) : null;
+            const out = [];
+            rows.forEach(r => { if (/NOT\s*EXIST/i.test(r.grade || '')) return; const t = cbmTrailOf(r.raw); if (!t || t.length < 2) return;
+                const cur = t[t.length - 1], prev = t[t.length - 2];
+                if (!cur.cbm || cur.cbm > lim || !prev.cbm || prev.cbm <= lim) return;
+                if (from && cur.d < from) return;
+                out.push(Object.assign({}, r, { raw: undefined, was: prev.cbm, wasOn: prev.d, wasInstall: prev.install, wasMt: prev.mn, now: cur.cbm, on: cur.d, mt: cur.mn, days: cbmDayDiff(prev.cbm, cur.cbm) })); });
+            return out.sort((a, b) => a.now - b.now || (a.dept > b.dept ? 1 : -1));
+        }
+        const cbmMailLog = () => { try { return JSON.parse(localStorage.getItem('sbc_cbm_mail') || '{}'); } catch (e) { return {}; } };
+        window.__cbmLists = window.__cbmLists || {};
+        // card body (filters + department buttons + table); src = which list ('thk' / 'sbc'), setFn = global function that changes the filters
+        function cbmFwdHTML(src, all, st, setFn) {
+            window.__cbmLists[src] = all; const lg = cbmMailLog();
+            const depts = [...new Set(all.map(a => a.dept))].sort(), dsel = st.dept && depts.includes(st.dept) ? st.dept : '';
+            const L = dsel ? all.filter(a => a.dept === dsel) : all, days = st.days;
+            const mailed = a => { const x = lg[a.conv]; return x && x.cbm === cbmDstr(a.now) ? x.d : ''; };
+            const rows = L.map(a => `<tr><td>${cbmEsc(a.dept)}</td><td><b>${cbmEsc(a.name)}</b><br><small>${cbmFmt(a.len)} m · ${cbmEsc(a.grade || '-')} · cat ${cbmEsc(a.cat || '-')}</small></td>${a.abp ? `<td>${cbmEsc(a.abp)}</td>` : '<td>-</td>'}
+                <td>${cbmDstr(a.was)}<br><small>${a.wasInstall ? 'at replacement ' : 'reading '}${cbmDstr(a.wasOn)}</small></td><td style="color:var(--red)"><b>${cbmDstr(a.now)}</b><br><small>reading ${cbmDstr(a.on)}</small></td><td><b>${cbmFmt(a.days)}</b> days</td>
+                <td>${a.wasMt != null ? a.wasMt : '-'} &rarr; ${a.mt != null ? a.mt : '-'}</td><td>${a.cw && a.pw ? (a.cw / a.pw).toFixed(2) + ' &times;' : '-'}</td><td>${cbmEsc(a.crit || '-')}</td>
+                <td><button class="sbc-chip" style="margin:0" onclick="cbmMailFrom('${src}','B:${cbmEsc(a.conv)}')"><i class="fas fa-envelope"></i> Mail</button>${mailed(a) ? `<br><small style="color:var(--green)">mailed ${mailed(a)}</small>` : ''}</td></tr>`).join('');
+            const chip = (on, js, txt) => `<button class="sbc-chip ${on ? 'on' : ''}" onclick="${js}">${txt}</button>`;
+            return `<div class="sbc-banner ${all.length ? 'red' : 'green'}" style="margin:0 0 8px"><i class="fas fa-triangle-exclamation"></i> <b>${all.length}</b> belt${all.length === 1 ? '' : 's'} whose next CBM was more than 6 months away at the previous thickness reading and is now within 6 months (on or before ${cbmDstr(new Date(Date.now() + CBM_FWD_DAYS * 864e5))})${days ? ` - latest reading taken in the last ${days} days` : ''}.</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px"><small style="margin-right:4px">Latest reading taken in:</small>${[7, 15, 30, 60, 0].map(d => chip(d === days, `${setFn}('days',${d})`, d ? 'last ' + d + ' days' : 'Any time')).join('')}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px"><small style="margin-right:4px">Department:</small>${chip(!dsel, `${setFn}('dept','')`, 'All · ' + all.length)}${depts.map(d => chip(d === dsel, `${setFn}('dept','${cbmEsc(d)}')`, cbmEsc(d) + ' · ' + all.filter(a => a.dept === d).length)).join('')}</div>
+                ${dsel ? `<div style="margin:0 0 8px"><button class="sbc-chip on" onclick="cbmMailFrom('${src}','D:${cbmEsc(dsel)}')"><i class="fas fa-envelope"></i> Draft mail to ${cbmEsc(dsel)} (${L.length} belt${L.length === 1 ? '' : 's'})</button></div>` : (depts.length ? `<div style="font-size:.8rem;opacity:.8;margin:0 0 8px">Pick a department above to draft one mail with all its belts, or use <b>Mail</b> on a single belt.</div>` : '')}
+                ${L.length ? `<div class="sbc-tablewrap table-container" style="overflow-x:auto"><table class="sbc-table"><thead><tr><th>Dept</th><th>Conveyor</th><th>ABP</th><th>CBM at previous reading</th><th>CBM now</th><th>Came forward by</th><th>Min thickness (mm)<br><small>previous &rarr; now</small></th><th>Wear rate<br><small>current / planned</small></th><th>Criticality</th><th>Mail</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div style="font-size:.85rem;opacity:.8">No belt in this selection.</div>'}
+                <div style="font-size:.78rem;opacity:.75;margin-top:8px">The CBM at each reading is worked out from the readings in the thickness sheet with the same formula as the sheet: wear rate = (TOP &minus; min thickness) &divide; months since the last replacement; CBM = last replacement + (TOP &minus; 0.5) &divide; wear rate. If the belt has only one reading after the replacement, "previous" is the CBM at replacement (planned wear rate). "Mailed" is remembered on this device only.</div>`;
+        }
+        function cbmMailParts(L, single) {
+            const dept = L[0].dept, n = L.length;
+            const subj = single ? `Belt CBM alert - ${dept} - ${L[0].name}: next CBM now ${cbmDstr(L[0].now)}` : `Belt CBM alert - ${dept} - ${n} conveyor belt${n > 1 ? 's' : ''} now due within 6 months`;
+            const hasAbp = L.some(a => a.abp), hasAbn = L.some(a => a.abn);
+            const cols = [['Conveyor', a => a.name], ['Length (m)', a => cbmFmt(a.len)], ['Width', a => a.width || '-'], ['Cover grade', a => a.grade || '-'], ['Category', a => a.cat || '-'],
+                ['CBM at previous reading', a => `${cbmDstr(a.was)} (${a.wasInstall ? 'at replacement' : 'reading'} ${cbmDstr(a.wasOn)})`], ['CBM now', a => `${cbmDstr(a.now)} (reading ${cbmDstr(a.on)})`], ['Came forward by', a => cbmFmt(a.days) + ' days'],
+                ['Min thickness (mm) previous / now', a => `${a.wasMt != null ? a.wasMt : '-'} / ${a.mt != null ? a.mt : '-'}`], ['Wear rate (mm/month) current / planned', a => `${a.cw ? (+a.cw).toFixed(3) : '-'} / ${a.pw ? (+a.pw).toFixed(3) : '-'}`],
+                ['Criticality', a => a.crit || '-']].concat(hasAbp ? [['ABP status', a => a.abp || '-']] : [], hasAbn ? [['Open abnormalities', a => a.abn || '-']] : []);
+            const td = 'border:1px solid #9aa5b1;padding:4px 7px;font-family:Calibri,Arial,sans-serif;font-size:10pt;vertical-align:top';
+            const table = `<table style="border-collapse:collapse;margin:8px 0"><tr>${cols.map(c => `<th style="${td};background:#1F4E79;color:#ffffff;text-align:left">${cbmEsc(c[0])}</th>`).join('')}</tr>${L.map(a => `<tr>${cols.map((c, i) => `<td style="${td}${i === 6 ? ';color:#C00000;font-weight:bold' : ''}">${cbmEsc(c[1](a))}</td>`).join('')}</tr>`).join('')}</table>`;
+            const p = t => `<p style="font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0 0 8px">${t}</p>`;
+            const intro = single ? `As per the latest thickness measurement, the next CBM (condition-based replacement) date of conveyor belt <b>${cbmEsc(L[0].name)}</b> has come forward by ${cbmFmt(L[0].days)} days and is now within the next 6 months. At the previous measurement it was not due in this period.`
+                : `As per the latest thickness measurement, the next CBM (condition-based replacement) date of the following ${n} conveyor belt${n > 1 ? 's' : ''} of ${cbmEsc(dept)} has come forward sharply and is now within the next 6 months. At the previous measurement ${n > 1 ? 'these belts were' : 'this belt was'} not due in this period.`;
+            const asks = ['Check the belt condition at site and confirm the latest thickness reading.', 'Share the action plan to extend the belt life (repair, skirt / sealing, chute, scraper or loading correction).', 'If the replacement cannot be avoided, confirm the expected month so that it can be included in the SBC plan.'];
+            const html = p('Dear Sir,') + p(intro) + table + p('Request you to kindly:') + `<ol style="font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0 0 8px">${asks.map(x => `<li>${x}</li>`).join('')}</ol>` + p('Regards,<br>Prashant');
+            const txt = ['Dear Sir,', '', intro.replace(/<[^>]+>/g, ''), ''].concat(L.map((a, i) => `${i + 1}. ${cols.map(c => c[0] + ': ' + c[1](a)).join(' | ')}`), ['', 'Request you to kindly:'], asks.map((x, i) => `${i + 1}. ${x}`), ['', 'Regards,', 'Prashant']).join('\n');
+            return { subj, html, txt, n, dept };
+        }
+        window.cbmMailFrom = function (src, k) {
+            const ty = k.slice(0, 1), v = k.slice(2), AL = window.__cbmLists[src] || [];
+            const L = ty === 'B' ? AL.filter(a => a.conv === v) : AL.filter(a => a.dept === v); if (!L.length) return;
+            const m = cbmMailParts(L, ty === 'B'); window.__cbmMailNow = { m, L, src };
+            let box = document.getElementById('cbmMailBox'); if (!box) { box = document.createElement('div'); box.id = 'cbmMailBox'; document.body.appendChild(box); }
+            box.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:16px';
+            const btn = (how, bg, fg, ic, t) => `<button onclick="cbmMailGo('${how}')" style="background:${bg};color:${fg};border:0;border-radius:6px;padding:9px 14px;cursor:pointer;font-weight:600"><i class="fas ${ic}"></i> ${t}</button>`;
+            box.innerHTML = `<div style="background:#fff;color:#111;max-width:980px;width:100%;border-radius:10px;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.4)">
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><b style="flex:1;font-size:1rem">Mail draft - ${cbmEsc(m.dept)} (${m.n} belt${m.n > 1 ? 's' : ''})</b><button onclick="cbmMailClose()" style="border:0;background:#eee;border-radius:6px;padding:6px 10px;cursor:pointer;color:#111">Close</button></div>
+                <label style="font-size:.8rem">To (optional)<input id="cbmMailTo" type="email" multiple placeholder="type mail IDs, or fill them in the mail app" style="width:100%;padding:7px;margin:2px 0 8px;border:1px solid #bbb;border-radius:6px;color:#111;background:#fff"></label>
+                <label style="font-size:.8rem">Subject<input id="cbmMailSub" value="${cbmEsc(m.subj)}" style="width:100%;padding:7px;margin:2px 0 8px;border:1px solid #bbb;border-radius:6px;color:#111;background:#fff"></label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px">${btn('eml', '#1F4E79', '#fff', 'fa-desktop', 'Open in Outlook (office PC)')}${btn('app', '#0f766e', '#fff', 'fa-mobile-screen', 'Open mail app (phone)')}${btn('copy', '#e5e7eb', '#111', 'fa-copy', 'Copy mail with table')}</div>
+                <div id="cbmMailMsg" style="font-size:.8rem;color:#0f766e;margin:0 0 8px"></div>
+                <div style="border:1px solid #ddd;border-radius:6px;padding:12px;overflow:auto;background:#fff;color:#111">${m.html}</div></div>`;
+        };
+        window.cbmMailClose = function () { const b = document.getElementById('cbmMailBox'); if (b) b.remove(); };
+        function cbmCopyRich(html, txt) {
+            const fb = () => { const d = document.createElement('div'); d.contentEditable = 'true'; d.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff'; d.innerHTML = html; document.body.appendChild(d); const r = document.createRange(); r.selectNodeContents(d); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { } s.removeAllRanges(); d.remove(); return ok; };
+            try { if (navigator.clipboard && window.ClipboardItem) return navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([txt], { type: 'text/plain' }) })]).then(() => true, () => fb()); } catch (e) { }
+            return Promise.resolve(fb());
+        }
+        window.cbmMailGo = function (how) {
+            const o = window.__cbmMailNow; if (!o) return; const m = o.m, msg = document.getElementById('cbmMailMsg');
+            const to = (document.getElementById('cbmMailTo').value || '').trim(), subj = (document.getElementById('cbmMailSub').value || m.subj).trim();
+            const markSent = () => { try { const lg = cbmMailLog(), d = cbmDstr(new Date()); o.L.forEach(a => lg[a.conv] = { d, cbm: cbmDstr(a.now) }); localStorage.setItem('sbc_cbm_mail', JSON.stringify(lg)); } catch (e) { } };
+            if (how === 'eml') {
+                const eml = ['To: ' + to, 'Subject: ' + subj, 'X-Unsent: 1', 'MIME-Version: 1.0', 'Content-Type: text/html; charset="utf-8"', 'Content-Transfer-Encoding: 8bit', '', '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>' + m.html + '</body></html>'].join('\r\n');
+                const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([eml], { type: 'message/rfc822' })); a.download = ('CBM_alert_' + m.dept + (o.L.length === 1 ? '_' + o.L[0].name : '')).replace(/[^A-Za-z0-9#_-]+/g, '_') + '.eml';
+                document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+                msg.innerText = 'Mail file downloaded. Open it - it opens in Outlook as a new mail with the table. Add the To mail IDs (if empty) and press Send.'; markSent();
+            } else if (how === 'app') {
+                cbmCopyRich(m.html, m.txt).then(ok => {
+                    const body = m.txt.length > 1800 ? m.txt.split('\n').slice(0, 4).join('\n') + '\n\n(Paste the copied table here)\n\nRegards,\nPrashant' : m.txt;
+                    msg.innerText = (ok ? 'Mail with table copied. ' : '') + 'Mail app is opening with the subject and text.' + (ok ? ' To get the table, select the text in the mail body and paste.' : '');
+                    markSent(); window.location.href = 'mailto:' + encodeURIComponent(to).replace(/%40/g, '@').replace(/%2C/g, ',') + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body); });
+            } else cbmCopyRich(m.html, m.txt).then(ok => { msg.innerText = ok ? 'Copied. Open a new mail in Outlook / Gmail and paste - the table comes with it.' : 'Copy did not work on this browser - use "Open in Outlook".'; if (ok) markSent(); });
+        };
+        // ---- Thickness app card ----
+        window.__thkCbm = { days: 30, dept: '', open: false, abp: null };
+        const thkCbmKey = s => String(s || '').trim().toUpperCase().replace(/\s+/g, '');
+        function thkCbmRows() {
+            const A = window.__thkCbm.abp, fyN = (() => { const t = new Date(); return (t.getMonth() >= 3 ? t.getFullYear() + 1 : t.getFullYear()) - 2000; })();
+            const abn = {}; (window.openRecords || []).forEach(r => { const c = thkCbmKey(r['NO.']); if (c) (abn[c] = abn[c] || []).push(`${r['Abnormality Date'] || ''} ${r['Major Abnormality'] || ''}`.trim()); });
+            return (filteredData || []).map(d => { const c = thkCbmKey(d.conv);
+                return { raw: d, conv: c, name: String(d.conv).trim(), dept: d.dept, len: parseFloat(d.length) || 0, width: d.width, grade: String(d['Belt CoverGrade'] || '').trim(), cat: d.beltCategory, crit: d.crit, cw: d.cWear, pw: d.pWear,
+                    abp: A ? (A.has(fyN + '|' + c) ? `In ABP FY'${fyN} (planned)` : `Not in ABP FY'${fyN}`) : '', abn: (abn[c] || []).join('; ') }; });
+        }
+        function thkCbmLoadAbp() {
+            if (window.__thkCbm.abp || window.__thkCbm.abpLoading || typeof Papa === 'undefined') return; window.__thkCbm.abpLoading = true;
+            fetch('./abp_master.csv?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { if (!t) return; Papa.parse(t, { header: true, skipEmptyLines: true, complete: x => {
+                const s = new Set(); x.data.forEach(r => { const c = thkCbmKey(r.Conveyor), fy = String(r.FY || '').replace(/\D/g, ''); if (c && fy) s.add((+fy) + '|' + c); }); window.__thkCbm.abp = s; thkCbmRefresh(); } }); }).catch(() => { });
+        }
+        function thkCbmRefresh() {
+            const st = window.__thkCbm, all = cbmFwdList(thkCbmRows(), st.days);
+            const k = document.getElementById('t-k-cbmfwd'); if (k) k.innerText = all.length;
+            const sec = document.getElementById('cbm-fwd-section'); if (!sec) return;
+            sec.style.display = st.open ? 'block' : 'none'; if (!st.open) return;
+            sec.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap"><h3 style="margin:0;font-weight:800"><i class="fas fa-bell" style="color:var(--red)"></i> CBM Came Forward - belts now due within 6 months <span class="count-badge">${all.length}</span></h3><button class="sbc-chip" onclick="thkCbmToggle(false)"><i class="fas fa-times"></i> Close</button></div>` + cbmFwdHTML('thk', all, st, 'thkCbmSet');
+        }
+        window.thkCbmSet = function (k, v) { window.__thkCbm[k] = v; thkCbmRefresh(); };
+        window.thkCbmToggle = function (on) { window.__thkCbm.open = on; thkCbmLoadAbp(); thkCbmRefresh(); if (on) { const s = document.getElementById('cbm-fwd-section'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
 
         function parseDateForSort(dStr) {
             if (!dStr || dStr === '-' || dStr.trim() === '') return 0;
@@ -1793,7 +1944,7 @@
             populateTableDeptDropdown();
             document.getElementById('t-k-total').innerText = filteredData.length; document.getElementById('t-k-crit').innerText = filteredData.filter(d => d.crit.includes('1.Critical')).length; document.getElementById('t-k-wear').innerText = filteredData.filter(d => d.cWear > d.pWear).length; document.getElementById('t-k-life').innerText = filteredData.filter(d => d.actualRemainingLife < 6 && d.actualRemainingLife >= 0 && !d.crit.includes('1.Critical') && d.cbmLife !== 999).length; document.getElementById('t-k-next6m').innerText = filteredData.filter(d => d.actualRemainingLife >= 0 && d.actualRemainingLife <= 6 && d.cbmLife !== 999).length; document.getElementById('t-k-backlog').innerText = filteredData.filter(d => d.actualRemainingLife < 0 && d.cbmLife !== 999).length;
             let sk = 0, cn = 0; filteredData.forEach(d => { if(d.wearType.includes('Edge')) sk++; else cn++; }); document.getElementById('t-k-ratio').innerText = `${sk} / ${cn}`;
-            showThkCharts(); applyTableDeptFilter(); 
+            showThkCharts(); applyTableDeptFilter(); try { thkCbmLoadAbp(); thkCbmRefresh(); } catch (e) { console.error(e); }
         }
         function showThkCharts() {
             const checkboxes = document.querySelectorAll('.sec-chk:checked'); const isAll = checkboxes.length === document.querySelectorAll('.sec-chk').length; Chart.defaults.color = getCssVar('--text-muted'); const deptsMap = {};
@@ -2027,6 +2178,7 @@
             document.getElementById('mainDashboard').style.display = 'flex';
             document.getElementById('tabs-menu').style.display = 'none';
             switchTab('thkTab', 'btn-thk');
+            try { thkCbmLoadAbp(); thkCbmRefresh(); } catch (e) { console.error(e); }
         }
 
         function openAbnormalityApp() {
@@ -3105,13 +3257,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (typeof currentRole === 'undefined' || currentRole !== 'admin') return;
         el('landingPage').style.display = 'none'; el('sbcScreen').style.display = 'block'; window.scrollTo(0, 0); el('sbcScreen').scrollTop = 0;
         el('sbcLoading').style.display = 'block'; el('sbcLoading').innerText = 'Loading data...';
-        Promise.all([get('./sbc.csv'), get('./abp_master.csv'), get('./data.csv'), get('./abn.csv'), get('./daily.csv'), get('./abp_overrides.csv'), get('./umc.csv'), get('./cost_actual.csv'), get('./cbm_history.csv')]).then(([sbc, abp, thk, abn, dly, ovr, umc, act, hist]) => {
+        Promise.all([get('./sbc.csv'), get('./abp_master.csv'), get('./data.csv'), get('./abn.csv'), get('./daily.csv'), get('./abp_overrides.csv'), get('./umc.csv'), get('./cost_actual.csv')]).then(([sbc, abp, thk, abn, dly, ovr, umc, act]) => {
             // actual cost of the belts already consumed (cost sheet, Apr-Sep FY'27, given by the user): per conveyor metres + Rs
             S.act = {}; act.forEach(r => { const c = key(r.Conveyor), m = num(r.Metres), v = num(String(r.Cost || '').replace(/,/g, '')); if (!c || !(m > 0)) return; const o = S.act[c] = S.act[c] || { m: 0, c: 0 }; o.m += m; o.c += v; });
-            // day-wise history of the next CBM date (saved by the sync from 16-Sep-2026): per conveyor, oldest first
-            S.hist = {}; hist.forEach(r => { const c = key(r.Conveyor), d = pdmy(String(r.Date || '').split('-').reverse().join('-')), cb = pdmy(String(r.NextCBM || '').split('-').reverse().join('-')); if (!c || !d || !cb) return;
-                (S.hist[c] = S.hist[c] || []).push({ d, cbm: cb, lt: pdmy(String(r.LastThicknessDate || '').split('-').reverse().join('-')), mt: String(r.MinThickness || '').trim(), crit: String(r.Criticality || '').trim() }); });
-            Object.values(S.hist).forEach(L => L.sort((a, b) => a.d - b.d));
             // UMC rate list: cost per metre of each conveyor's belt
             S.umc = {}; umc.forEach(r => { const c = key(r.Conveyor), v = num(String(r.CostPerMtr || '').replace(/,/g, '')); if (c && v > 0 && !S.umc[c]) S.umc[c] = v; });
             // fixed classification from the ABP modification sheet (conveyor + type) - e.g. its unplanned list always stays unplanned
@@ -3139,8 +3287,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             // double entries in the SBC sheet (23-Oct-2026): take one entry out while the sheet still shows the doubled value
             S.dupFixed = []; DUP_FIX.forEach(fx => { const c = key(fx.c), e = S.daily.find(x => x.fy === fx.fy && x.conv === c && x.type === fx.type); if (e && e.m >= fx.full - 0.01) { e.m -= fx.m; S.dupFixed.push(fx); } });
             el('sbcLoading').innerText = S.monthly.length ? '' : 'sbc.csv not found or empty (check the SBC tab in Google Sheet / sync).';
-            S.thk = {};
-            thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thk[c] = { dept: dp, name: r['Conveyor'], width: String(r['Belt Width'] || '').trim(), len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']), nextCbm: parseDateCustom(r[Object.keys(r).find(k => /^Next Prediction\s*\(CBM\)/i.test(k))]), minThk: (r['MIN THICKNESS'] || '').trim(), top: (r['TOP'] || '').trim(), lastThk: parseDateCustom(r['Last Thickness Date']), cWear: (v => v ? v.toFixed(3) : '')(num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))])), predLife: num(r['Predicted Life (in Months) (Actual)']) ? f1(num(r['Predicted Life (in Months) (Actual)'])) : '', crit: (r['Criticality'] || '').trim(), cat: String(r['CATEGORY'] || '').trim().toUpperCase(), pWearN: num(r[Object.keys(r).find(k => /^Planned Wear Rate/i.test(k))]), cWearN: num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))]), e1: String(r['Thickness EDGE 1'] || '').trim(), ctr: String(r['CENTER2'] || '').trim(), e2: String(r['Thickness EDGE 2'] || '').trim() }; });
+            S.thk = {}; S.thkRaw = {};
+            thk.forEach(r => { const c = key(r['Conveyor']); const dp = nd(r['DEPT']); if (!c || !dp) return; S.thkRaw[c] = r; S.thk[c] = { trail: cbmTrailOf(r), dept: dp, name: r['Conveyor'], width: String(r['Belt Width'] || '').trim(), len: num(r['belt Length'] || r['Belt Length']), grade: String(r['Belt CoverGrade'] || '').toUpperCase(), lastRep: parseDateCustom(r['Last Belt Replacement']), nextCbm: parseDateCustom(r[Object.keys(r).find(k => /^Next Prediction\s*\(CBM\)/i.test(k))]), minThk: (r['MIN THICKNESS'] || '').trim(), top: (r['TOP'] || '').trim(), lastThk: parseDateCustom(r['Last Thickness Date']), cWear: (v => v ? v.toFixed(3) : '')(num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))])), predLife: num(r['Predicted Life (in Months) (Actual)']) ? f1(num(r['Predicted Life (in Months) (Actual)'])) : '', crit: (r['Criticality'] || '').trim(), cat: String(r['CATEGORY'] || '').trim().toUpperCase(), pWearN: num(r[Object.keys(r).find(k => /^Planned Wear Rate/i.test(k))]), cWearN: num(r[Object.keys(r).find(k => /^Current Wear Rate/i.test(k))]), e1: String(r['Thickness EDGE 1'] || '').trim(), ctr: String(r['CENTER2'] || '').trim(), e2: String(r['Thickness EDGE 2'] || '').trim() }; });
             // Daily Report: har replacement / piece addition ki date, metres, joint, vendor
             S.ev = {}; dly.forEach(r => { const c = key(r['Conveyor']); if (!c) return; const L = S.ev[c] = S.ev[c] || [];
                 const fd = pdmy(r['Final Replacement Date']); if (fd && fd.getFullYear() > 2000) L.push({ type: 'R', date: fd, m: num(r['Cosnumption'] || r['Consumption']), joint: String(r['Type of joint'] || '').trim(), vendor: String(r['Vendor'] || '').trim() });
@@ -3181,102 +3329,20 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     S.tblMode = (() => { try { return +localStorage.getItem('sbc_tbl_mode') || 1; } catch (e) { return 1; } })();
     const TBL_NAME = { 1: 'Table 1 - as per CBM (nothing pushed)', 2: 'Table 2 - only planned belts', 3: 'Table 3 - after push (target)' };
     const netFor = (M, m) => m === 1 ? { P: M.cbmP, U: M.cbmU } : m === 2 ? { P: M.cbmP, U: M.u2 } : { P: M.cbmP.filter(a => !M.pushPl.includes(a)), U: [] };
-    // CBM history of a conveyor (cbm_history.csv): first saved value, latest value, and the last value that was outside a limit date
-    const dayDiff = (a, b) => Math.round((new Date(a.getFullYear(), a.getMonth(), a.getDate()) - new Date(b.getFullYear(), b.getMonth(), b.getDate())) / 864e5) || 0;   // whole days a - b
-    const cbmTrail = (c, lim) => { const L = (S.hist || {})[c]; if (!L || !L.length) return null; const last = L[L.length - 1];
-        let out = null, cut = null; if (lim) for (let i = L.length - 1; i >= 0; i--) { if (L[i].cbm > lim) { out = L[i]; cut = L[i + 1] || null; break; } }
-        return { first: L[0], last, out, cut, list: L }; };
-    // ================= CBM ALERT (23-Oct-2026): belts whose next CBM suddenly came inside the next 6 months -> mail to department =================
-    const escH = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const mailLog = () => { try { return JSON.parse(localStorage.getItem('sbc_cbm_mail') || '{}'); } catch (e) { return {}; } };
-    function cbmAlerts(M) {
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const lim = new Date(today.getTime() + CBM_ALERT_DAYS * 864e5);
-        const days = S.alDays == null ? 30 : S.alDays, from = days ? new Date(today.getTime() - days * 864e5) : null;
-        const AL = [];
-        Object.keys(S.thk).forEach(c => { const t = S.thk[c]; if (!t.nextCbm || t.nextCbm > lim || /NOT\s*EXIST/.test(t.grade)) return;
-            const h = cbmTrail(c, lim); if (!h || !h.out || !h.cut) return;   // CBM was never beyond 6 months in the saved history -> not a sudden drop
-            if (t.lastRep && t.lastRep >= h.cut.d) return;                    // belt already replaced after the drop
-            if (from && h.cut.d < from) return;
-            AL.push({ conv: c, name: String(t.name || c).trim(), dept: t.dept, len: t.len, width: t.width, grade: t.grade, cat: t.cat, crit: t.crit,
-                was: h.out.cbm, wasOn: h.out.d, wasMt: h.out.mt, now: t.nextCbm, on: h.cut.d, lt: t.lastThk, mt: t.minThk, cw: t.cWearN, pw: t.pWearN,
-                days: dayDiff(h.out.cbm, t.nextCbm), abp: M.abpBy[c] ? 'In ABP (planned)' : 'Not in ABP (unplanned)',
-                abn: (S.abn[c] || []).map(x => `${dstr(x.date)} ${x.issue}`).join('; ') }); });
-        return AL.sort((a, b) => a.now - b.now || (a.dept > b.dept ? 1 : -1));
-    }
+    // ================= CBM came forward card (shared code: cbmFwdList / cbmFwdHTML / cbmMailFrom) =================
     function alertCard(M) {
-        const all = cbmAlerts(M); S.alerts = all; const lg = mailLog();
-        const depts = [...new Set(all.map(a => a.dept))].sort();
-        const dsel = S.alDept && depts.includes(S.alDept) ? S.alDept : '';
-        const L = dsel ? all.filter(a => a.dept === dsel) : all;
         const days = S.alDays == null ? 30 : S.alDays;
-        const mailed = a => { const x = lg[a.conv]; return x && x.cbm === dstr(a.now) ? x.d : ''; };
-        const rows = L.map(a => `<tr><td>${escH(a.dept)}</td><td><b>${escH(a.name)}</b><br><small>${fmt(a.len)} m · ${escH(a.grade || '-')} · cat ${escH(a.cat || '-')}</small></td><td>${escH(a.abp)}</td>
-            <td>${dstr(a.was)}<br><small>as on ${dstr(a.wasOn)}</small></td><td class="sbc-r"><b>${dstr(a.now)}</b><br><small>since ${dstr(a.on)}</small></td><td><b>${fmt(a.days)}</b> days</td>
-            <td>${escH(a.wasMt || '-')} &rarr; ${escH(a.mt || '-')}<br><small>last reading ${a.lt ? dstr(a.lt) : '-'}</small></td><td>${a.cw && a.pw ? (a.cw / a.pw).toFixed(2) + ' &times;' : '-'}</td><td>${escH(a.crit || '-')}</td>
-            <td><button class="sbc-chip" style="margin:0" onclick="sbcMail('B:${escH(a.conv)}')"><i class="fas fa-envelope"></i> Mail</button>${mailed(a) ? `<br><small class="sbc-g">mailed ${mailed(a)}</small>` : ''}</td></tr>`).join('');
+        const rows = Object.keys(S.thk).map(c => { const t = S.thk[c]; return { raw: S.thkRaw[c], conv: c, name: String(t.name || c).trim(), dept: t.dept, len: t.len, width: t.width, grade: t.grade, cat: t.cat, crit: t.crit, cw: t.cWearN, pw: t.pWearN,
+            abp: M.abpBy[c] ? 'In ABP (planned)' : 'Not in ABP (unplanned)', abn: (S.abn[c] || []).map(x => `${dstr(x.date)} ${x.issue}`).join('; ') }; });
+        const all = cbmFwdList(rows, days);
         TITLES.sbcAlert = `CBM came forward - belts now due within 6 months - FY'${M.fy}`;
-        return `<div class="glass-panel sbc-panel" id="card-sbcAlert"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1"><i class="fas fa-bell"></i> ${TITLES.sbcAlert}</h3></div>
-            <div class="sbc-banner ${all.length ? 'red' : 'green'}" style="margin:0 0 8px"><i class="fas fa-triangle-exclamation"></i> <b>${all.length}</b> belt${all.length === 1 ? '' : 's'} whose next CBM was more than 6 months away and is now within 6 months (on or before ${dstr(new Date(Date.now() + CBM_ALERT_DAYS * 864e5))})${days ? `, changed in the last ${days} days` : ''}. Send them to the department to check the belt and plan the action.</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px"><small style="margin-right:4px">Changed in last:</small>${[7, 15, 30, 60, 0].map(d => `<button class="sbc-chip ${d === days ? 'on' : ''}" onclick="sbcAlertSet('days',${d})">${d ? d + ' days' : 'All (since 16-Sep)'}</button>`).join('')}</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px"><small style="margin-right:4px">Department:</small><button class="sbc-chip ${!dsel ? 'on' : ''}" onclick="sbcAlertSet('dept','')">All · ${all.length}</button>${depts.map(d => `<button class="sbc-chip ${d === dsel ? 'on' : ''}" onclick="sbcAlertSet('dept','${escH(d)}')">${escH(d)} · ${all.filter(a => a.dept === d).length}</button>`).join('')}</div>
-            ${dsel ? `<div style="margin:0 0 8px"><button class="sbc-chip on" onclick="sbcMail('D:${escH(dsel)}')"><i class="fas fa-envelope"></i> Draft mail to ${escH(dsel)} (${L.length} belt${L.length === 1 ? '' : 's'})</button></div>` : (depts.length ? `<div class="sbc-note" style="margin:0 0 8px">Pick a department above to draft one mail with all its belts, or use <b>Mail</b> on a single belt.</div>` : '')}
-            ${L.length ? `<div class="sbc-tablewrap"><table class="sbc-table"><thead><tr><th>Dept</th><th>Conveyor</th><th>ABP</th><th>CBM earlier</th><th>CBM now</th><th>Came forward by</th><th>Min thickness (mm)<br><small>earlier &rarr; now</small></th><th>Wear rate<br><small>current / planned</small></th><th>Criticality</th><th>Mail</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="sbc-note">No belt in this selection.</div>'}
-            <div class="sbc-note">CBM history is saved every day by the sync (from 16-Sep-2026). A belt is listed when its next CBM was more than 6 months away at an earlier reading and is now within 6 months, and it has not been replaced since. "Mailed" is remembered on this device only.</div></div>`;
+        return `<div class="glass-panel sbc-panel" id="card-sbcAlert"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1"><i class="fas fa-bell"></i> ${TITLES.sbcAlert}</h3></div>${cbmFwdHTML('sbc', all, { days, dept: S.alDept || '' }, 'sbcAlertSet')}</div>`;
     }
     window.sbcAlertSet = function (k, v) { if (k === 'days') S.alDays = v; else S.alDept = v; const sc = el('sbcScreen'), y = sc ? sc.scrollTop : 0, wy = window.scrollY; window.sbcRender(); if (sc) sc.scrollTop = y; window.scrollTo(0, wy); };
-    function mailParts(L, single) {
-        const dept = L[0].dept, n = L.length;
-        const subj = single ? `Belt CBM alert - ${dept} - ${L[0].name}: next CBM now ${dstr(L[0].now)}` : `Belt CBM alert - ${dept} - ${n} conveyor belt${n > 1 ? 's' : ''} now due within 6 months`;
-        const cols = [['Conveyor', a => a.name], ['Length (m)', a => fmt(a.len)], ['Width', a => a.width || '-'], ['Cover grade', a => a.grade || '-'], ['Category', a => a.cat || '-'],
-            ['Earlier CBM', a => `${dstr(a.was)} (as on ${dstr(a.wasOn)})`], ['Current CBM', a => dstr(a.now)], ['Came forward by', a => fmt(a.days) + ' days'], ['Last thickness date', a => a.lt ? dstr(a.lt) : '-'],
-            ['Min thickness (mm) earlier / now', a => `${a.wasMt || '-'} / ${a.mt || '-'}`], ['Wear rate (mm/month) current / planned', a => `${a.cw ? a.cw.toFixed(3) : '-'} / ${a.pw ? a.pw.toFixed(3) : '-'}`],
-            ['Criticality', a => a.crit || '-'], ['ABP status', a => a.abp], ['Open abnormalities', a => a.abn || '-']];
-        const td = 'border:1px solid #9aa5b1;padding:4px 7px;font-family:Calibri,Arial,sans-serif;font-size:10pt;vertical-align:top';
-        const table = `<table style="border-collapse:collapse;margin:8px 0"><tr>${cols.map(c => `<th style="${td};background:#1F4E79;color:#ffffff;text-align:left">${escH(c[0])}</th>`).join('')}</tr>${L.map(a => `<tr>${cols.map((c, i) => `<td style="${td}${i === 6 ? ';color:#C00000;font-weight:bold' : ''}">${escH(c[1](a))}</td>`).join('')}</tr>`).join('')}</table>`;
-        const p = t => `<p style="font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0 0 8px">${t}</p>`;
-        const intro = single ? `As per the latest thickness measurement, the next CBM (condition-based replacement) date of conveyor belt <b>${escH(L[0].name)}</b> has come forward by ${fmt(L[0].days)} days and is now within the next 6 months. At the earlier measurement it was not due in this period.`
-            : `As per the latest thickness measurement, the next CBM (condition-based replacement) date of the following ${n} conveyor belt${n > 1 ? 's' : ''} of ${escH(dept)} has come forward sharply and is now within the next 6 months. At the earlier measurement ${n > 1 ? 'these belts were' : 'this belt was'} not due in this period.`;
-        const asks = ['Check the belt condition at site and confirm the latest thickness reading.', 'Share the action plan to extend the belt life (repair, skirt / sealing, chute, scraper or loading correction).', 'If the replacement cannot be avoided, confirm the expected month so that it can be included in the SBC plan.'];
-        const html = p('Dear Sir,') + p(intro) + table + p('Request you to kindly:') + `<ol style="font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0 0 8px">${asks.map(x => `<li>${x}</li>`).join('')}</ol>` + p('Regards,<br>Prashant');
-        const txt = ['Dear Sir,', '', intro.replace(/<[^>]+>/g, ''), ''].concat(L.map((a, i) => `${i + 1}. ${cols.map(c => c[0] + ': ' + c[1](a)).join(' | ')}`), ['', 'Request you to kindly:'], asks.map((x, i) => `${i + 1}. ${x}`), ['', 'Regards,', 'Prashant']).join('\n');
-        return { subj, html, txt, n, dept };
-    }
-    window.sbcMail = function (k) {
-        const ty = k.slice(0, 1), v = k.slice(2), AL = S.alerts || [];
-        const L = ty === 'B' ? AL.filter(a => a.conv === v) : AL.filter(a => a.dept === v); if (!L.length) return;
-        const m = mailParts(L, ty === 'B'); S.mailNow = { m, L };
-        let box = el('sbcMailBox'); if (!box) { box = document.createElement('div'); box.id = 'sbcMailBox'; document.body.appendChild(box); }
-        box.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:16px';
-        box.innerHTML = `<div style="background:#fff;color:#111;max-width:980px;width:100%;border-radius:10px;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.4)">
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><b style="flex:1;font-size:1rem">Mail draft - ${escH(m.dept)} (${m.n} belt${m.n > 1 ? 's' : ''})</b><button onclick="sbcMailClose()" style="border:0;background:#eee;border-radius:6px;padding:6px 10px;cursor:pointer">Close</button></div>
-            <label style="font-size:.8rem">To (optional)<input id="sbcMailTo" type="email" multiple placeholder="type mail IDs, or fill in the mail app" style="width:100%;padding:7px;margin:2px 0 8px;border:1px solid #bbb;border-radius:6px;color:#111;background:#fff"></label>
-            <label style="font-size:.8rem">Subject<input id="sbcMailSub" value="${escH(m.subj)}" style="width:100%;padding:7px;margin:2px 0 8px;border:1px solid #bbb;border-radius:6px;color:#111;background:#fff"></label>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px">
-                <button onclick="sbcMailGo('eml')" style="background:#1F4E79;color:#fff;border:0;border-radius:6px;padding:9px 14px;cursor:pointer;font-weight:600"><i class="fas fa-desktop"></i> Open in Outlook (office PC)</button>
-                <button onclick="sbcMailGo('app')" style="background:#0f766e;color:#fff;border:0;border-radius:6px;padding:9px 14px;cursor:pointer;font-weight:600"><i class="fas fa-mobile-screen"></i> Open mail app (phone)</button>
-                <button onclick="sbcMailGo('copy')" style="background:#e5e7eb;color:#111;border:0;border-radius:6px;padding:9px 14px;cursor:pointer;font-weight:600"><i class="fas fa-copy"></i> Copy mail with table</button></div>
-            <div id="sbcMailMsg" style="font-size:.8rem;color:#0f766e;margin:0 0 8px"></div>
-            <div style="border:1px solid #ddd;border-radius:6px;padding:12px;overflow:auto;background:#fff">${m.html}</div></div>`;
-    };
-    window.sbcMailClose = function () { const b = el('sbcMailBox'); if (b) b.remove(); };
-    const copyRich = (html, txt) => { try { if (navigator.clipboard && window.ClipboardItem) return navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([txt], { type: 'text/plain' }) })]).then(() => true, () => fb()); } catch (e) { } return Promise.resolve(fb());
-        function fb() { const d = document.createElement('div'); d.contentEditable = 'true'; d.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff'; d.innerHTML = html; document.body.appendChild(d); const r = document.createRange(); r.selectNodeContents(d); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { } s.removeAllRanges(); d.remove(); return ok; } };
-    window.sbcMailGo = function (how) {
-        const o = S.mailNow; if (!o) return; const m = o.m; const to = (el('sbcMailTo').value || '').trim(), subj = (el('sbcMailSub').value || m.subj).trim(); const msg = el('sbcMailMsg');
-        const markSent = () => { try { const lg = mailLog(); const d = dstr(new Date()); o.L.forEach(a => lg[a.conv] = { d, cbm: dstr(a.now) }); localStorage.setItem('sbc_cbm_mail', JSON.stringify(lg)); } catch (e) { } };
-        if (how === 'eml') {
-            const eml = ['To: ' + to, 'Subject: ' + subj, 'X-Unsent: 1', 'MIME-Version: 1.0', 'Content-Type: text/html; charset="utf-8"', 'Content-Transfer-Encoding: 8bit', '', '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>' + m.html + '</body></html>'].join('\r\n');
-            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([eml], { type: 'message/rfc822' })); a.download = ('CBM_alert_' + m.dept + (o.L.length === 1 ? '_' + o.L[0].name : '')).replace(/[^A-Za-z0-9#_-]+/g, '_') + '.eml';
-            document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
-            msg.innerText = 'Mail file downloaded. Open it - it opens in Outlook as a new mail with the table. Add the To mail IDs (if empty) and press Send.'; markSent();
-        } else if (how === 'app') {
-            copyRich(m.html, m.txt).then(ok => {
-                const body = m.txt.length > 1800 ? m.txt.split('\n').slice(0, 4).join('\n') + '\n\n(Paste the copied table here)\n\nRegards,\nPrashant' : m.txt;
-                msg.innerText = (ok ? 'Mail with table copied. ' : '') + 'Mail app is opening with the subject and text. ' + (ok ? 'To get the table, select all text in the mail body and paste.' : '');
-                markSent(); window.location.href = 'mailto:' + encodeURIComponent(to).replace(/%40/g, '@').replace(/%2C/g, ',') + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body); });
-        } else copyRich(m.html, m.txt).then(ok => { msg.innerText = ok ? 'Copied. Open a new mail in Outlook / Gmail and paste - the table comes with it.' : 'Copy did not work on this browser - use "Open in Outlook".'; if (ok) markSent(); });
-    };
+    // CBM of a belt at ABP time (last reading before 1-Apr of the FY) and at the previous reading - from the readings in the thickness sheet
+    const cbmBack = (c, fy) => { const tr = (S.thk[c] || {}).trail; if (!tr || !tr.length) return null; const n = tr.length, fs = new Date(2000 + fy - 1, 3, 1);
+        let abp = null; for (let i = n - 1; i >= 0; i--) if (tr[i].d < fs) { abp = tr[i]; break; }
+        return { cur: tr[n - 1], prev: n >= 2 ? tr[n - 2] : null, abp, fs }; };
     window.sbcSetTbl = function (m) { S.tblMode = m; try { localStorage.setItem('sbc_tbl_mode', String(m)); } catch (e) { }
         const sc = el('sbcScreen'), y = sc ? sc.scrollTop : 0, wy = window.scrollY; window.sbcRender(); if (sc) sc.scrollTop = y; window.scrollTo(0, wy); };
 
@@ -3532,7 +3598,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 <div class="sbc-note">Department rows are <b>fabric belts only</b> (the 252 plan): <b>Planned cost</b> = ABP belts kept in the plan &times; rate. <b>Consumption cost</b> = metres used this FY &times; rate, planned / unplanned as in the SBC table. <b>Balance cost to spend</b> = planned cost &minus; consumed planned cost. <b>Forecast cost to spend</b> = belts still due by 31-Mar in the table selected above (${TBL_NAME[CM]}). <b>Difference</b> = year-end &minus; planned (red = over). <b>Steel cord / bucket</b> are shown below the fabric total. Planned = bucket belts already replaced this FY, the planned lists of the ABP modification sheet (steel cord J24C1 900 m) and PC1 (forecast). Unplanned = the unplanned list of the ABP modification sheet, any other piece addition, and ${CM === 1 ? 'the future steel cord J24C1 100 m, J65C2, J67C1, CCBHAC1' : 'no future unplanned belt (Table 2 / 3)'}. Planned cost = consumed planned + forecast planned. Belts without a UMC rate count as Rs 0.</div></div>`;
         }
         // ---- CBM alert card (mail to department) ----
-        if (S.hist && Object.keys(S.hist).length) h += alertCard(M);
+        h += alertCard(M);
         // ---- question graphs ----
         if (M.abp.length) {
             const card = (id, n, title, sub, hgt) => { TITLES[id] = n + '. ' + title + ` (FY'${fy})`; return `<div class="glass-panel sbc-panel" id="card-${id}"><div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px"><h3 style="margin:0;flex:1"><span class="sbc-qn">${n}</span> ${title}</h3><button class="sbc-chip sbc-png" onclick="sbcPng('${id}')" title="Download PNG"><i class="fas fa-image"></i> PNG</button></div><div class="sbc-note" style="margin:0 0 8px">${sub}</div><div class="sbc-chart" style="height:${hgt || 280}px"><canvas id="${id}"></canvas></div><div class="sbc-tap"><i class="fas fa-hand-pointer"></i> Tap any bar to open its belt list below</div></div>`; };
@@ -3701,9 +3767,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             rows: arr.slice().sort((a, b) => (M.nextOf(a) || 0) - (M.nextOf(b) || 0)).map(a => { const t = tk(a.conv); return [a.dept, a.name, SRC(a), fmt(a.len), fmt(a.plan), a.grade || '-', dstr(M.nextOf(a)), thkTxt(a.conv), [t.e1, t.ctr, t.e2].map(v => v === '' || v == null ? '-' : v).join(' / '), (t.cWearN ? t.cWearN.toFixed(3) : '-') + ' / ' + (t.pWearN ? t.pWearN.toFixed(3) : '-'), st(a)]; }), tm: s(arr, M.planM) });
         const doneTxt = a => { const r = M.repMap[a.conv]; if (!r && a.outOfPlan) return pill('Removed from plan (to hold target) - ' + (a.drop === 'CBM' ? 'CBM after 31-Mar' : 'due Jan-Mar'), 'rgba(100,116,139,.3)', '#cbd5e1'); if (!r && a.noPush) return P_PEND('Must replace this FY (push cancelled by decision)'); if (!r && a.drop) return P_BLUE(a.drop === 'CBM' ? 'In plan - not due this FY (CBM after 31-Mar)' : 'In plan - push to next FY (due Jan-Mar)'); if (!r) return a.push ? P_BLUE('Can push: ' + RS(a.push)) : P_PEND(a.overdue ? 'Must replace - CBM overdue' : S.thk[a.conv] ? 'Must replace' : 'Must replace - no thickness data'); const d = r.map(x => x.date).filter(Boolean).sort((p, q) => q - p)[0]; return P_DONE('Done' + (d ? ' ' + dstr(d) : '') + ' · ' + fmt(s(r)) + ' m'); };
         const noteC = x => x.fixed === 'U' ? P_RED('Unplanned (ABP modification list)') : x.fixed === 'P' ? P_DONE('Planned (ABP modification list)') : M.abpBy[x.conv] ? P_DONE(SRC(M.abpBy[x.conv])) : M.C.sb.includes(x) ? P_BLUE(M.isSteel(x.conv) ? 'Steel cord' : 'Bucket') : P_RED('Not in ABP');
-        const cbmWas = a => { const h = cbmTrail(a.conv); if (!h || !a.next) return '-'; const dd = dayDiff(h.first.cbm, a.next);
-            return `${dstr(h.first.cbm)}<br><small>as on ${dstr(h.first.d)}${dd > 0 ? ` · came ${fmt(dd)} days earlier` : dd < 0 ? ` · moved ${fmt(-dd)} days later` : ' · no change'}</small>`; };
-        const freshRows = arr => ({ head: ['Dept', 'Conveyor', 'Length m', 'CBM earlier', 'CBM now (thickness)', 'Min thk', 'Thickness note'], rows: arr.slice().sort((a, b) => a.next - b.next).map(a => [a.dept, a.name, fmt(a.len), cbmWas(a), dstr(a.next), thkTxt(a.conv), a.t2 ? P_BLUE(a.note || 'User decision') : a.reason === 'OTHER' ? P_PEND('Normal wear - will be needed') : P_BLUE(RS(a.reason))]), tm: s(arr, a => a.len) });
+        const cbmWas = a => { const b = cbmBack(a.conv, M.fy); if (!b) return '-'; const ln = (lbl, e) => e && e.cbm ? `${lbl}: <b>${dstr(e.cbm)}</b><br><small>${e.install ? 'at replacement' : 'reading'} ${dstr(e.d)}</small>` : '';
+            if (b.abp && b.abp === b.cur) return `<small>no new reading since ABP time<br>(last ${b.cur.install ? 'replacement' : 'reading'} ${dstr(b.cur.d)})</small>`;
+            const x = [b.abp ? ln('ABP time', b.abp) : `<small>new belt after ${dstr(b.fs)}</small>`, b.prev && b.prev !== b.abp && b.prev.d >= b.fs ? ln('Previous', b.prev) : ''].filter(Boolean); return x.join('<br>') || '-'; };
+        const freshRows = arr => ({ head: ['Dept', 'Conveyor', 'Length m', 'CBM earlier (ABP time / previous reading)', 'CBM now (thickness)', 'Min thk', 'Thickness note'], rows: arr.slice().sort((a, b) => a.next - b.next).map(a => [a.dept, a.name, fmt(a.len), cbmWas(a), dstr(a.next), thkTxt(a.conv), a.t2 ? P_BLUE(a.note || 'User decision') : a.reason === 'OTHER' ? P_PEND('Normal wear - will be needed') : P_BLUE(RS(a.reason))]), tm: s(arr, a => a.len) });
         let o;
         if (kind === 'cons') {
             if (arg === 'planOld') o = Object.assign(repRows(M.C.planned.filter(x => x.src === 'OLD'), noteC), { t: 'Planned - Old ABP belts consumed' });
@@ -3926,13 +3993,13 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             us.push(['BY BELT TYPE', 'Belts', 'Metres', 'SBC']); ['Fabric', 'Steel cord', 'Bucket'].forEach(k => { const f = a => kind(a.conv) === k; us.push([k, UL.filter(f).length, n1(uSum(f)), sbc(uSum(f))]); }); us.push(['TOTAL', UL.length, n1(uSum(() => true)), sbc(uSum(() => true))], []);
             us.push(['BY REASON (latest thickness)', 'Belts', 'Metres', 'SBC', 'Action to avoid it']); Object.keys(UCAT).forEach(k => { const f = a => (a.reason || 'OTHER') === k; if (UL.some(f)) us.push([UCAT[k][0], UL.filter(f).length, n1(uSum(f)), sbc(uSum(f)), UCAT[k][1]]); }); us.push([]);
             us.push(['BY DEPARTMENT', 'Belts', 'Metres', 'SBC']); DEPTS.forEach(d => { const f = a => a.dept === d[0]; if (UL.some(f)) us.push([d[0], UL.filter(f).length, n1(uSum(f)), sbc(uSum(f))]); }); us.push([]);
-            const uH = ['Dept', 'Conveyor', 'Belt type', 'Metres', 'SBC', 'CBM earlier', 'Earlier CBM as on', 'CBM now', 'CBM came forward by (days)', 'Why it is due (forecast)', 'Why not counted in Table 2 / 3', 'Thickness reason', 'Reason in numbers', 'Action to avoid it', 'UMC rate (Rs/m)', 'Cost (Rs Cr)'].concat(thkH);
-            const cbmCols = a => { const h = cbmTrail(a.conv), n = M.nextOf(a); if (!h) return ['no history', '', dz(n), ''];
-                return [dz(h.first.cbm), dz(h.first.d), dz(n || h.last.cbm), n && h.first.cbm ? dayDiff(h.first.cbm, n) : '']; };
+            const uH = ['Dept', 'Conveyor', 'Belt type', 'Metres', 'SBC', `CBM at ABP time (before ${dz(new Date(2000 + fy - 1, 3, 1))})`, 'ABP-time reading date', 'CBM at previous reading', 'Previous reading date', 'CBM now', 'Latest reading date', 'CBM change since ABP time (days, + = came earlier)', 'Why it is due (forecast)', 'Why not counted in Table 2 / 3', 'Thickness reason', 'Reason in numbers', 'Action to avoid it', 'UMC rate (Rs/m)', 'Cost (Rs Cr)'].concat(thkH);
+            const cbmCols = a => { const b = cbmBack(a.conv, fy), n = M.nextOf(a); if (!b) return ['no thickness data', '', '', '', dz(n), '', ''];
+                const ab = b.abp, pv = b.prev && b.prev !== ab && b.prev.d >= b.fs ? b.prev : null; if (ab && ab === b.cur) return [dz(ab.cbm), (ab.install ? 'replacement ' : '') + dz(ab.d), 'no new reading since ABP time', '', dz(b.cur.cbm || n), dz(b.cur.d), 0]; return [ab ? dz(ab.cbm) : 'new belt after ' + dz(b.fs), ab ? (ab.install ? 'replacement ' : '') + dz(ab.d) : '', pv ? dz(pv.cbm) : '', pv ? (pv.install ? 'replacement ' : '') + dz(pv.d) : '', dz(b.cur.cbm || n), dz(b.cur.d), ab && ab.cbm && b.cur.cbm ? cbmDayDiff(ab.cbm, b.cur.cbm) : '']; };
             const uHeadRow = us.length; us.push(uH);
             UL.forEach(a => { const r = a.reason || 'OTHER'; us.push([a.dept, a.name || a.conv, kind(a.conv), n1(a.len), sbc(a.len)].concat(cbmCols(a), [whyFc(a), a.t2 ? 'Counted in Table 2 (user decision); not counted in Table 3' : 'Not in the ABP - no further unplanned replacement is assumed', (UCAT[r] || [r])[0], uWhy(a), (UCAT[r] || ['', ''])[1], rate(a.conv) || 'no rate', lk(rate(a.conv) * a.len)]).concat(thkF(a.conv))); });
             us.push([], ['TOTAL', '', '', n1(uSum(() => true)), sbc(uSum(() => true))]);
-            add(us, uNm, [40, 16, 10, 9, 7, 12, 12, 12, 12, 40, 34, 22, 80, 40, 10, 10].concat(thkH.map(() => 12)), uHeadRow);
+            add(us, uNm, [40, 16, 10, 9, 7, 14, 14, 12, 14, 12, 12, 12, 40, 34, 22, 80, 40, 10, 10].concat(thkH.map(() => 12)), uHeadRow);
             // planned push: why each belt can wait till next FY, with the numbers
             const PL = M.pushPl.slice().sort((p, q) => (p.push > q.push ? 1 : p.push < q.push ? -1 : 0) || (p.dept > q.dept ? 1 : -1));
             const pSum = f => PL.filter(f).reduce((q, a) => q + pm(a), 0);
