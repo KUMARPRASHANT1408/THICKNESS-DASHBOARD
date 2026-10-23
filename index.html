@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-d</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-e</div>
         </div>
     </div>
 
@@ -3448,6 +3448,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const usedBy = {}; C.planned.concat(C.unplanned).forEach(x => usedBy[x.conv] = (usedBy[x.conv] || 0) + x.m);
         again.forEach(a => { const L = (S.thk[a.conv] || {}).len || a.len; a.agLeft = Math.max(0, planM(a) - (usedBy[a.conv] || 0)); a.agP = Math.min(a.agLeft, L); a.agU = Math.max(0, L - a.agP); });
         const againP = again.filter(a => a.agP > 0.01).map(a => Object.assign({}, a, { plan: a.agP, len: a.agP, again: true, push: null, noPush: false, outOfPlan: false }));
+        // same push rules as the other planned belts (field decision, skirt, high wear, long B/C, Jan-Mar); overdue / unavoidable belts are not pushed
+        againP.forEach(x => { const n = nextOf(x); x.overdue = !!(n && n < today); x.noPush = NO_PUSH.includes(x.conv);
+            x.push = MANUAL_PUSH[x.conv] && !x.noPush ? 'MANUAL' : (x.noPush || !S.thk[x.conv] || x.overdue) ? null : (r => (r === 'OTHER' || r === 'NODATA') ? null : r)(thkReason(x.conv)); });
         const againU = again.filter(a => a.agU > 0.01).map(a => { const t = S.thk[a.conv]; return { conv: a.conv, name: a.name, dept: a.dept || t.dept, len: a.agU, next: t.nextCbm, cat: t.cat || '', grade: t.grade || '', reason: 'AGAIN', t2: true, note: a.agP > 0.01 ? `ABP belt replaced this FY - CBM again by 31-Mar; ${fmt(a.agU)} m beyond the ABP plan` : 'ABP belt replaced this FY - ABP plan used up, new belt CBM again by 31-Mar' }; });
         const fcP = plPend.filter(a => !a.outOfPlan && !isSB2(a.conv) && dueCbm(a)).concat(againP, sbFcP);
         const exU = EXTRA_UNPLANNED.map(x => { const c = key(x.c), t = S.thk[c] || {}; return { conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || '', len: x.m, next: t.nextCbm || null, cat: t.cat || '', grade: t.grade || '', reason: 'USER' }; }).filter(x => !fresh.some(f => f.conv === x.conv) && !repMap[x.conv] && !plSet.has(x.conv));
