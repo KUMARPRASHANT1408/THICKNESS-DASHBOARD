@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-k</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-l</div>
         </div>
     </div>
 
@@ -4166,7 +4166,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const cons = sumM(e => e.st === 'Already consumed'), tb = k => sumM(e => e.st === 'To be replaced' && e.t[k]);
                 const head = [[title], [], ['', 'Metres', 'SBC'], ['Already consumed - planned', n1(sumM(e => e.st === 'Already consumed' && e.cls === 'Planned')), sbc(sumM(e => e.st === 'Already consumed' && e.cls === 'Planned'))], ['Already consumed - unplanned', n1(sumM(e => e.st === 'Already consumed' && e.cls === 'Unplanned')), sbc(sumM(e => e.st === 'Already consumed' && e.cls === 'Unplanned'))],
                     ['To be replaced - Table 1 (as per CBM)', n1(tb(0)), sbc(tb(0))], ['To be replaced - Table 2 (only planned)', n1(tb(1)), sbc(tb(1))], ['To be replaced - Table 3 (after push)', n1(tb(2)), sbc(tb(2))], ['Pushed in Table 3', n1(sumM(e => e.pr)), sbc(sumM(e => e.pr))],
-                    ['Total - Table 1', n1(cons + tb(0)), sbc(cons + tb(0))], ['Total - Table 2', n1(cons + tb(1)), sbc(cons + tb(1))], ['Total - Table 3', n1(cons + tb(2)), sbc(cons + tb(2))], [], listH];
+                    [`${nm} total - Table 1 (this sheet only; plant total is on the Summary sheet)`, n1(cons + tb(0)), sbc(cons + tb(0))], [`${nm} total - Table 2 (this sheet only; plant total is on the Summary sheet)`, n1(cons + tb(1)), sbc(cons + tb(1))], [`${nm} total - Table 3 (this sheet only; plant total is on the Summary sheet)`, n1(cons + tb(2)), sbc(cons + tb(2))], [], listH];
                 const rows = L.map(e => [e.st, e.cls, e.x.dept, e.x.name || e.x.conv, e.x.src === 'SB' ? 'Not in ABP (given by user)' : src(e.x.conv), e.act, n1(e.m), sbc(e.m), e.dates, e.why, tStat(e, 0), tStat(e, 1), tStat(e, 2), e.pr ? RS(e.pr) : '', e.pr ? whyPush(e.x.conv, e.pr) : '', re(e) ? n2(re(e)) : (e.st === 'Already consumed' ? 0 : 'no rate'), lk(re(e) * e.m)].concat(thkF(e.x.conv)));
                 add(head.concat(rows), nm, [36, 12, 9, 16, 16, 18, 9, 7, 30, 46, 14, 14, 18, 28, 70, 10, 10].concat(thkH.map(() => 12)), head.length - 1);
                 return L; };
