@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-c</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-d</div>
         </div>
     </div>
 
@@ -3210,11 +3210,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     // pushed belts brought back into this FY's forecast by decision (21-Oct-2026)
     // fabric belts NOT in the ABP that the user wants replaced this FY (unplanned forecast, never pushed, no change to the plan)
     // 23-Oct-2026: SCR1 will be changed again - unplanned, counted in Table 1 (as per CBM) and Table 2 (only planned), NOT in Table 3 (after push, 252)
-    const UNPL_T2 = [];   // SCR1 moved to PLAN_AGAIN on 23-Oct-2026
-    // 23-Oct-2026: ABP belts already replaced this FY whose new belt's CBM is again on or before 31-Mar ->
-    //   unplanned forecast, counted in Table 1 (as per CBM) and Table 2 (only planned), not in Table 3 (after push);
-    //   PLAN_AGAIN belts instead are a planned 2nd replacement of the ABP (counted in all three tables)
-    const PLAN_AGAIN = ['SCR1'];
+    const UNPL_T2 = [];   // SCR1 is now covered by the ABP-plan-left rule below (23-Oct-2026)
+    // 23-Oct-2026: ABP belts already replaced this FY whose new belt's CBM is again on or before 31-Mar:
+    //   ABP planned metres still left (e.g. SCR1 plan 180 m, used 90 m) -> planned forecast (all three tables);
+    //   ABP planned metres used up -> unplanned forecast, counted in Table 1 and Table 2 only (not in Table 3)
     // 23-Oct-2026: entries counted twice in the SBC sheet - one entry is taken out, only while the double entry is still there
     const DUP_FIX = [{ c: 'BC1(COAL)', fy: 27, type: 'R', m: 57, full: 114, note: 'replacement 57 m entered twice' }, { c: 'BC7(COAL)', fy: 27, type: 'P', m: 12, full: 24, note: 'piece addition 12 m entered twice' }];
     const CBM_ALERT_DAYS = 183;   // CBM alert card: belts whose next CBM came inside the next 6 months
@@ -3446,8 +3445,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const notEx = c => /NOT\s*EXIST/.test(grade(c));   // belts marked NOT EXISTING in the thickness sheet are never forecast
         const dueCbm = a => !notEx(a.conv) && (a.force || (() => { const n = nextOf(a); return !n || n <= fyEnd; })());
         const again = plDone.filter(a => !isSB2(a.conv) && !notEx(a.conv) && S.thk[a.conv] && S.thk[a.conv].nextCbm && S.thk[a.conv].nextCbm <= fyEnd);
-        const againP = again.filter(a => PLAN_AGAIN.includes(a.conv)).map(a => Object.assign({}, a, { plan: (S.thk[a.conv] || {}).len || a.len, len: (S.thk[a.conv] || {}).len || a.len, again: true, push: null, noPush: false, outOfPlan: false }));
-        const againU = again.filter(a => !PLAN_AGAIN.includes(a.conv)).map(a => { const t = S.thk[a.conv]; return { conv: a.conv, name: a.name, dept: a.dept || t.dept, len: t.len || a.len, next: t.nextCbm, cat: t.cat || '', grade: t.grade || '', reason: 'AGAIN', t2: true, note: 'ABP belt replaced this FY - new belt CBM again by 31-Mar' }; });
+        const usedBy = {}; C.planned.concat(C.unplanned).forEach(x => usedBy[x.conv] = (usedBy[x.conv] || 0) + x.m);
+        again.forEach(a => { const L = (S.thk[a.conv] || {}).len || a.len; a.agLeft = Math.max(0, planM(a) - (usedBy[a.conv] || 0)); a.agP = Math.min(a.agLeft, L); a.agU = Math.max(0, L - a.agP); });
+        const againP = again.filter(a => a.agP > 0.01).map(a => Object.assign({}, a, { plan: a.agP, len: a.agP, again: true, push: null, noPush: false, outOfPlan: false }));
+        const againU = again.filter(a => a.agU > 0.01).map(a => { const t = S.thk[a.conv]; return { conv: a.conv, name: a.name, dept: a.dept || t.dept, len: a.agU, next: t.nextCbm, cat: t.cat || '', grade: t.grade || '', reason: 'AGAIN', t2: true, note: a.agP > 0.01 ? `ABP belt replaced this FY - CBM again by 31-Mar; ${fmt(a.agU)} m beyond the ABP plan` : 'ABP belt replaced this FY - ABP plan used up, new belt CBM again by 31-Mar' }; });
         const fcP = plPend.filter(a => !a.outOfPlan && !isSB2(a.conv) && dueCbm(a)).concat(againP, sbFcP);
         const exU = EXTRA_UNPLANNED.map(x => { const c = key(x.c), t = S.thk[c] || {}; return { conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || '', len: x.m, next: t.nextCbm || null, cat: t.cat || '', grade: t.grade || '', reason: 'USER' }; }).filter(x => !fresh.some(f => f.conv === x.conv) && !repMap[x.conv] && !plSet.has(x.conv));
         const u2 = UNPL_T2.map(x => { const c = key(x.c), t = S.thk[c] || {}; return { conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || (abpBy[c] || {}).dept || '', len: x.m, next: t.nextCbm || null, cat: t.cat || '', grade: t.grade || '', reason: 'USER', t2: true, note: x.note }; }).filter(x => !fresh.some(f => f.conv === x.conv) && !exU.some(f => f.conv === x.conv)).concat(againU);
@@ -3540,9 +3541,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                     return `<tr class="sbc-sub"><td>&nbsp;&nbsp;&nbsp;↳ ${nm} <small>(in dept rows)</small></td>${c(0)}${c(0)}${c(p, '', p ? key : null)}${c(u, '', u ? key : null)}${c(0)}${c(0)}${c(0)}${mode === 3 ? c(0) : ''}${c(fp, '', fp ? 'sbfc:P:' + nm : null)}${c(fu, '', fu ? 'sbfc:U:' + nm : null)}${c(p + u + fp + fu)}${c(0)}</tr>`; };
                 tb += sub('Steel cord', r => M.isSteel(r.conv), 'sb:steel') + sub('Bucket', r => M.isBucket(r.conv), 'sb:bucket');
                 tb += row('<b>TOTAL</b>', tot, 'ALL', 'tot');
-                const ttl = { 1: 'Table 1 - Original: every belt due by 31-Mar as per CBM (nothing pushed)', 2: 'Table 2 - Only planned belts replaced (+ ABP belts due again)', 3: 'Table 3 - Planned belts pushed to reach the target' }[mode];
+                const ttl = { 1: 'Table 1 - Original: every belt due by 31-Mar as per CBM (nothing pushed)', 2: 'Table 2 - Only planned belts replaced (+ ABP belts due again beyond the plan)', 3: 'Table 3 - Planned belts pushed to reach the target' }[mode];
                 TITLES[id] = `${ttl} - FY'${fy}`;
-                const what = { 1: 'every ABP belt not yet replaced and every belt not in the ABP whose next CBM (thickness sheet) is on or before 31-Mar, plus the steel cord / bucket forecast given by the user (PC1 planned; J24C1 100 m, J65C2, J67C1, CCBHAC1 unplanned).', 2: 'every planned belt due by 31-Mar is replaced (incl. PC1); no further unplanned consumption is counted, except the ABP belts already replaced this FY whose new belt CBM is again by 31-Mar (decision 23-Oct-2026). SCR1 2nd replacement is planned (ABP 180 m).', 3: 'as Table 2, but the planned belts in the Push column are run till next FY (reasons in the breakup table below).' }[mode];
+                const what = { 1: 'every ABP belt not yet replaced and every belt not in the ABP whose next CBM (thickness sheet) is on or before 31-Mar, plus the steel cord / bucket forecast given by the user (PC1 planned; J24C1 100 m, J65C2, J67C1, CCBHAC1 unplanned).', 2: 'every planned belt due by 31-Mar is replaced (incl. PC1); no further unplanned consumption is counted, except the ABP belts already replaced this FY whose ABP plan is used up and whose new belt CBM is again by 31-Mar (decision 23-Oct-2026). If the ABP plan still has metres left (e.g. SCR1 180 m), the next replacement is planned.', 3: 'as Table 2, but the planned belts in the Push column are run till next FY (reasons in the breakup table below).' }[mode];
                 S.csvHead[id] = ['Dept', 'Target planned m', 'Target planned SBC', 'Target unplanned m', 'Target unplanned SBC', 'Consumed planned m', 'Consumed planned SBC', 'Consumed unplanned m', 'Consumed unplanned SBC', 'Balance as on date m', 'Balance as on date SBC', 'Balance vs ABP planned m', 'Balance vs ABP planned SBC', 'Balance vs ABP unplanned m', 'Balance vs ABP unplanned SBC'].concat(mode === 3 ? ['Pushed planned m', 'Pushed planned SBC'] : [], ['Forecast planned m', 'Forecast planned SBC', 'Forecast unplanned m', 'Forecast unplanned SBC', 'Projected m', 'Projected SBC', 'Projected - target m', 'Projected - target SBC']);
                 return `<div class="glass-panel sbc-panel" id="${cid}"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">${TITLES[id]}</h3><button class="sbc-chip sbc-png" onclick="sbcGenCsv('${id}')"><i class="fas fa-download"></i> CSV</button></div>
                 <div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px">${[1, 2, 3].map(m => `<button class="sbc-chip ${m === mode ? 'on' : ''}" onclick="sbcSetTbl(${m})">${m}. ${{ 1: 'As per CBM', 2: 'Only planned', 3: 'After push' }[m]} · <b>${f1(tot3(m) / TOTAL_KM)}</b></button>`).join('')}</div>
@@ -3939,7 +3940,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             // why a belt is in the forecast
             const whyFc = a => { const n = M.nextOf(a);
                 if (a.src === 'SB') return 'Steel cord / bucket belt expected by 31-Mar (given by user, 20/21-Oct-2026)';
-                if (a.again) return `2nd replacement this FY as per ABP (planned ${fmt(M.abpBy[a.conv] ? M.abpBy[a.conv].plan : 0)} m; first replacement done); new belt CBM ` + dz(n);
+                if (a.again) return `Next replacement this FY within the ABP plan (ABP ${fmt(M.abpBy[a.conv] ? M.abpBy[a.conv].plan : 0)} m, ${fmt(M.abpBy[a.conv] ? M.abpBy[a.conv].plan - a.agLeft : 0)} m already used); new belt CBM ` + dz(n);
                 if (a.force) return 'Added to the plan for replacement this FY because of belt condition (decision); CBM ' + dz(n);
                 if (a.reason === 'USER') return (a.note || 'Added by user - replace this FY (unplanned)') + '; CBM ' + dz(n);
                 if (!S.thk[a.conv]) return 'No thickness data - kept as due';
@@ -3989,7 +3990,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const uNm = `Unplanned ${f1(s(M.cbmU, ln) / KM)}`, pNm = `Push ${f1(s(M.pushPl, pm) / KM)}`;
             // ---------- Backup of the two steps: Table 1 -> Table 2 (unplanned not counted) and Table 2 -> Table 3 (planned push) ----------
             const bridge = () => { const a = tot(1).proj, b = tot(2).proj, c = tot(3).proj, u = s(M.cbmU, ln), p = s(M.pushPl, pm);
-                const u2 = s(M.u2, ln), u2n = `${M.u2.length} ABP belt${M.u2.length === 1 ? '' : 's'} already replaced this FY whose new CBM is again by 31-Mar`;
+                const u2 = s(M.u2, ln), u2n = `${M.u2.length} ABP belt${M.u2.length === 1 ? '' : 's'} already replaced this FY whose ABP plan is used up and new CBM is again by 31-Mar`;
                 return [['STEP', 'Metres', 'SBC'], ['Table 1 - every belt due as per CBM (nothing pushed)', n1(a), sbc(a)], [`  minus unplanned forecast (belts not in the ABP) - see sheet "${uNm}"${u2 ? ` - except ${u2n} (${fmt(u2)} m), still counted in Table 2` : ''}`, n1(-(u - u2)), sbc(-(u - u2))], ['= Table 2 - only planned belts' + (u2 ? ` + ${u2n}` : ''), n1(b), sbc(b)], [`  minus planned belts pushed to next FY - see sheet "${pNm}"`, n1(-p), sbc(-p)]].concat(u2 ? [[`  minus ${u2n} (unplanned, counted in Table 2 only - user decision)`, n1(-u2), sbc(-u2)]] : [], [['= Table 3 - after push', n1(c), sbc(c)], ['Target', M.T * KM, M.T]]); };
             // unplanned forecast: why each belt is due, why it is not counted in Table 2 / 3, and what must be done so it is really avoided
             const UCAT = { AGAIN: ['Replaced this FY - CBM again this FY', 'ABP belt already replaced once; counted in Table 1 and Table 2, not in Table 3 (252) - check the new belt and hold'], USER: ['User decision (will be changed)', 'Counted in Table 1 and Table 2; not counted in Table 3 (252)'], EDGE: ['Skirt area damage', 'Repair skirt / sealing, run with the belt'], WEAR: ['High wear rate', 'Fix the root cause (chute, scraper, loading) to slow the wear'], LONG: ['Long B / C belt', 'Piece addition instead of full replacement'], JANMAR: ['Due Jan-Mar', 'Shift the replacement to April (next FY)'], MANUAL: ['Field decision', 'Field team decided it can run till April'], OTHER: ['Normal wear (CBM due)', 'Close monitoring; replace only if it fails inspection'], NODATA: ['No thickness data', 'Take thickness reading'], SBFC: ['Steel cord / bucket (given by user)', 'Planned for this FY by user input but not in the ABP'], USER: ['Added by user', 'Added by user - not in the ABP'], SBPUSH: ['Steel cord (given by user)', 'Not in the ABP'] };
