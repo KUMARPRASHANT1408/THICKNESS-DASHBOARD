@@ -621,7 +621,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-g</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 23-Oct-h</div>
         </div>
     </div>
 
@@ -3213,7 +3213,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     // 23-Oct-2026: forecast metres changed by the user (the ABP target stays as it is)
     const FC_METRES = { 'BLENDINGCONVEYOR': { m: 90, note: 'ABP 270 m (3 replacements) - only 90 m kept in the forecast, 180 m taken out (decision 23-Oct-2026)' } };
     // 23-Oct-2026: belts not in the ABP moved to the planned forecast (in place of the 180 m of BLENDING CONVEYOR)
-    const EXTRA_PLANNED = [{ c: 'FSC1', m: 125, note: 'Not in ABP - moved to planned forecast in place of 180 m of BLENDING CONVEYOR (decision 23-Oct-2026)' }];
+    const EXTRA_PLANNED = [];   // FSC1 kept unplanned (skirt area damage) - decision 23-Oct-2026
     const UNPL_T2 = [];   // SCR1 is now covered by the ABP-plan-left rule below (23-Oct-2026)
     // 23-Oct-2026: ABP belts already replaced this FY whose new belt's CBM is again on or before 31-Mar:
     //   ABP planned metres still left (e.g. SCR1 plan 180 m, used 90 m) -> planned forecast (all three tables);
