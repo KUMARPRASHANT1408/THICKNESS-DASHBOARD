@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 26-Oct-c</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 26-Oct-d</div>
         </div>
     </div>
 
@@ -4254,7 +4254,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             [['Fabric', 'Fabric belts', c => !M.isSB2(c)], ['Steel cord', 'Steel cord belts', c => M.isSteel(c)], ['Bucket', 'Bucket belts', c => M.isBucket(c)]].forEach(([short, long, fn]) => {
                 const L = items(fn);
                 [0, 1, 2].forEach(k => {
-                    const R = L.filter(e => e.st === 'Already consumed' || e.t[k]); if (!R.length) return;
+                    const R = L.filter(e => e.st === 'Already consumed' || e.t[k]), RL = R.filter(e => e.st !== 'Already consumed'); if (!RL.length) return;   // list = only belts still to be replaced
                     const plant = tot(k + 1).proj, sm = f => R.filter(f).reduce((q, e) => q + (+e.m || 0), 0);
                     const mc = sm(e => e.st === 'Already consumed'), mf = sm(e => e.st !== 'Already consumed'), mpu = sm(e => e.st === 'Already consumed' && e.cls === 'Planned');
                     const nm = `${short} SBC ${f1(plant / KM)}`;
@@ -4266,11 +4266,11 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                         ['To be replaced by 31-Mar', R.filter(e => e.st !== 'Already consumed').length, n1(mf), sbc(mf)],
                         [`${long} total in this view`, R.length, n1(mc + mf), sbc(mc + mf)],
                         ['Plant total in this view (all belt types)', '', n1(plant), sbc(plant)], []];
-                    const head = ['Dept', 'Conveyor', 'Status', 'Planned / Unplanned', 'Metres', 'Belt length (m)', 'Belt width', 'Next CBM', 'Reason for replacement'];
+                    sh.push([`BELTS TO BE REPLACED BY 31-MAR - ${RL.length} belts, ${fmt(mf)} m`]); const head = ['Dept', 'Conveyor', 'Planned / Unplanned', 'Metres', 'Belt length (m)', 'Belt width', 'Next CBM', 'Reason for replacement'];
                     const hr = sh.length; sh.push(head);
-                    R.slice().sort((a, b) => (a.x.dept > b.x.dept ? 1 : a.x.dept < b.x.dept ? -1 : 0) || (a.st > b.st ? -1 : a.st < b.st ? 1 : 0) || ((a.x.name || a.x.conv) > (b.x.name || b.x.conv) ? 1 : -1))
-                        .forEach(e => { const th = T(e.x.conv); sh.push([e.x.dept, e.x.name || e.x.conv, e.st, e.cls, n1(e.m), th.len || '', th.width || '', dz(M.nextOf(e.x)), why(e)]); });
-                    add(sh, nm, [12, 18, 18, 12, 9, 10, 10, 12, 90], hr);
+                    RL.slice().sort((a, b) => (a.x.dept > b.x.dept ? 1 : a.x.dept < b.x.dept ? -1 : 0) || ((a.x.name || a.x.conv) > (b.x.name || b.x.conv) ? 1 : -1))
+                        .forEach(e => { const th = T(e.x.conv); sh.push([e.x.dept, e.x.name || e.x.conv, e.cls, n1(e.m), th.len || '', th.width || '', dz(M.nextOf(e.x)), why(e)]); });
+                    add(sh, nm, [12, 18, 12, 9, 10, 10, 12, 90], hr + 1);
                 });
             });
             XLSX.writeFile(wb, `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`); if (msg) { msg.innerText = ''; msg.style.display = 'none'; }
