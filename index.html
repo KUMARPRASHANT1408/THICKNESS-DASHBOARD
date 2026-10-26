@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 26-Oct-d</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 26-Oct-e</div>
         </div>
     </div>
 
@@ -3623,7 +3623,12 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const today0 = new Date(); today0.setHours(0, 0, 0, 0);
         const notEx = c => /NOT\s*EXIST/.test(grade(c));   // belts marked NOT EXISTING in the thickness sheet are never forecast
         const dueCbm = a => !notEx(a.conv) && (a.force || (() => { const n = nextOf(a); return !n || n <= fyEnd; })());
-        const again = plDone.filter(a => !isSB2(a.conv) && !notEx(a.conv) && S.thk[a.conv] && S.thk[a.conv].nextCbm && S.thk[a.conv].nextCbm <= fyEnd);
+        // the CBM in the thickness sheet belongs to the new belt only if its 'Last Belt Replacement' is on / after our latest replacement date (3 days tolerance);
+        // otherwise the sheet still shows the old belt (e.g. SCR1, J15C2 replaced 22-Oct, sheet not yet updated) and the belt is not 'due again'
+        const repDate = c => { const ds = (repMap[c] || []).map(x => x.date).filter(Boolean); return ds.length ? new Date(Math.max(...ds)) : null; };
+        const thkNew = c => { const t = S.thk[c], rd = repDate(c); return !rd || (t && t.lastRep && t.lastRep.getTime() >= rd.getTime() - 3 * 864e5); };
+        const again = plDone.filter(a => !isSB2(a.conv) && !notEx(a.conv) && S.thk[a.conv] && S.thk[a.conv].nextCbm && S.thk[a.conv].nextCbm <= fyEnd && thkNew(a.conv));
+        const thkOld = plDone.filter(a => !isSB2(a.conv) && S.thk[a.conv] && !thkNew(a.conv)).map(a => a.conv);
         const usedBy = {}; C.planned.concat(C.unplanned).forEach(x => usedBy[x.conv] = (usedBy[x.conv] || 0) + x.m);
         again.forEach(a => { const L = (S.thk[a.conv] || {}).len || a.len; a.agLeft = Math.max(0, planM(a) - (usedBy[a.conv] || 0)); a.agP = Math.min(a.agLeft, L); a.agU = Math.max(0, L - a.agP); });
         const againP = again.filter(a => a.agP > 0.01).map(a => Object.assign({}, a, { plan: a.agP, len: a.agP, again: true, push: null, noPush: false, outOfPlan: false }));
@@ -3652,7 +3657,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         // consumed cost rate per conveyor: actual cost (cost sheet) for the metres it covers, UMC rate for the rest (e.g. October)
         const consRate = {}; { const tm = {}; C.planned.concat(C.unplanned, C.sb).forEach(x => tm[x.conv] = (tm[x.conv] || 0) + x.m);
             Object.keys(tm).forEach(c => { const a = (S.act || {})[c], u = (S.umc || {})[c] || 0, t = tm[c]; consRate[c] = a ? (a.c + Math.max(0, t - a.m) * u) / t : u; }); }
-        return { u2, again, againP, againU, consRate, pushSB, cbmP, cbmU, cbmPm, cbmUm, cbmMar, sbFc, sbFcM, isSB2, sbAll, sbPl, sbUn, consBW, fcPm, fcUm, pushPm, pushUm, byMarch, yearEnd, gapEnd, fcP, fcU, pushPl, pushUn, CUT, preRep, nextOf, leftP, maintP, leftU, maintU, fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, mustP, pushP, avRep, avStill,
+        return { thkOld, u2, again, againP, againU, consRate, pushSB, cbmP, cbmU, cbmPm, cbmUm, cbmMar, sbFc, sbFcM, isSB2, sbAll, sbPl, sbUn, consBW, fcPm, fcUm, pushPm, pushUm, byMarch, yearEnd, gapEnd, fcP, fcU, pushPl, pushUn, CUT, preRep, nextOf, leftP, maintP, leftU, maintU, fyEv, avoidT, due, fy, T, st, abp, repMap, paMap, C, other, known, pl, av, pre, plDone, plPend, mustP, pushP, avRep, avStill,
             steelPlan, bucketPlan, steelRep, bucketRep, steelPa, bucketPa, pendFab, pendMust, pushM, pendSteel, pendBucket, steelUsed, bucketUsed, proj, projPush, fresh, planM, sum, abpBy, isSteel, isBucket,
             removed, keptNotDue, dropAll, activeP, abpTotal, removedM, sbTarget, fabTarget, planTotal, pushNeeded, pushActual, consX, thkReason };
     }
