@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 26-Oct-b</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 26-Oct-c</div>
         </div>
     </div>
 
@@ -983,7 +983,7 @@
             <button class="btn-slate" onclick="closeSbcApp()"><i class="fas fa-arrow-left"></i> Home</button>
             <h2><i class="fas fa-chart-line" style="color:#f59e0b"></i> SBC - Specific Belt Consumption</h2>
             <select id="sbcFy" class="sbc-sel" onchange="sbcRender()"></select>
-            <button class="btn-slate" onclick="sbcExcel()"><i class="fas fa-file-excel"></i> Export Excel (7 sheets)</button>
+            <button class="btn-slate" onclick="sbcExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
             <button class="btn-slate" onclick="sbcExport()"><i class="fas fa-file-pdf"></i> PDF</button>
             <select id="sbcDeptExp" class="sbc-sel" onchange="sbcExportDept(this.value); this.value='';"><option value="">Dept report PDF...</option></select>
         </div>
@@ -4099,7 +4099,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     }
     window.sbcExcel = function () {
         if (!S.loaded) return;
-        const msg = el('sbcLoading'); if (msg) { msg.style.display = 'block'; msg.innerText = 'Preparing Excel file (7 sheets)...'; }
+        const msg = el('sbcLoading'); if (msg) { msg.style.display = 'block'; msg.innerText = 'Preparing Excel file...'; }
         loadXlsx().then(() => {
             const fy = fyNow(), M = model(fy), s = M.sum, KM = TOTAL_KM, dz = d => d ? dstr(d) : '', rate = c => (S.umc || {})[c] || 0, rateC = c => M.consRate[c] != null ? M.consRate[c] : rate(c);
             const re = e => e.st === 'Already consumed' ? rateC(e.x.conv) : rate(e.x.conv);   // consumed: actual cost sheet (+UMC for metres it does not cover); forecast: UMC
@@ -4249,6 +4249,30 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             sv.push(['SBC(Mtr/Km)'].concat(bv.map(sbc), [sbc(s(M.pushPl, pm))])); sv.push(['Length(mtr)'].concat(bv.map(n1), [n1(s(M.pushPl, pm))]));
             sv.push([], ['Fabric / steel cord / bucket split of the projected SBC'], ['', 'Table 1', 'Table 2', 'Table 3'], ['Fabric'].concat([1, 2, 3].map(m => sbc(fab(m)))), ['Steel cord + bucket'].concat([1, 2, 3].map(m => sbc(tot(m).proj - fab(m)))), ['TOTAL'].concat([1, 2, 3].map(m => sbc(tot(m).proj))));
             const wsS = XLSX.utils.aoa_to_sheet(sv); wsS['!merges'] = merges; wsS['!cols'] = [14, 12, 12, 12, 12, 14, 12, 12, 14, 12, 16].map(x => ({ wch: x })); XLSX.utils.book_append_sheet(wb, wsS, 'Summary');
+            // ---------- simple belt lists for departments (26-Oct-2026): one sheet per belt type and view, only the belts counted in that view ----------
+            const VIEW = { 0: 'As per CBM (nothing pushed)', 1: 'Planned only', 2: 'After push' };
+            [['Fabric', 'Fabric belts', c => !M.isSB2(c)], ['Steel cord', 'Steel cord belts', c => M.isSteel(c)], ['Bucket', 'Bucket belts', c => M.isBucket(c)]].forEach(([short, long, fn]) => {
+                const L = items(fn);
+                [0, 1, 2].forEach(k => {
+                    const R = L.filter(e => e.st === 'Already consumed' || e.t[k]); if (!R.length) return;
+                    const plant = tot(k + 1).proj, sm = f => R.filter(f).reduce((q, e) => q + (+e.m || 0), 0);
+                    const mc = sm(e => e.st === 'Already consumed'), mf = sm(e => e.st !== 'Already consumed'), mpu = sm(e => e.st === 'Already consumed' && e.cls === 'Planned');
+                    const nm = `${short} SBC ${f1(plant / KM)}`;
+                    const why = e => e.st === 'Already consumed' ? `Already ${e.act === 'Piece addition' ? 'piece addition' : 'replaced'} (${e.cls.toLowerCase()})${e.dates ? ': ' + e.dates : ''}` : e.why;
+                    const sh = [[`${long.toUpperCase()} - ${VIEW[k]} - plant SBC ${f1(plant / KM)} (FY'${fy})`], [],
+                        ['', 'Belts', 'Metres', 'SBC'],
+                        ['Already consumed (1-Apr to date)', R.filter(e => e.st === 'Already consumed').length, n1(mc), sbc(mc)],
+                        ['   of which planned / unplanned', '', `${n1(mpu)} / ${n1(mc - mpu)}`, `${sbc(mpu)} / ${sbc(mc - mpu)}`],
+                        ['To be replaced by 31-Mar', R.filter(e => e.st !== 'Already consumed').length, n1(mf), sbc(mf)],
+                        [`${long} total in this view`, R.length, n1(mc + mf), sbc(mc + mf)],
+                        ['Plant total in this view (all belt types)', '', n1(plant), sbc(plant)], []];
+                    const head = ['Dept', 'Conveyor', 'Status', 'Planned / Unplanned', 'Metres', 'Belt length (m)', 'Belt width', 'Next CBM', 'Reason for replacement'];
+                    const hr = sh.length; sh.push(head);
+                    R.slice().sort((a, b) => (a.x.dept > b.x.dept ? 1 : a.x.dept < b.x.dept ? -1 : 0) || (a.st > b.st ? -1 : a.st < b.st ? 1 : 0) || ((a.x.name || a.x.conv) > (b.x.name || b.x.conv) ? 1 : -1))
+                        .forEach(e => { const th = T(e.x.conv); sh.push([e.x.dept, e.x.name || e.x.conv, e.st, e.cls, n1(e.m), th.len || '', th.width || '', dz(M.nextOf(e.x)), why(e)]); });
+                    add(sh, nm, [12, 18, 18, 12, 9, 10, 10, 12, 90], hr);
+                });
+            });
             XLSX.writeFile(wb, `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`); if (msg) { msg.innerText = ''; msg.style.display = 'none'; }
         }).catch(e => { console.error(e); const m = el('sbcLoading'); if (m) { m.style.display = 'block'; m.innerText = 'Excel file could not be created (library not loaded). Check the internet connection and try again.'; } });
     };
