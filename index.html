@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 26-Oct-e</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 26-Oct-f</div>
         </div>
     </div>
 
@@ -3386,7 +3386,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     // fabric belts NOT in the ABP that the user wants replaced this FY (unplanned forecast, never pushed, no change to the plan)
     // 23-Oct-2026: SCR1 will be changed again - unplanned, counted in Table 1 (as per CBM) and Table 2 (only planned), NOT in Table 3 (after push, 252)
     // 23-Oct-2026: forecast metres changed by the user (the ABP target stays as it is)
-    const FC_METRES = { 'BLENDINGCONVEYOR': { m: 90, note: 'ABP 270 m (3 replacements) - only 90 m kept in the forecast, 180 m taken out (decision 23-Oct-2026)' } };
+    const FC_METRES = { 'BLENDINGCONVEYOR': { m: 90, note: 'ABP 270 m (3 replacements) - only 90 m kept in the forecast, 180 m taken out (decision 23-Oct-2026)' }, 'REC2': { m: 90, note: 'ABP 180 m (2 replacements) - only 90 m kept in the forecast, other 90 m given to SCR4 (decision 26-Oct-2026)' } };
+    // 26-Oct-2026: belts replaced this FY and due again that are taken into the planned forecast (in place of the 90 m of REC2)
+    const AGAIN_PLANNED = { 'SCR4': 90 };
     // 23-Oct-2026: belts not in the ABP moved to the planned forecast (in place of the 180 m of BLENDING CONVEYOR)
     const EXTRA_PLANNED = [];   // FSC1 kept unplanned (skirt area damage) - decision 23-Oct-2026
     const UNPL_T2 = [];   // SCR1 is now covered by the ABP-plan-left rule below (23-Oct-2026)
@@ -3630,10 +3632,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const again = plDone.filter(a => !isSB2(a.conv) && !notEx(a.conv) && S.thk[a.conv] && S.thk[a.conv].nextCbm && S.thk[a.conv].nextCbm <= fyEnd && thkNew(a.conv));
         const thkOld = plDone.filter(a => !isSB2(a.conv) && S.thk[a.conv] && !thkNew(a.conv)).map(a => a.conv);
         const usedBy = {}; C.planned.concat(C.unplanned).forEach(x => usedBy[x.conv] = (usedBy[x.conv] || 0) + x.m);
-        again.forEach(a => { const L = (S.thk[a.conv] || {}).len || a.len; a.agLeft = Math.max(0, planM(a) - (usedBy[a.conv] || 0)); a.agP = Math.min(a.agLeft, L); a.agU = Math.max(0, L - a.agP); });
+        again.forEach(a => { const L = (S.thk[a.conv] || {}).len || a.len; a.agLeft = Math.max(0, planM(a) - (usedBy[a.conv] || 0)); a.agP = Math.min(a.agLeft, L); if (AGAIN_PLANNED[a.conv]) { a.agP = Math.min(L, AGAIN_PLANNED[a.conv]); a.agUser = true; } a.agU = Math.max(0, L - a.agP); });
         const againP = again.filter(a => a.agP > 0.01).map(a => Object.assign({}, a, { plan: a.agP, len: a.agP, again: true, push: null, noPush: false, outOfPlan: false }));
         // same push rules as the other planned belts (field decision, skirt, high wear, long B/C, Jan-Mar); overdue / unavoidable belts are not pushed
-        againP.forEach(x => { const n = nextOf(x); x.overdue = !!(n && n < today); x.noPush = NO_PUSH.includes(x.conv);
+        againP.forEach(x => { const n = nextOf(x); x.overdue = !!(n && n < today); x.noPush = NO_PUSH.includes(x.conv) || !!AGAIN_PLANNED[x.conv];
             x.push = MANUAL_PUSH[x.conv] && !x.noPush ? 'MANUAL' : (x.noPush || !S.thk[x.conv] || x.overdue) ? null : (r => (r === 'OTHER' || r === 'NODATA') ? null : r)(thkReason(x.conv)); });
         const againU = again.filter(a => a.agU > 0.01).map(a => { const t = S.thk[a.conv]; return { conv: a.conv, name: a.name, dept: a.dept || t.dept, len: a.agU, next: t.nextCbm, cat: t.cat || '', grade: t.grade || '', reason: 'AGAIN', t2: true, note: a.agP > 0.01 ? `ABP belt replaced this FY - CBM again by 31-Mar; ${fmt(a.agU)} m beyond the ABP plan` : 'ABP belt replaced this FY - ABP plan used up, new belt CBM again by 31-Mar' }; });
         // forecast copies of the pending ABP belts (forecast metres can differ from the ABP metres - FC_METRES); same objects are used by Table 1 / 2 / 3
@@ -4132,6 +4134,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 if (a.src === 'SB') return 'Steel cord / bucket belt expected by 31-Mar (given by user, 20/21-Oct-2026)';
                 if (a.extra) return (a.note || 'Moved to planned forecast (decision)') + '; CBM ' + dz(n);
                 if (a.fcNote) return a.fcNote + '; CBM ' + dz(n);
+                if (a.again && a.agUser) return `Replaced this FY and due again - taken into the planned forecast in place of 90 m of REC2 (decision 26-Oct-2026); new belt CBM ` + dz(n);
                 if (a.again) return `Next replacement this FY within the ABP plan (ABP ${fmt(M.abpBy[a.conv] ? M.abpBy[a.conv].plan : 0)} m, ${fmt(M.abpBy[a.conv] ? M.abpBy[a.conv].plan - a.agLeft : 0)} m already used); new belt CBM ` + dz(n);
                 if (a.force) return 'Added to the plan for replacement this FY because of belt condition (decision); CBM ' + dz(n);
                 if (a.reason === 'USER') return (a.note || 'Added by user - replace this FY (unplanned)') + '; CBM ' + dz(n);
