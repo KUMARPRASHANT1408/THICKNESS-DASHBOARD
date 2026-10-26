@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 26-Oct-f</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 26-Oct-g</div>
         </div>
     </div>
 
@@ -4281,6 +4281,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                     add(sh, nm, [12, 18, 12, 9, 10, 10, 12, 90], hr + 1);
                 });
             });
+            // 26-Oct-2026: every 'Table 1 / 2 / 3' label in the Excel shows its SBC number instead
+            const TSB = { 1: 'SBC ' + f1(tot(1).proj / KM), 2: 'SBC ' + f1(tot(2).proj / KM), 3: 'SBC ' + f1(tot(3).proj / KM) };
+            const tLbl = v => v.replace(/ total - Table ([123])/g, (x, k) => ' total in the ' + TSB[k] + ' view').replace(/^To be replaced - Table ([123])/, (x, k) => 'To be replaced in the ' + TSB[k] + ' view').replace(/Table 2 \/ 3/g, TSB[2] + ' / ' + TSB[3]).replace(/\b(?:Table|TABLE) ([123])\b/g, (x, k) => TSB[k]);
+            wb.SheetNames.forEach(sn => { const sh = wb.Sheets[sn]; Object.keys(sh).forEach(k => { const c = sh[k]; if (k[0] !== '!' && c && c.t === 's' && typeof c.v === 'string' && /Table|TABLE/.test(c.v)) { c.v = tLbl(c.v); if (c.w) c.w = c.v; if (c.h) delete c.h; if (c.r) delete c.r; } }); });
             XLSX.writeFile(wb, `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`); if (msg) { msg.innerText = ''; msg.style.display = 'none'; }
         }).catch(e => { console.error(e); const m = el('sbcLoading'); if (m) { m.style.display = 'block'; m.innerText = 'Excel file could not be created (library not loaded). Check the internet connection and try again.'; } });
     };
