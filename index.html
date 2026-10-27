@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 27-Oct-a</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 27-Oct-b</div>
         </div>
     </div>
 
@@ -3458,8 +3458,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 if (!pd || !pc || pc === '0' || pm < 0) return; cdept[pc] = cdept[pc] || pd;
                 FYL.forEach(f => { const v = num(r[f[1]]); if (v) S.monthly.push({ fy: f[0], mi: pm, date: new Date(yr(f[0], pm), (pm + 3) % 12, 1), dept: pd, conv: pc, name: String(r['Conv. Name']).trim(), m: v, type: 'X' }); });
             });
+            S.oldRep = {};   // 'Manual Old Date' of the SBC tab = previous full replacement (used in the Excel 'Unplanned why' sheet)
             sbc.forEach(r => {
                 const dp = nd(r['Department']), c = key(r['Conveyor']); if (!c || c === '0' || !dp) return;
+                { const od = pdmy(r['Manual Old Date']); if (od && od.getFullYear() > 2000) S.oldRep[c] = od; }
                 const fin = pdmy(r['Final Replacement Date']); const finOk = fin && fin.getFullYear() > 2000 ? fin : null;
                 FYL.forEach(f => {
                     const rv = num(r['Replacement ' + f[1]]), pv = num(r['Piece Addition ' + f[1]]); if (!rv && !pv) return;
@@ -4224,7 +4226,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const BA = baTxt ? Papa.parse(baTxt, { header: false, skipEmptyLines: true }).data.slice(1) : [];
                 const nk = v => String(v || '').toUpperCase().replace(/[\s\-_()]/g, '');
                 const pdt = v => { const m = String(v || '').trim().match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
-                const baBy = {}; BA.forEach(r => { const d = pdt(r[6]); if (r[2] && d) (baBy[nk(r[2])] = baBy[nk(r[2])] || []).push({ d, prev: pdt(r[5]), len: +r[4] || 0, life: r[8], pred: r[9], job: r[10], pb: r[13], typ: String(r[14] || '').trim(), main: String(r[15] || '').trim(), sub: String(r[16] || '').trim(), rem: String(r[19] || '').trim() }); });
+                const baBy = {}; BA.forEach(r => { const d = pdt(r[6]); if (r[2] && d) (baBy[nk(r[2])] = baBy[nk(r[2])] || []).push({ d, prevRaw: String(r[5] || '').trim(), isRep: /replacement/i.test(r[10] || ''), prev: pdt(r[5]), len: +r[4] || 0, life: r[8], pred: r[9], job: r[10], pb: r[13], typ: String(r[14] || '').trim(), main: String(r[15] || '').trim(), sub: String(r[16] || '').trim(), rem: String(r[19] || '').trim() }); });
                 // decisions on single belts (reason not in the sheet, or a life check)
                 const WHY_FIX = { 'K4-BC12': { typ: 'PLANNED', main: 'Ply Visible / Thickness Reduction', sub: 'Natural wear', grp: 'OTH', note: 'Predicted life achieved: belt fitted 14-Nov-2021, replaced 10-Sep-2026 = 58 months vs predicted 50.6 months - so not premature (decision 27-Oct-2026)' } };
                 const GRP = [['PRE', 'Premature - fast wear (ply visible / thickness reduction)', 'Belt was not in the ABP (its CBM was next FY at ABP time) but wore faster and came this FY - fix spillage, carry-back, skirt and scraper; follow the wear rate'],
@@ -4243,7 +4245,12 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                     const cand = baBy[nk(x.conv)] || []; const hits = [], usedB = new Set();
                     evs.forEach(e => { const c = cand.filter(b => Math.abs(b.d - e.date) <= 5 * 864e5).sort((p, q) => Math.abs(p.d - e.date) - Math.abs(q.d - e.date))[0]; if (c && !usedB.has(c)) { usedB.add(c); hits.push(Object.assign({ em: e.m || 0 }, c)); } });
                     const fx = WHY_FIX[x.conv]; hits.sort((p, q) => q.em - p.em);
-                    const one = (top, m, part) => { const lifeM = top && top.prev && top.d ? Math.round((top.d - top.prev) / (30.44 * 864e5) * 10) / 10 : ''; return { x, m, g: top ? grpOf(top) : 'OTH', top, hits, lifeM, dates: evT(x.conv, ty), found: !!top, part }; };
+                    // previous full replacement: 1) the sheet's own column, 2) the last 'Belt replacement' row of the same conveyor before this job, 3) 'Manual Old Date' of the SBC tab
+                    const prevOf = top => { const d = top && top.d || (evs[0] && evs[0].date); if (!d) return { p: null, src: '' }; if (top && top.prev && top.prev < d) return { p: top.prev, src: 'Belt analysis sheet (previous date column)' };
+                        const pr = cand.filter(b => b.isRep && b.d < d - 5 * 864e5).sort((p, q) => q.d - p.d)[0]; if (pr) return { p: pr.d, src: 'Belt analysis sheet (earlier replacement row)' };
+                        const od = S.oldRep && S.oldRep[x.conv]; if (od && od < d - 5 * 864e5 && od < new Date(2000 + fy - 1, 3, 1)) return { p: od, src: 'SBC sheet (Manual Old Date)' };
+                        return { p: null, src: /FIRST/i.test(top && top.prevRaw || '') ? 'First replacement - no earlier record' : 'No earlier replacement record (belt analysis sheet starts 01-Apr-2023, so the belt was fitted before that)' }; };
+                    const one = (top, m, part) => { const pv = prevOf(top), jd = top && top.d || (evs[0] && evs[0].date); const lifeM = pv.p && jd ? Math.round((jd - pv.p) / (30.44 * 864e5) * 10) / 10 : ''; return { x, m, g: top ? grpOf(top) : 'OTH', top, hits, lifeM, pv, jd, dates: evT(x.conv, ty), found: !!top, part }; };
                     if (fx) return [one(Object.assign({ em: x.m, d: null, prev: null }, fx), x.m)];
                     // jobs of one belt with different reasons (e.g. J65C2: 400 m ply visible + 200 m mother belt damage) -> metres split by job
                     const gs = [...new Set(hits.map(grpOf))], hm = hits.reduce((a, h) => a + h.em, 0);
@@ -4259,13 +4266,13 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 ws2.push(['TOTAL', new Set(UL2.map(e => e.x.conv)).size, n1(tU), sbc(tU), 100, ''], [], ['BY DEPARTMENT (metres)'].concat(GRP.map(r => r[1].split(' (')[0]), ['Total m', 'SBC']));
                 DEPTS.forEach(d => { const f = e => e.x.dept === d[0]; if (!UL2.some(f)) return; const m = UL2.filter(f).reduce((a, e) => a + e.m, 0); ws2.push([d[0]].concat(GRP.map(r => n1(gS(r[0], f))), [n1(m), sbc(m)])); });
                 ws2.push([]); const hRow = ws2.length;
-                ws2.push(['Reason group', 'Dept', 'Conveyor', 'Belt type', 'Activity', 'Metres', 'SBC', 'Date(s) - Daily Report', 'Main cause (belt analysis sheet)', 'Sub-cause', 'Remarks', 'Type in belt analysis sheet', 'Planned / Breakdown job', 'Replacement date (analysis sheet)', 'Previous replacement date', 'Life achieved (months)', 'Predicted life (years) - analysis sheet', 'Note']);
+                ws2.push(['Reason group', 'Dept', 'Conveyor', 'Belt type', 'Activity', 'Metres', 'SBC', 'Date(s) - Daily Report', 'Main cause (belt analysis sheet)', 'Sub-cause', 'Remarks', 'Type in belt analysis sheet', 'Planned / Breakdown job', 'Job date', 'Previous full replacement', 'Where the previous date comes from', 'Belt age at this job (months) - life achieved for a replacement', 'Predicted life (years) - analysis sheet', 'Note']);
                 UL2.forEach(e => { const b = e.top || {}; const ok = v => v && !/^#|^NA$/i.test(String(v).trim()) ? v : '';
                     ws2.push([(GRP.find(r => r[0] === e.g) || [])[1], e.x.dept, e.x.name || e.x.conv, M.isSteel(e.x.conv) ? 'Steel cord' : M.isBucket(e.x.conv) ? 'Bucket' : 'Fabric', e.x.kind || '', n1(e.m), sbc(e.m), e.dates,
-                        b.main || '', b.sub || '', b.rem || '', b.typ || '', b.pb || '', dz(b.d), dz(b.prev), e.lifeM, ok(b.pred),
+                        b.main || '', b.sub || '', b.rem || '', b.typ || '', b.pb || '', dz(e.jd), dz(e.pv.p), e.pv.src, e.lifeM, ok(b.pred),
                         b.note || (e.part ? 'Belt split by job: ' + e.hits.map(h => dz(h.d) + ' ' + fmt(h.em) + ' m ' + h.main).join(' | ') : e.found ? (e.hits.length > 1 ? 'Several jobs this FY: ' + e.hits.map(h => dz(h.d) + ' ' + h.main).join(' | ') : '') : 'Reason not found in the belt analysis sheet')]); });
                 ws2.push([], ['TOTAL', '', '', '', '', n1(tU), sbc(tU)]);
-                add(ws2, `Unplanned why ${f1(tU / KM)}`, [44, 10, 16, 10, 14, 9, 7, 40, 34, 34, 50, 22, 12, 14, 14, 10, 12, 60], hRow);
+                add(ws2, `Unplanned why ${f1(tU / KM)}`, [44, 10, 16, 10, 14, 9, 7, 40, 34, 34, 50, 22, 12, 12, 14, 40, 14, 12, 60], hRow);
             }
             // ---------- Cost ----------
             const cst = (L, f) => L.filter(f).reduce((q, e) => q + re(e) * (+e.m || 0), 0), mt = (L, f) => L.filter(f).reduce((q, e) => q + (+e.m || 0), 0);
