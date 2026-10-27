@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 27-Oct-b</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 27-Oct-c</div>
         </div>
     </div>
 
@@ -4235,15 +4235,16 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                     ['JNT', 'Joint issue (step crack, joint ageing)', 'Joint failed before the belt - joint quality, sway, pulley alignment'],
                     ['OTH', 'Others (belt burnt, snapping, sway, life achieved, reason not found)', 'Case by case']];
                 const grpOf = b => { if (b.grp) return b.grp; const ty = b.typ.toUpperCase(), mc = b.main.toUpperCase();
-                    if (/THROUGH|CROSSCUT/.test(ty) || /THROUGH|CROSSCUT/.test(mc)) return 'TC';
+                    if (/THROUGH|CROSSCUT/.test(ty)) return 'TC';   // throughcut only when the sheet's TYPE column says so (27-Oct-2026)
                     if (ty === 'PRE-MATURE' || /PLY VIS|THICKNESS/.test(mc)) return 'PRE';
                     if (/MOTHER|CRACK|HARDNESS|PEEL|PLY SEP|MANUFACTUR/.test(mc)) return 'MBD';
                     if (/JOINT/.test(mc)) return 'JNT'; return 'OTH'; };
+                const usedAll = new Set();   // belt analysis rows already used by the unplanned sheet
                 const UL2 = M.C.unplanned.map(x => {
                     const ty = x.kind === 'Piece addition' ? 'P' : 'R'; let evs = M.fyEv(x.conv).filter(e => e.type === ty && e.date);
                     const exact = evs.filter(e => Math.abs((e.m || 0) - x.m) < 0.5); if (exact.length && exact.length < evs.length) evs = exact;
                     const cand = baBy[nk(x.conv)] || []; const hits = [], usedB = new Set();
-                    evs.forEach(e => { const c = cand.filter(b => Math.abs(b.d - e.date) <= 5 * 864e5).sort((p, q) => Math.abs(p.d - e.date) - Math.abs(q.d - e.date))[0]; if (c && !usedB.has(c)) { usedB.add(c); hits.push(Object.assign({ em: e.m || 0 }, c)); } });
+                    evs.forEach(e => { const c = cand.filter(b => Math.abs(b.d - e.date) <= 5 * 864e5).sort((p, q) => Math.abs(p.d - e.date) - Math.abs(q.d - e.date))[0]; if (c && !usedB.has(c)) { usedB.add(c); usedAll.add(c); hits.push(Object.assign({ em: e.m || 0 }, c)); } });
                     const fx = WHY_FIX[x.conv]; hits.sort((p, q) => q.em - p.em);
                     // previous full replacement: 1) the sheet's own column, 2) the last 'Belt replacement' row of the same conveyor before this job, 3) 'Manual Old Date' of the SBC tab
                     const prevOf = top => { const d = top && top.d || (evs[0] && evs[0].date); if (!d) return { p: null, src: '' }; if (top && top.prev && top.prev < d) return { p: top.prev, src: 'Belt analysis sheet (previous date column)' };
@@ -4273,6 +4274,47 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                         b.note || (e.part ? 'Belt split by job: ' + e.hits.map(h => dz(h.d) + ' ' + fmt(h.em) + ' m ' + h.main).join(' | ') : e.found ? (e.hits.length > 1 ? 'Several jobs this FY: ' + e.hits.map(h => dz(h.d) + ' ' + h.main).join(' | ') : '') : 'Reason not found in the belt analysis sheet')]); });
                 ws2.push([], ['TOTAL', '', '', '', '', n1(tU), sbc(tU)]);
                 add(ws2, `Unplanned why ${f1(tU / KM)}`, [44, 10, 16, 10, 14, 9, 7, 40, 34, 34, 50, 22, 12, 12, 14, 40, 14, 12, 60], hRow);
+
+                // ---------- 27-Oct-2026: planned consumption break-up - life achieved / throughcut / others ----------
+                // throughcut = rows whose TYPE is BELT THROUGHCUT in the belt analysis sheet, metres as in that sheet (rest of the belt's consumed metres = life achieved, e.g. double consumption)
+                const fyS = new Date(2000 + fy - 1, 3, 1), inFy = b => b.d >= new Date(fyS - 5 * 864e5) && b.d <= new Date();
+                const PG = [['LIFE', 'Life achieved (planned replacement - ply visible / thickness / time based / marked premature)', 'Belt was in the ABP - replaced as planned'],
+                    ['TC', 'Belt throughcut / crosscut', 'Planned belt cut by foreign material / internal component (TYPE = BELT THROUGHCUT in the belt analysis sheet)'],
+                    ['OTH', 'Others (mother belt damage, joint issue, others, reason not found)', 'See the break-up below']];
+                const subOf = b => { const mc = (b.main || '').toUpperCase(); return /MOTHER|CRACK|HARDNESS|PEEL|PLY SEP|MANUFACTUR/.test(mc) ? 'Mother belt damage / cracks / ageing' : /JOINT/.test(mc) ? 'Joint issue' : /THROUGH|CROSSCUT/.test(mc) ? 'Throughcut in main cause, but TYPE = PLANNED in the sheet' : /SNAP/.test(mc) ? 'Belt snapping' : /BURN/.test(mc) ? 'Belt burnt' : 'Others (sheet says Others)'; };
+                const lifeLike = b => b.typ.toUpperCase() === 'PRE-MATURE' || /PLY VIS|THICKNESS|TIME BASED|^PLANNED$|FIRST/i.test(b.main || '');
+                const PLI = M.C.planned.concat(M.C.sb), PL2 = [], usedP = new Set();
+                // 1) throughcut rows first, matched to the planned item of the same conveyor and job type
+                PLI.forEach(x => { const pa = x.kind === 'Piece addition'; (baBy[nk(x.conv)] || []).filter(b => inFy(b) && !usedAll.has(b) && !usedP.has(b) && /THROUGH|CROSSCUT/.test(b.typ.toUpperCase()) && (!b.isRep === pa || /piece/i.test(b.job) === pa))
+                    .forEach(b => { const left = x.m - PL2.filter(e => e.x === x).reduce((a, e) => a + e.m, 0); if (left <= 0.01) return; usedP.add(b); PL2.push({ x, g: 'TC', m: Math.min(b.len || left, left), b, sub: '' }); }); });
+                // 2) the rest of each planned item: reason rows matched by date (else any row of this FY), split by their metres
+                PLI.forEach(x => { const left = x.m - PL2.filter(e => e.x === x).reduce((a, e) => a + e.m, 0); if (left <= 0.01) return;
+                    const ty = x.kind === 'Piece addition' ? 'P' : 'R', evs = M.fyEv(x.conv).filter(e => e.type === ty && e.date), cand = (baBy[nk(x.conv)] || []).filter(b => inFy(b) && !usedAll.has(b) && !usedP.has(b) && !/THROUGH|CROSSCUT/.test(b.typ.toUpperCase()));
+                    let rows = []; evs.forEach(e => { const c = cand.filter(b => Math.abs(b.d - e.date) <= 5 * 864e5 && !rows.includes(b)).sort((p, q) => Math.abs(p.d - e.date) - Math.abs(q.d - e.date))[0]; if (c) rows.push(c); });
+                    if (!rows.length) rows = cand.filter(b => /piece/i.test(b.job) === (ty === 'P'));
+                    const hadTc = PL2.some(e => e.x === x);
+                    if (!rows.length) { PL2.push({ x, g: hadTc ? 'LIFE' : 'OTH', m: left, b: null, sub: hadTc ? '' : 'Reason not found in the belt analysis sheet', note: hadTc ? 'Rest of the consumed metres (double consumption) - throughcut metres as per the belt analysis sheet' : '' }); return; }
+                    rows.forEach(b => usedP.add(b));
+                    const parts = {}; rows.forEach(b => { const k = lifeLike(b) ? 'LIFE' : 'OTH|' + subOf(b); (parts[k] = parts[k] || []).push(b); });
+                    const tot = rows.reduce((a, b) => a + (b.len || 0), 0), keys = Object.keys(parts);
+                    keys.forEach(k => { const L = parts[k], sm = L.reduce((a, b) => a + (b.len || 0), 0); const m = keys.length === 1 ? left : tot ? left * sm / tot : left / keys.length;
+                        PL2.push({ x, g: k.split('|')[0], m, b: L[0], sub: k.split('|')[1] || '', note: keys.length > 1 ? 'Belt split by job: ' + rows.map(b => dz(b.d) + ' ' + fmt(b.len) + ' m ' + b.main).join(' | ') : hadTc ? 'Rest of the consumed metres (double consumption) - throughcut metres as per the belt analysis sheet' : '' }); }); });
+                PL2.sort((p, q) => PG.findIndex(r => r[0] === p.g) - PG.findIndex(r => r[0] === q.g) || (p.sub > q.sub ? 1 : p.sub < q.sub ? -1 : 0) || q.m - p.m);
+                const tP2 = PL2.reduce((a, e) => a + e.m, 0), pS = (g, f) => PL2.filter(e => e.g === g && (!f || f(e))).reduce((a, e) => a + e.m, 0), nB = L => new Set(L.map(e => e.x.conv)).size;
+                const wp = [[`FY'${fy} - PLANNED CONSUMPTION 1-Apr to date: ${fmt(tP2)} m = SBC ${f1(tP2 / KM)} - break-up`],
+                    ['Every planned (ABP) belt consumed this FY. A planned belt replaced for wear is "life achieved" (it was in the plan), even if the belt analysis sheet marks it premature.'],
+                    ['Throughcut = rows with TYPE "BELT THROUGHCUT / CROSSCUT" in the belt analysis sheet, metres as in that sheet; when the dashboard has more metres for the belt (double consumption) the rest is life achieved.'], [],
+                    ['BY REASON', 'Belts', 'Metres', 'SBC', '% of planned', 'What it means']];
+                PG.forEach(r => { const L = PL2.filter(e => e.g === r[0]), m = pS(r[0]); wp.push([r[1], nB(L), n1(m), sbc(m), tP2 ? +(m / tP2 * 100).toFixed(1) : 0, r[2]]); });
+                wp.push(['TOTAL', nB(PL2), n1(tP2), sbc(tP2), 100, ''], [], ['OTHERS - BREAK UP', 'Belts', 'Metres', 'SBC']);
+                [...new Set(PL2.filter(e => e.g === 'OTH').map(e => e.sub))].forEach(sb => { const L = PL2.filter(e => e.g === 'OTH' && e.sub === sb), m = L.reduce((a, e) => a + e.m, 0); wp.push([sb, nB(L), n1(m), sbc(m)]); });
+                wp.push([], ['BY DEPARTMENT (metres)'].concat(PG.map(r => r[1].split(' (')[0]), ['Total m', 'SBC']));
+                DEPTS.forEach(d => { const f = e => e.x.dept === d[0]; if (!PL2.some(f)) return; const m = PL2.filter(f).reduce((a, e) => a + e.m, 0); wp.push([d[0]].concat(PG.map(r => n1(pS(r[0], f))), [n1(m), sbc(m)])); });
+                wp.push([]); const pH2 = wp.length;
+                wp.push(['Reason group', 'Others - sub group', 'Dept', 'Conveyor', 'Belt type', 'Activity', 'Metres', 'SBC', 'Date(s) - Daily Report', 'Main cause (belt analysis sheet)', 'Sub-cause', 'Remarks', 'Type in belt analysis sheet', 'Job date (analysis sheet)', 'Metres in analysis sheet', 'Note']);
+                PL2.forEach(e => { const b = e.b || {}; wp.push([(PG.find(r => r[0] === e.g) || [])[1], e.sub, e.x.dept, e.x.name || e.x.conv, M.isSteel(e.x.conv) ? 'Steel cord' : M.isBucket(e.x.conv) ? 'Bucket' : 'Fabric', e.x.kind || '', n1(e.m), sbc(e.m), evT(e.x.conv, e.x.kind === 'Piece addition' ? 'P' : 'R'), b.main || '', b.sub || '', b.rem || '', b.typ || '', dz(b.d), b.len || '', e.note || '']); });
+                wp.push([], ['TOTAL', '', '', '', '', '', n1(tP2), sbc(tP2)]);
+                add(wp, `Planned why ${f1(tP2 / KM)}`, [44, 30, 10, 16, 10, 14, 9, 7, 40, 34, 34, 50, 22, 12, 10, 60], pH2);
             }
             // ---------- Cost ----------
             const cst = (L, f) => L.filter(f).reduce((q, e) => q + re(e) * (+e.m || 0), 0), mt = (L, f) => L.filter(f).reduce((q, e) => q + (+e.m || 0), 0);
