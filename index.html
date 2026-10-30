@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 27-Oct-c</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 30-Oct-a</div>
         </div>
     </div>
 
@@ -4332,6 +4332,33 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const cc = cst(L, e => e.st === 'Already consumed'), sp = k => cst(L, e => e.st === 'To be replaced' && e.t[k]);
                 return [nm, cr(bud), cr(cst(L, e => e.st === 'Already consumed' && e.cls === 'Planned')), cr(cst(L, e => e.st === 'Already consumed' && e.cls === 'Unplanned')), cr(sp(0)), cr(sp(1)), cr(sp(2)), cr(cc + sp(0)), cr(cc + sp(1)), cr(cc + sp(2)), cr(cst(L, e => e.pr))]; };
             DEPTS.forEach(d => cs.push(dRow(d[0], x => x.dept === d[0]))); cs.push(dRow('TOTAL', () => true));
+            // 30-Oct-2026: cost of every single belt (same rows as the Fabric / Steel cord / Bucket sheets) - totals tie to the tables above
+            {
+                const ALL = [['Fabric', LF], ['Steel cord', LS], ['Bucket', LB]].flatMap(([ty, L]) => L.map(e => ({ ty, e })));
+                const consM = {}; ALL.forEach(({ e }) => { if (e.st === 'Already consumed') consM[e.x.conv] = (consM[e.x.conv] || 0) + (+e.m || 0); });
+                const rSrc = e => { const c = e.x.conv, u = rate(c), a = (S.act || {})[c];
+                    if (e.st === 'Already consumed' && a && !(a.c > 0)) return `Actual cost sheet shows Rs 0 for ${fmt(a.m)} m - please check (UMC rate is Rs ${fmt(u)}/m)`;
+                    if (e.st === 'Already consumed') return a ? (a.m >= (consM[c] || 0) - 0.01 ? 'Actual cost sheet' : `Actual cost sheet (${fmt(a.m)} m) + UMC rate for the other ${fmt((consM[c] || 0) - a.m)} m`) : u ? 'UMC rate (not in actual cost sheet)' : 'No rate found (cost 0)';
+                    return u ? 'UMC rate' : 'No UMC rate (cost 0)'; };
+                const vL = [v1, v2, v3].map((v, k) => `SBC ${f1(v.proj / KM)} - ${['as per CBM', 'can replace', 'must replace'][k]}`);
+                const ord = { 'Already consumed': 0, 'To be replaced': 1 };
+                ALL.sort((p, q) => (p.ty > q.ty ? 1 : p.ty < q.ty ? -1 : 0) || ord[p.e.st] - ord[q.e.st] || (p.e.x.dept > q.e.x.dept ? 1 : p.e.x.dept < q.e.x.dept ? -1 : 0) || re(q.e) * q.e.m - re(p.e) * p.e.m);
+                const tC = f => ALL.filter(f).reduce((a, { e }) => a + re(e) * (+e.m || 0), 0);
+                cs.push([], [], ['COST OF EACH BELT - every belt of the Fabric, Steel cord and Bucket sheets (already consumed + to be replaced by 31-Mar)'],
+                    ['Rate: consumed belts = actual cost sheet (UMC rate for metres it does not cover); belts still to be replaced = UMC rate. Cost = metres x rate. Use the filter on the columns to see one department, one view or one status.'], [],
+                    ['SUMMARY OF THE LIST BELOW', 'Belts', 'Metres', 'Cost (Rs Cr)'],
+                    ['Already consumed (1-Apr to date)', ALL.filter(({ e }) => e.st === 'Already consumed').length, n1(ALL.filter(({ e }) => e.st === 'Already consumed').reduce((a, { e }) => a + e.m, 0)), cr(tC(({ e }) => e.st === 'Already consumed'))]);
+                [0, 1, 2].forEach(k => { const f = ({ e }) => e.st === 'To be replaced' && e.t[k]; cs.push([`To be replaced - counted in ${vL[k]}`, ALL.filter(f).length, n1(ALL.filter(f).reduce((a, { e }) => a + e.m, 0)), cr(tC(f))]); });
+                [0, 1, 2].forEach(k => cs.push([`Year-end cost in ${vL[k]} (consumed + to be replaced)`, '', '', cr(tC(({ e }) => e.st === 'Already consumed') + tC(({ e }) => e.st === 'To be replaced' && e.t[k]))]));
+                const pf = ({ e }) => !!e.pr; cs.push(['Pushed to next FY (cost saved in the must replace view)', ALL.filter(pf).length, n1(ALL.filter(pf).reduce((a, { e }) => a + e.m, 0)), cr(tC(pf))], []);
+                const bHead = cs.length;
+                cs.push(['Belt type', 'Dept', 'Conveyor', 'Status', 'Planned / Unplanned', 'Activity', 'Metres', 'SBC', 'Rate (Rs/m)', 'Rate source', 'Cost (Rs)', 'Cost (Rs Cr)', vL[0], vL[1], vL[2], 'Pushed to next FY - reason', 'Date(s) - Daily Report', 'Next CBM (thickness sheet)', 'Belt length (m)', 'Belt width', 'Cover grade', 'Reason (why planned / unplanned, why due)']);
+                ALL.forEach(({ ty, e }) => { const f = thkF(e.x.conv), r = re(e), c = r * (+e.m || 0);
+                    cs.push([ty, e.x.dept, e.x.name || e.x.conv, e.st, e.cls, e.act, n1(e.m), sbc(e.m), r ? n2(r) : 0, rSrc(e), Math.round(c), cr(c), tStat(e, 0), tStat(e, 1), tStat(e, 2), e.pr ? RS(e.pr) : '', e.dates || '', f[16] || '', f[0] || '', f[1] || '', f[2] || '', e.why || '']); });
+                cs.push([], ['TOTAL of the list (consumed + every belt to be replaced, as per CBM)', '', '', '', '', '', n1(ALL.reduce((a, { e }) => a + e.m, 0)), '', '', '', Math.round(tC(() => true)), cr(tC(() => true))]);
+                add(cs, 'Cost', [40, 14, 16, 16, 14, 14, 14, 14, 14, 30, 14, 12, 26, 26, 26, 30, 40, 14, 12, 10, 10, 60], bHead);
+            }
+            if (false)
             add(cs, 'Cost', [40, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 10]);
             // ---------- Summary (same layout as the user's sheet) ----------
             const sv = []; const merges = []; const mg = (r1, c1, r2, c2) => merges.push({ s: { r: r1, c: c1 }, e: { r: r2, c: c2 } });
