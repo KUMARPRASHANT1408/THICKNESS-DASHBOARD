@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 30-Oct-a</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 02-Nov-a</div>
         </div>
     </div>
 
@@ -3675,7 +3675,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         else if (ratio > 0.8) h += `<div class="sbc-banner amber"><i class="fas fa-circle-exclamation"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} / ${T}). Only ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m) left.</div>`;
         else h += `<div class="sbc-banner green"><i class="fas fa-circle-check"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} / ${T}). Balance ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m).</div>`;
         if (M.abp.length) {
-            const t2v = M.consBW + M.fcPm + M.pendSteel;
+            const t2v = M.consBW + M.fcPm + M.sum(M.u2, a => a.len) + M.pendSteel;   // 02-Nov-2026: incl. the replaced ABP belts due again (counted in Table 2)
             h += `<div class="sbc-banner ${M.gapEnd > 0 ? 'red' : 'green'}"><i class="fas fa-forward"></i> Projected SBC by 31-Mar: <b>Table 1 (as per CBM, nothing pushed) ${f1(M.byMarch / TOTAL_KM)}</b> · <b>Table 2 (only planned belts) ${f1(t2v / TOTAL_KM)}</b> · <b>Table 3 (planned push ${fmt(M.pushPm)} m) ${f1(M.yearEnd / TOTAL_KM)}</b> vs target ${T} - Table 3 is ${M.gapEnd > 0 ? `<b>${fmt(M.gapEnd)} m (${f1(M.gapEnd / TOTAL_KM)}) over</b>` : `${fmt(-M.gapEnd)} m (${f1(-M.gapEnd / TOTAL_KM)}) under`} target.</div>`; }
         if (st.minD && st.minD > new Date(2000 + fy - 1, 3, 11)) h += `<div class="sbc-banner amber"><i class="fas fa-database"></i> Partial data: FY'${fy} data is available from ${dstr(st.minD)} only - actual SBC will be higher.</div>`;
         if (!st.rows.length) h += `<div class="sbc-banner amber">No data found in the SBC sheet for this FY.</div>`;
@@ -3915,7 +3915,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             { label: 'Target', data: [T, 0, 0, 0, 0], color: CL.blue },
             { label: 'Consumed till date', data: [0, done, done, done, done], color: CL.teal },
             { label: 'Forecast planned', data: [0, 0, M.fcPm, M.fcPm, M.fcPm - M.pushPm], color: CL.amber },
-            { label: 'Forecast unplanned', data: [0, 0, M.fcUm, 0, 0], color: CL.red },
+            { label: 'Forecast unplanned', data: [0, 0, M.fcUm, M.sum(M.u2, a => a.len), 0], color: CL.red },
             { label: 'Steel cord / bucket allowance left', data: [0, 0, M.pendSteel, M.pendSteel, M.pendSteel], color: '#facc15' }] },
             (i, d) => i === 0 ? null : d === 1 ? 'cons:all' : d === 2 ? (i === 4 ? 'net:fcp:ALL' : 'cbm:fcp:ALL') : d === 3 ? 'cbm:fcu:ALL' : null, v => f1(v / TOTAL_KM));
         // 3. unplanned by dept
