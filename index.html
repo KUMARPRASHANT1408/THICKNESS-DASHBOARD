@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-b</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-c</div>
         </div>
     </div>
 
@@ -984,6 +984,7 @@
             <h2><i class="fas fa-chart-line" style="color:#f59e0b"></i> SBC - Specific Belt Consumption</h2>
             <select id="sbcFy" class="sbc-sel" onchange="sbcRender()"></select>
             <button class="btn-slate" onclick="sbcExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
+            <button class="btn-slate" onclick="sbcExcel('hold')" title="Belts due as per CBM that will not be replaced this FY - list for the departments"><i class="fas fa-file-excel"></i> Not-replacing list</button>
             <button class="btn-slate" onclick="sbcExport()"><i class="fas fa-file-pdf"></i> PDF</button>
             <select id="sbcDeptExp" class="sbc-sel" onchange="sbcExportDept(this.value); this.value='';"><option value="">Dept report PDF...</option></select>
         </div>
@@ -4119,7 +4120,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const one = u => new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = u; sc.onload = () => window.XLSX ? ok() : bad(); sc.onerror = bad; document.head.appendChild(sc); });
         return urls.reduce((p, u) => p.catch(() => one(u)), Promise.reject());
     }
-    window.sbcExcel = function () {
+    window.sbcExcel = function (mode) {
         if (!S.loaded) return;
         const msg = el('sbcLoading'); if (msg) { msg.style.display = 'block'; msg.innerText = 'Preparing Excel file...'; }
         loadXlsx().then(() => fetch('./belt_analysis.csv?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').catch(() => '')).then(baTxt => {
@@ -4156,7 +4157,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 if (!S.thk[a.conv]) return 'No thickness data - kept as due';
                 if (!n) return 'No CBM date - kept as due';
                 return n < new Date() ? `CBM overdue: next CBM ${dz(n)} already passed` : `Next CBM ${dz(n)} is on or before 31-Mar`; };
-            const wb = XLSX.utils.book_new();
+            let wb = XLSX.utils.book_new();
             const add = (aoa, nm, w, filterRow) => { const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = w.map(x => ({ wch: x })); if (filterRow != null && aoa[filterRow]) ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: filterRow, c: 0 }, e: { r: aoa.length - 1, c: aoa[filterRow].length - 1 } }) }; XLSX.utils.book_append_sheet(wb, ws, nm); };
             // ---------- the three tables (same numbers as the screen) ----------
             const inD = (x, dn) => !dn || (dn === 'FAB' ? !M.isSB2(x.conv) : x.dept === dn);
@@ -4419,6 +4420,33 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 });
             });
             // 26-Oct-2026: every 'Table 1 / 2 / 3' label in the Excel shows its SBC number instead
+            // ---------- 03-Nov-2026: belts due as per CBM that will NOT be replaced this FY (planned push + unplanned hold + replaced belts due again) ----------
+            const holdSheets = (() => {
+                const HL = [['Fabric', LF], ['Steel cord', LS], ['Bucket', LB]].flatMap(([ty, L]) => L.filter(e => e.st === 'To be replaced' && !e.t[2]).map(e => ({ ty, e })));
+                const PA = {}; PR5.forEach(r => PA[r[0]] = r[3]);
+                const info = ({ e }) => { const a = e.x, r = a.reason || 'OTHER';
+                    if (e.pr) return { cat: 'Planned (ABP) - pushed to next FY', grp: RS(e.pr), why: whyPush(a.conv, e.pr), act: PA[e.pr] || 'Run till April (next FY) under monitoring', abp: 'In the ABP' };
+                    if (r === 'AGAIN') return { cat: 'Planned (ABP) - already replaced this FY, due again', grp: 'Replaced this FY - CBM again this FY', why: `${e.why}. ABP metres for this belt are used up.`, act: 'Check the new belt, find and fix the cause of the fast wear, hold till next FY', abp: 'In the ABP (metres used up)' };
+                    return { cat: 'Unplanned - not in the ABP', grp: (UCAT[r] || [r])[0], why: uWhy(a), act: (UCAT[r] || ['', 'Hold till next FY'])[1], abp: 'Not in the ABP' }; };
+                const rows = HL.map(h => Object.assign({ i: info(h), c: re(h.e) * (+h.e.m || 0), n: M.nextOf(h.e.x) }, h))
+                    .sort((p, q) => (p.e.x.dept > q.e.x.dept ? 1 : p.e.x.dept < q.e.x.dept ? -1 : 0) || (p.i.cat > q.i.cat ? 1 : p.i.cat < q.i.cat ? -1 : 0) || q.e.m - p.e.m);
+                const sm = f => rows.filter(f).reduce((a, r) => a + r.e.m, 0), sc = f => rows.filter(f).reduce((a, r) => a + r.c, 0), tm = sm(() => true);
+                const CATS = ['Planned (ABP) - pushed to next FY', 'Planned (ABP) - already replaced this FY, due again', 'Unplanned - not in the ABP'];
+                const v3 = f1(tot(3).proj / KM), v1 = f1(tot(1).proj / KM);
+                const s1 = [[`FY'${fy} - BELTS DUE AS PER CBM THAT WILL NOT BE REPLACED THIS FY - as on ${dz(new Date())}`],
+                    [`${rows.length} belts, ${fmt(tm)} m = SBC ${f1(tm / KM)}, Rs ${cr(sc(() => true))} Cr. Each belt is due as per its CBM (thickness sheet) but is kept running till next FY with the action shown. Holding all of them keeps the year-end SBC at ${v3} instead of ${v1}.`], [],
+                    ['BY DEPARTMENT', 'Belts', 'Metres', 'SBC', 'Cost avoided (Rs Cr)'].concat(CATS.map(c => c + ' (m)'))];
+                DEPTS.concat([['OTHER']]).forEach(d => { const f = r => d[0] === 'OTHER' ? !DEPTS.some(x => x[0] === r.e.x.dept) : r.e.x.dept === d[0]; if (!rows.some(f)) return; s1.push([d[0], rows.filter(f).length, n1(sm(f)), sbc(sm(f)), cr(sc(f))].concat(CATS.map(c => n1(sm(r => f(r) && r.i.cat === c))))); });
+                s1.push(['TOTAL', rows.length, n1(tm), sbc(tm), cr(sc(() => true))].concat(CATS.map(c => n1(sm(r => r.i.cat === c)))), [], ['BY REASON', 'Belts', 'Metres', 'SBC', 'Cost avoided (Rs Cr)', 'Action']);
+                [...new Set(rows.map(r => r.i.cat + '|' + r.i.grp))].sort((p, q) => CATS.indexOf(p.split('|')[0]) - CATS.indexOf(q.split('|')[0]) || sm(r => r.i.cat + '|' + r.i.grp === q) - sm(r => r.i.cat + '|' + r.i.grp === p)).forEach(k => { const [c, g] = k.split('|'), f = r => r.i.cat === c && r.i.grp === g; s1.push([`${c}: ${g}`, rows.filter(f).length, n1(sm(f)), sbc(sm(f)), cr(sc(f)), rows.find(f).i.act]); });
+                const s2 = [[`FY'${fy} - NOT-REPLACING LIST - every belt (filter on Dept to give one department its list)`], []]; const hr = s2.length;
+                s2.push(['Dept', 'Conveyor', 'Belt type', 'ABP status', 'Category', 'Reason', 'Why it will not be replaced this FY (thickness data)', 'Action needed to run till next FY', 'Metres', 'SBC', 'Cost avoided (Rs Cr)', 'Next CBM', 'CBM status'].concat(thkH));
+                const today = new Date(); rows.forEach(r => { const f = thkF(r.e.x.conv); s2.push([r.e.x.dept, r.e.x.name || r.e.x.conv, r.ty, r.i.abp, r.i.cat, r.i.grp, r.i.why, r.i.act, n1(r.e.m), sbc(r.e.m), cr(r.c), dz(r.n), r.n ? (r.n < today ? 'CBM passed - watch closely' : 'Due by 31-Mar') : 'No CBM date'].concat(f)); });
+                s2.push([], ['TOTAL', '', '', '', '', '', '', '', n1(tm), sbc(tm), cr(sc(() => true))]);
+                return [[s1, 'Summary', [52, 8, 10, 8, 14, 22, 22, 22]], [s2, 'Not-replacing list', [12, 16, 10, 16, 34, 30, 80, 50, 9, 7, 10, 12, 18].concat(thkH.map(() => 12)), hr]];
+            })();
+            if (mode === 'hold') { wb = XLSX.utils.book_new(); holdSheets.forEach(x => add(x[0], x[1], x[2], x[3])); }
+            else add(holdSheets[1][0], 'Not replacing list', holdSheets[1][2], holdSheets[1][3]);
             const TSB = { 1: 'SBC ' + f1(tot(1).proj / KM), 2: 'SBC ' + f1(tot(2).proj / KM), 3: 'SBC ' + f1(tot(3).proj / KM) };
             const tLbl = v => v.replace(/ total - Table ([123])/g, (x, k) => ' total in the ' + TSB[k] + ' view').replace(/^To be replaced - Table ([123])/, (x, k) => 'To be replaced in the ' + TSB[k] + ' view').replace(/Table 2 \/ 3/g, TSB[2] + ' / ' + TSB[3]).replace(/\b(?:Table|TABLE) ([123])\b/g, (x, k) => TSB[k]);
             // 03-Nov-2026: a cell holding only a date (dd-mm-yyyy) becomes a real Excel date, so Excel's filter groups it by year / month / day
@@ -4426,7 +4454,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const m = c.v.trim().match(/^(\d{2})-(\d{2})-(\d{4})$/); if (!m) return; const ser = (Date.UTC(+m[3], +m[2] - 1, +m[1]) - Date.UTC(1899, 11, 30)) / 864e5; if (!(ser > 0)) return;
                 c.t = 'n'; c.v = ser; c.z = 'dd-mm-yyyy'; delete c.w; delete c.h; delete c.r; }); });
             wb.SheetNames.forEach(sn => { const sh = wb.Sheets[sn]; Object.keys(sh).forEach(k => { const c = sh[k]; if (k[0] !== '!' && c && c.t === 's' && typeof c.v === 'string' && /Table|TABLE/.test(c.v)) { c.v = tLbl(c.v); if (c.w) c.w = c.v; if (c.h) delete c.h; if (c.r) delete c.r; } }); });
-            XLSX.writeFile(wb, `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`); if (msg) { msg.innerText = ''; msg.style.display = 'none'; }
+            XLSX.writeFile(wb, mode === 'hold' ? `SBC_Not_replacing_FY${fy}_${dz(new Date())}.xlsx` : `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`); if (msg) { msg.innerText = ''; msg.style.display = 'none'; }
         }).catch(e => { console.error(e); const m = el('sbcLoading'); if (m) { m.style.display = 'block'; m.innerText = 'Excel file could not be created (library not loaded). Check the internet connection and try again.'; } });
     };
     window.sbcGenCsv = function (id) { const t = document.querySelector('#card-' + id + ' table'); if (!t) return;
