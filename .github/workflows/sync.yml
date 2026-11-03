@@ -40,9 +40,13 @@ jobs:
         run: |
           curl -fL "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWKjd9swnkqU7NLBWL_RP7J5KTumUQslWnJ3GZyglyYZRt9xJy6WqvJa7ST297K4F4w01K24xJ5cvN/pub?gid=663645953&single=true&output=csv" -o sbc.csv
 
+      - name: Build month-wise consumption (Daily Report log + SBC main table)
+        continue-on-error: true
+        run: python3 tools/consumption.py all
+
       - name: Commit and push if data changed
         run: |
           git config --global user.name 'GitHub Actions Bot'
           git config --global user.email 'actions@github.com'
-          git add data.csv abn.csv daily.csv patching.csv sbc.csv abp.csv
+          git add data.csv abn.csv daily.csv patching.csv sbc.csv abp.csv consumption_log.csv sbc_monthly.csv
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-sync latest CSV data from Google Sheet" && git push)
