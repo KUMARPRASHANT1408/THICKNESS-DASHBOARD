@@ -836,7 +836,7 @@ fy,dept,conv,mi,month,metres,source
 27,RMPP,2J18C1,2,June,21,daily report log
 27,RMPP,2J18C4,3,July,106,daily report log
 27,RMPP,2J19C1,5,September,130,daily report log
-27,LCP,4A,7,November,460,no date - month of latest entry
+27,LCP,4A,7,November,460,daily report log
 27,RMPP,AJ001,0,April,28,pivot copy 27-Oct-2026
 27,RMPP,AJ001,3,July,28,daily report log
 27,RMPP,AJ10C1,5,September,13,daily report log
@@ -889,7 +889,7 @@ fy,dept,conv,mi,month,metres,source
 27,BRIQUETTING,BOOM,6,October,32,daily report log
 27,BF#2,CC2,0,April,20,pivot copy 27-Oct-2026
 27,BF#2,CC2,5,September,20,daily report log
-27,RMBB,CCBHAC1,7,November,114,no date - month of latest entry
+27,RMBB,CCBHAC1,7,November,114,daily report log
 27,CO#1,CDQ1-BC01A,3,July,20,daily report log
 27,CO#1,CDQ1-BC01B,5,September,15,daily report log
 27,SP#1,CF1,6,October,196,daily report log
@@ -926,7 +926,7 @@ fy,dept,conv,mi,month,metres,source
 27,RMPP,EJ001,6,October,28,daily report log
 27,RMPP,EJ0010,4,August,15,daily report log
 27,RMPP,EJ1046,2,June,60,daily report log
-27,SP#1,F1,7,November,230,no date - month of latest entry
+27,SP#1,F1,7,November,230,daily report log
 27,SP#1,F2,1,May,12,daily report log
 27,SMS#2,FABF1,0,April,11,daily report log
 27,SMS#2,FAC1,0,April,20,daily report log
@@ -971,6 +971,7 @@ fy,dept,conv,mi,month,metres,source
 27,RMHS,J23RC1,5,September,17,daily report log
 27,RMHS,J24C1,0,April,900,daily report log
 27,RMHS,J24C1,1,May,850,daily report log
+27,RMHS,J24C1,7,November,100,daily report log
 27,RMHS,J26C1,6,October,340,daily report log
 27,RMHS,J26C2,0,April,15,daily report log
 27,RMHS,J27C1,6,October,750,daily report log
