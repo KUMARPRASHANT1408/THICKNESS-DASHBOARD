@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-d</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-e</div>
         </div>
     </div>
 
@@ -984,6 +984,7 @@
             <h2><i class="fas fa-chart-line" style="color:#f59e0b"></i> SBC - Specific Belt Consumption</h2>
             <select id="sbcFy" class="sbc-sel" onchange="sbcRender()"></select>
             <button class="btn-slate" onclick="sbcExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
+            <button class="btn-slate" onclick="sbcExcel('plan')" title="Belts to replace and belts to save for each SBC view, with charts"><i class="fas fa-file-excel"></i> Replace / save plan</button>
             <button class="btn-slate" onclick="sbcExcel('hold')" title="Belts due as per CBM that will not be replaced this FY - list for the departments"><i class="fas fa-file-excel"></i> Not-replacing list</button>
             <button class="btn-slate" onclick="sbcExport()"><i class="fas fa-file-pdf"></i> PDF</button>
             <select id="sbcDeptExp" class="sbc-sel" onchange="sbcExportDept(this.value); this.value='';"><option value="">Dept report PDF...</option></select>
@@ -4121,6 +4122,48 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const one = u => new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = u; sc.onload = () => window.XLSX ? ok() : bad(); sc.onerror = bad; document.head.appendChild(sc); });
         return urls.reduce((p, u) => p.catch(() => one(u)), Promise.reject());
     }
+    // 03-Nov-2026: native Excel charts for a SheetJS workbook
+    // native Excel charts added to a SheetJS workbook (zip post-processing with XLSX.CFB)
+    function xlsxCharts(XLSX, wbArr, sheetIdx, charts) {
+      const enc = s => new TextEncoder().encode(s), dec = u => new TextDecoder().decode(u);
+      const cfb = XLSX.CFB.read(new Uint8Array(wbArr), { type: 'array' });
+      const get = p => { const f = XLSX.CFB.find(cfb, p); return f ? dec(f.content) : null; };
+      const put = (p, s) => { const f = XLSX.CFB.find(cfb, p); if (f) f.content = enc(s); else XLSX.CFB.utils.cfb_add(cfb, p, enc(s)); };
+      const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const q = n => `'${String(n).replace(/'/g, "''")}'`;
+      const NS = 'xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+      const sp = col => `<c:spPr><a:solidFill><a:srgbClr val="${col}"/></a:solidFill></c:spPr>`;
+      const txPr = (sz, b) => `<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${sz}" b="${b ? 1 : 0}"/></a:pPr><a:endParaRPr lang="en-US"/></a:p></c:txPr>`;
+      let anchors = '', drels = '';
+      charts.forEach((ch, i) => {
+        const n = i + 1, sh = q(ch.sheet);
+        const ser = ch.series.map((s, j) => `<c:ser><c:idx val="${j}"/><c:order val="${j}"/><c:tx><c:strRef><c:f>${sh}!${s.name}</c:f></c:strRef></c:tx>${sp(s.color)}<c:invertIfNegative val="0"/>` +
+          `<c:dLbls><c:numFmt formatCode="${s.fmt || 'General'};;;" sourceLinked="0"/><c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>${txPr(900, 1)}<c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>` +
+          `<c:cat><c:strRef><c:f>${sh}!${ch.cat}</c:f></c:strRef></c:cat><c:val><c:numRef><c:f>${sh}!${s.val}</c:f></c:numRef></c:val></c:ser>`).join('');
+        const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><c:chartSpace ${NS}><c:roundedCorners val="0"/><c:chart>` +
+          `<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1300" b="1"/></a:pPr><a:r><a:rPr lang="en-US" sz="1300" b="1"/><a:t>${esc(ch.title)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/>` +
+          `<c:plotArea><c:layout/><c:barChart><c:barDir val="${ch.dir || 'col'}"/><c:grouping val="${ch.grouping || 'stacked'}"/><c:varyColors val="0"/>${ser}<c:gapWidth val="60"/>${(ch.grouping || 'stacked') === 'clustered' ? '' : '<c:overlap val="100"/>'}<c:axId val="${n}001"/><c:axId val="${n}002"/></c:barChart>` +
+          `<c:catAx><c:axId val="${n}001"/><c:scaling><c:orientation val="${ch.dir === 'bar' ? 'maxMin' : 'minMax'}"/></c:scaling><c:delete val="0"/><c:axPos val="${ch.dir === 'bar' ? 'l' : 'b'}"/><c:numFmt formatCode="General" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>${txPr(1000, 0)}<c:crossAx val="${n}002"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>` +
+          `<c:valAx><c:axId val="${n}002"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="${ch.dir === 'bar' ? 'b' : 'l'}"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="E5E7EB"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>${ch.yTitle ? `<c:title><c:tx><c:rich><a:bodyPr rot="-5400000"/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" sz="1000"/><a:t>${esc(ch.yTitle)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>` : ''}<c:numFmt formatCode="General" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>${txPr(900, 0)}<c:crossAx val="${n}001"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx></c:plotArea>` +
+          `<c:legend><c:legendPos val="b"/><c:overlay val="0"/>${txPr(1000, 0)}</c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart><c:spPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="D9DDE3"/></a:solidFill></a:ln></c:spPr></c:chartSpace>`;
+        put(`/xl/charts/chart${n}.xml`, xml);
+        const [c1, r1, c2, r2] = ch.at;   // 0-based col/row of the top-left and bottom-right cells
+        anchors += `<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>${c1}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${r1}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>${c2}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${r2}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>` +
+          `<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="${n + 1}" name="Chart ${n}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rId${n}"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>`;
+        drels += `<Relationship Id="rId${n}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart${n}.xml"/>`;
+      });
+      put('/xl/drawings/drawing1.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${anchors}</xdr:wsDr>`);
+      put('/xl/drawings/_rels/drawing1.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${drels}</Relationships>`);
+      const sp2 = `/xl/worksheets/sheet${sheetIdx}.xml`, rp = `/xl/worksheets/_rels/sheet${sheetIdx}.xml.rels`;
+      let rels = get(rp) || '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+      rels = rels.replace('</Relationships>', '<Relationship Id="rIdDrw1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
+      put(rp, rels);
+      put(sp2, get(sp2).replace('</worksheet>', '<drawing r:id="rIdDrw1"/></worksheet>'));
+      let ct = get('/[Content_Types].xml');
+      ct = ct.replace('</Types>', charts.map((c, i) => `<Override PartName="/xl/charts/chart${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>`).join('') + '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
+      put('/[Content_Types].xml', ct);
+      return XLSX.CFB.write(cfb, { type: 'array', fileType: 'zip' });
+    }
     window.sbcExcel = function (mode) {
         if (!S.loaded) return;
         const msg = el('sbcLoading'); if (msg) { msg.style.display = 'block'; msg.innerText = 'Preparing Excel file...'; }
@@ -4422,13 +4465,13 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             });
             // 26-Oct-2026: every 'Table 1 / 2 / 3' label in the Excel shows its SBC number instead
             // ---------- 03-Nov-2026: belts due as per CBM that will NOT be replaced this FY (planned push + unplanned hold + replaced belts due again) ----------
-            const holdSheets = (() => {
-                const HL = [['Fabric', LF], ['Steel cord', LS], ['Bucket', LB]].flatMap(([ty, L]) => L.filter(e => e.st === 'To be replaced' && !e.t[2]).map(e => ({ ty, e })));
-                const PA = {}; PR5.forEach(r => PA[r[0]] = r[3]);
-                const info = ({ e }) => { const a = e.x, r = a.reason || 'OTHER';
+            const PA = {}; PR5.forEach(r => PA[r[0]] = r[3]);
+            const info = ({ e }) => { const a = e.x, r = a.reason || 'OTHER';
                     if (e.pr) return { cat: 'Planned (ABP) - pushed to next FY', grp: RS(e.pr), why: whyPush(a.conv, e.pr), act: PA[e.pr] || 'Run till April (next FY) under monitoring', abp: 'In the ABP' };
                     if (r === 'AGAIN') return { cat: 'Planned (ABP) - already replaced this FY, due again', grp: 'Replaced this FY - CBM again this FY', why: `${e.why}. ABP metres for this belt are used up.`, act: 'Check the new belt, find and fix the cause of the fast wear, hold till next FY', abp: 'In the ABP (metres used up)' };
                     return { cat: 'Unplanned - not in the ABP', grp: (UCAT[r] || [r])[0], why: uWhy(a), act: (UCAT[r] || ['', 'Hold till next FY'])[1], abp: 'Not in the ABP' }; };
+            const holdSheets = (() => {
+                const HL = [['Fabric', LF], ['Steel cord', LS], ['Bucket', LB]].flatMap(([ty, L]) => L.filter(e => e.st === 'To be replaced' && !e.t[2]).map(e => ({ ty, e })));
                 const rows = HL.map(h => Object.assign({ i: info(h), c: re(h.e) * (+h.e.m || 0), n: M.nextOf(h.e.x) }, h))
                     .sort((p, q) => (p.e.x.dept > q.e.x.dept ? 1 : p.e.x.dept < q.e.x.dept ? -1 : 0) || (p.i.cat > q.i.cat ? 1 : p.i.cat < q.i.cat ? -1 : 0) || q.e.m - p.e.m);
                 const sm = f => rows.filter(f).reduce((a, r) => a + r.e.m, 0), sc = f => rows.filter(f).reduce((a, r) => a + r.c, 0), tm = sm(() => true);
@@ -4446,7 +4489,76 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 s2.push([], ['TOTAL', '', '', '', '', '', '', '', n1(tm), sbc(tm), cr(sc(() => true))]);
                 return [[s1, 'Summary', [52, 8, 10, 8, 14, 22, 22, 22]], [s2, 'Not-replacing list', [12, 16, 10, 16, 34, 30, 80, 50, 9, 7, 10, 12, 18].concat(thkH.map(() => 12)), hr]];
             })();
-            if (mode === 'hold') { wb = XLSX.utils.book_new(); holdSheets.forEach(x => add(x[0], x[1], x[2], x[3])); }
+            // ---------- 03-Nov-2026: replace / save plan for the three SBC views - belt numbers first, with native charts ----------
+            let planCharts = null;
+            if (mode === 'plan') {
+                wb = XLSX.utils.book_new();
+                const chartSheet = [];   // filled after the summary - must be the first sheet (charts go on sheet1)
+                add(chartSheet, 'Charts', [12]);
+                const ALL = [['Fabric', LF], ['Steel cord', LS], ['Bucket', LB]].flatMap(([ty, L]) => L.map(e => ({ ty, e })));
+                const VV = [v1, v2, v3].map(v => f1(v.proj / KM)), VN = ['As per CBM', 'Can replace', 'Must replace'], VD = ['every belt due as per CBM is replaced', 'ABP belts + ABP belts replaced this FY that are due again; belts not in the ABP are held', 'only the belts that must be replaced; ABP belts pushed to next FY and all unplanned belts are held'];
+                const nb = L => new Set(L.map(r => r.e.x.conv)).size, mm = L => L.reduce((a, r) => a + (+r.e.m || 0), 0), cc = L => L.reduce((a, r) => a + re(r.e) * (+r.e.m || 0), 0);
+                const done = ALL.filter(r => r.e.st === 'Already consumed'), dP = done.filter(r => r.e.cls === 'Planned'), dU = done.filter(r => r.e.cls === 'Unplanned');
+                const rep = k => ALL.filter(r => r.e.st === 'To be replaced' && r.e.t[k]), sav = k => ALL.filter(r => r.e.st === 'To be replaced' && !r.e.t[k]);
+                const abpB = M.pl.filter(a => !a.outOfPlan), abpN = new Set(abpB.map(a => a.conv)).size, abpM = s(abpB, pm);
+                const sh = [[`FY'${fy} - BELT REPLACEMENT PLAN FOR THE THREE SBC VIEWS - as on ${dz(new Date())} (numbers change with the data)`],
+                    [`Target ${f1(M.T)} m/km. ${VN.map((n, k) => `${n} = SBC ${VV[k]}`).join(' | ')}. Belt numbers = number of conveyors.`], []];
+                const r0 = sh.length; sh.push(['', 'Belts', 'Metres', 'SBC', 'What it means']);
+                sh.push(['ABP plan (planned belts)', abpN, n1(abpM), sbc(abpM), 'Belts in the ABP for this FY']);
+                sh.push(['Already replaced - planned', nb(dP), n1(mm(dP)), sbc(mm(dP)), '1-Apr to date, ABP belts']);
+                sh.push(['Already replaced - unplanned', nb(dU), n1(mm(dU)), sbc(mm(dU)), '1-Apr to date, belts not in the ABP']);
+                sh.push(['Already replaced - total', nb(done), n1(mm(done)), sbc(mm(done)), 'SBC till date']);
+                [0, 1, 2].forEach(k => { sh.push([], [`SBC ${VV[k]} - ${VN[k]}: ${VD[k]}`]);
+                    sh.push(['  Belts to be replaced by 31-Mar', nb(rep(k)), n1(mm(rep(k))), sbc(mm(rep(k))), `See sheet "Replace ${VV[k]}"`]);
+                    sh.push(['  Belts that can be saved (not replaced this FY)', nb(sav(k)), n1(mm(sav(k))), sbc(mm(sav(k))), k ? `See sheet "Save ${VV[k]}"` : 'None - nothing is held in this view']);
+                    sh.push(['  Year-end SBC', '', n1(mm(done) + mm(rep(k))), sbc(mm(done) + mm(rep(k))), `Cost to spend Rs ${cr(cc(rep(k)))} Cr`]); });
+                // chart data (belts and SBC)
+                const cats = ['ABP plan', 'Replaced till date'].concat(VN.map((n, k) => `${n} ${VV[k]}`));
+                const block = (title, f) => { const top = sh.length + 1; sh.push([], [title].concat(cats));
+                    sh.push(['ABP planned', f(abpB.map(a => ({ e: { x: a, m: pm(a) } }))), 0, 0, 0, 0]);
+                    sh.push(['Replaced - planned', 0].concat([0, 0, 0, 0].map(() => f(dP))));
+                    sh.push(['Replaced - unplanned', 0].concat([0, 0, 0, 0].map(() => f(dU))));
+                    sh.push(['To be replaced', 0, 0].concat([0, 1, 2].map(k => f(rep(k)))));
+                    sh.push(['Can be saved', 0, 0].concat([0, 1, 2].map(k => f(sav(k)))));
+                    return top; };   // 0-based index of the header row
+                const hB = block('BELTS (numbers) - chart data', nb), hS = block('SBC (m/km) - chart data', L => sbc(mm(L)));
+                // department table: belts
+                sh.push([], ['BY DEPARTMENT - belt numbers'], ['Dept', 'ABP plan', 'Replaced - planned', 'Replaced - unplanned'].concat([0, 1, 2].flatMap(k => [`Replace for ${VV[k]}`, `Save for ${VV[k]}`]), [`Year-end SBC ${VN[2]}`]));
+                const dH = sh.length;
+                DEPTS.forEach(d => { const f = r => r.e.x.dept === d[0]; sh.push([d[0], new Set(abpB.filter(a => a.dept === d[0]).map(a => a.conv)).size, nb(dP.filter(f)), nb(dU.filter(f))].concat([0, 1, 2].flatMap(k => [nb(rep(k).filter(f)), nb(sav(k).filter(f))]), [sbc(mm(done.filter(f)) + mm(rep(2).filter(f)))])); });
+                const dE = sh.length;
+                sh.push(['TOTAL', abpN, nb(dP), nb(dU)].concat([0, 1, 2].flatMap(k => [nb(rep(k)), nb(sav(k))]), [sbc(mm(done) + mm(rep(2)))]));
+                add(sh, 'Summary', [46, 12, 14, 14, 20, 20, 16, 16, 16, 16, 16]);
+                const col = c => String.fromCharCode(65 + c), rg = (r, c1, c2) => `$${col(c1)}$${r + 1}:$${col(c2)}$${r + 1}`;
+                const CL5 = ['C9D1DE', '5B8FD1', '9BBCE6', 'F0A35E', '8FD0C8'];
+                const ser = h => [1, 2, 3, 4, 5].map((i, j) => ({ name: `$A$${h + i + 1}`, val: rg(h + i, 1, 5), color: CL5[j] }));
+                planCharts = [{ sheet: 'Summary', title: 'Belts (numbers): ABP plan, replaced, to replace and to save', cat: rg(hB, 1, 5), series: ser(hB), at: [0, 3, 12, 27], yTitle: 'Belts' },
+                    { sheet: 'Summary', title: 'SBC (m/km): ABP plan, replaced, to replace and to save', cat: rg(hS, 1, 5), series: ser(hS), at: [0, 28, 12, 52], yTitle: 'SBC (m/km)', fmt: '0.0' },
+                    { sheet: 'Summary', title: `Belts by department - ${VN[2]} (SBC ${VV[2]})`, cat: `$A$${dH + 1}:$A$${dE}`, dir: 'bar', series: [{ name: `$C$${dH}`, val: `$C$${dH + 1}:$C$${dE}`, color: '5B8FD1' }, { name: `$D$${dH}`, val: `$D$${dH + 1}:$D$${dE}`, color: '9BBCE6' }, { name: `$I$${dH}`, val: `$I$${dH + 1}:$I$${dE}`, color: 'F0A35E' }, { name: `$J$${dH}`, val: `$J$${dH + 1}:$J$${dE}`, color: '8FD0C8' }], at: [0, 53, 12, 80], yTitle: 'Belts' }];
+                XLSX.utils.sheet_add_aoa(wb.Sheets.Charts, [[`FY'${fy} - SBC replace / save plan - charts (as on ${dz(new Date())})`], [`Target ${f1(M.T)} | ${VN.map((n, k) => `${n} = SBC ${VV[k]}`).join(' | ')} | tables and belt lists on the next sheets`]], { origin: 'A1' });
+                // belt lists
+                const det = r => { const f = thkF(r.e.x.conv); return [f[0] || '', f[1] || '', f[2] || '']; };
+                const today = new Date(), cst2 = r => re(r.e) * (+r.e.m || 0);
+                const sortL = L => L.slice().sort((p, q) => (p.e.x.dept > q.e.x.dept ? 1 : p.e.x.dept < q.e.x.dept ? -1 : 0) || q.e.m - p.e.m);
+                const deptHead = L => { const o = [['Dept', 'Belts', 'Metres', 'SBC']]; DEPTS.forEach(d => { const f = r => r.e.x.dept === d[0]; if (L.some(f)) o.push([d[0], nb(L.filter(f)), n1(mm(L.filter(f))), sbc(mm(L.filter(f)))]); }); o.push(['TOTAL', nb(L), n1(mm(L)), sbc(mm(L))]); return o; };
+                [0, 1, 2].forEach(k => {
+                    const L = sortL(rep(k)), a = [[`To reach SBC ${VV[k]} (${VN[k]}): these ${nb(L)} belts must be replaced by 31-Mar - ${fmt(mm(L))} m = SBC ${f1(mm(L) / KM)}`], [VD[k]], []].concat(deptHead(L), [[]]);
+                    const h = a.length; a.push(['Dept', 'Conveyor', 'Belt type', 'Planned / Unplanned', 'ABP status', 'Metres', 'SBC', 'Next CBM', 'CBM status', 'Why it is replaced', 'Pushed / held in the other views', 'Cost (Rs Cr)', 'Belt length (m)', 'Belt width', 'Cover grade']);
+                    L.forEach(r => { const n = M.nextOf(r.e.x); a.push([r.e.x.dept, r.e.x.name || r.e.x.conv, r.ty, r.e.cls, r.e.x.src === 'SB' ? 'Steel cord / bucket (given by user)' : src(r.e.x.conv), n1(r.e.m), sbc(r.e.m), dz(n), n ? (n < today ? 'CBM passed' : 'Due by 31-Mar') : 'No CBM date', r.e.why || '', [0, 1, 2].filter(j => !r.e.t[j]).map(j => 'held in ' + VV[j]).join(', ') || 'Replaced in all three views', cr(cst2(r))].concat(det(r))); });
+                    a.push([], ['TOTAL', nb(L) + ' belts', '', '', '', n1(mm(L)), sbc(mm(L)), '', '', '', '', cr(cc(L))]);
+                    add(a, `Replace ${VV[k]}`, [12, 16, 10, 12, 22, 9, 7, 12, 14, 70, 26, 10, 10, 10, 10], h);
+                    if (!k) return;
+                    const H = sortL(sav(k)), b = [[`To reach SBC ${VV[k]} (${VN[k]}): these ${nb(H)} belts are due as per CBM but will NOT be replaced this FY - ${fmt(mm(H))} m = SBC ${f1(mm(H) / KM)} saved`], ['Each belt must be held with the action shown.'], []].concat(deptHead(H), [[]]);
+                    const h2 = b.length; b.push(['Dept', 'Conveyor', 'Belt type', 'ABP status', 'Category', 'Reason', 'Why it will not be replaced (thickness data)', 'Action needed to run till next FY', 'Metres', 'SBC', 'Next CBM', 'CBM status', 'Cost saved (Rs Cr)', 'Belt length (m)', 'Belt width', 'Cover grade']);
+                    H.forEach(r => { const i = info(r), n = M.nextOf(r.e.x); b.push([r.e.x.dept, r.e.x.name || r.e.x.conv, r.ty, i.abp, i.cat, i.grp, i.why, i.act, n1(r.e.m), sbc(r.e.m), dz(n), n ? (n < today ? 'CBM passed - watch closely' : 'Due by 31-Mar') : 'No CBM date', cr(cst2(r))].concat(det(r))); });
+                    b.push([], ['TOTAL', nb(H) + ' belts', '', '', '', '', '', '', n1(mm(H)), sbc(mm(H)), '', '', cr(cc(H))]);
+                    add(b, `Save ${VV[k]}`, [12, 16, 10, 22, 34, 28, 70, 46, 9, 7, 12, 18, 10, 10, 10, 10], h2); });
+                const D0 = sortL(done), c0 = [[`Already replaced 1-Apr to date: ${nb(D0)} belts, ${fmt(mm(D0))} m = SBC ${f1(mm(D0) / KM)} (planned ${nb(dP)} belts, unplanned ${nb(dU)} belts)`], []].concat(deptHead(D0), [[]]);
+                const h0 = c0.length; c0.push(['Dept', 'Conveyor', 'Belt type', 'Planned / Unplanned', 'Activity', 'Metres', 'SBC', 'Date(s) - Daily Report', 'Cost (Rs Cr)']);
+                D0.forEach(r => c0.push([r.e.x.dept, r.e.x.name || r.e.x.conv, r.ty, r.e.cls, r.e.act, n1(r.e.m), sbc(r.e.m), r.e.dates || '', cr(cst2(r))]));
+                add(c0, 'Already replaced', [12, 16, 10, 12, 14, 9, 7, 50, 10], h0);
+            }
+            else if (mode === 'hold') { wb = XLSX.utils.book_new(); holdSheets.forEach(x => add(x[0], x[1], x[2], x[3])); }
             else add(holdSheets[1][0], 'Not replacing list', holdSheets[1][2], holdSheets[1][3]);
             const TSB = { 1: 'SBC ' + f1(tot(1).proj / KM), 2: 'SBC ' + f1(tot(2).proj / KM), 3: 'SBC ' + f1(tot(3).proj / KM) };
             const tLbl = v => v.replace(/ total - Table ([123])/g, (x, k) => ' total in the ' + TSB[k] + ' view').replace(/^To be replaced - Table ([123])/, (x, k) => 'To be replaced in the ' + TSB[k] + ' view').replace(/Table 2 \/ 3/g, TSB[2] + ' / ' + TSB[3]).replace(/\b(?:Table|TABLE) ([123])\b/g, (x, k) => TSB[k]);
@@ -4455,7 +4567,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const m = c.v.trim().match(/^(\d{2})-(\d{2})-(\d{4})$/); if (!m) return; const ser = (Date.UTC(+m[3], +m[2] - 1, +m[1]) - Date.UTC(1899, 11, 30)) / 864e5; if (!(ser > 0)) return;
                 c.t = 'n'; c.v = ser; c.z = 'dd-mm-yyyy'; delete c.w; delete c.h; delete c.r; }); });
             wb.SheetNames.forEach(sn => { const sh = wb.Sheets[sn]; Object.keys(sh).forEach(k => { const c = sh[k]; if (k[0] !== '!' && c && c.t === 's' && typeof c.v === 'string' && /Table|TABLE/.test(c.v)) { c.v = tLbl(c.v); if (c.w) c.w = c.v; if (c.h) delete c.h; if (c.r) delete c.r; } }); });
-            XLSX.writeFile(wb, mode === 'hold' ? `SBC_Not_replacing_FY${fy}_${dz(new Date())}.xlsx` : `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`); if (msg) { msg.innerText = ''; msg.style.display = 'none'; }
+            if (mode === 'plan') { const out = xlsxCharts(XLSX, XLSX.write(wb, { type: 'array', bookType: 'xlsx' }), 1, planCharts); const u = URL.createObjectURL(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); const a = document.createElement('a'); a.href = u; a.download = `SBC_Replace_Save_plan_FY${fy}_${dz(new Date())}.xlsx`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 2000); }
+            else XLSX.writeFile(wb, mode === 'hold' ? `SBC_Not_replacing_FY${fy}_${dz(new Date())}.xlsx` : `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`); if (msg) { msg.innerText = ''; msg.style.display = 'none'; }
         }).catch(e => { console.error(e); const m = el('sbcLoading'); if (m) { m.style.display = 'block'; m.innerText = 'Excel file could not be created (library not loaded). Check the internet connection and try again.'; } });
     };
     window.sbcGenCsv = function (id) { const t = document.querySelector('#card-' + id + ' table'); if (!t) return;
