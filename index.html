@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-g</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-h</div>
         </div>
     </div>
 
@@ -4507,10 +4507,11 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             })();
             // ---------- 03-Nov-2026: replace / save plan for the three SBC views - belt numbers first, with native charts ----------
             let planCharts = null;
-            if (mode === 'plan') {
-                wb = XLSX.utils.book_new();
+            if (mode !== 'hold') {   // 03-Nov-2026: the plan is part of the main Excel too (first sheet = its charts)
+                if (mode === 'plan') wb = XLSX.utils.book_new();
+                const CN = mode === 'plan' ? 'Charts' : 'Plan charts', SN = mode === 'plan' ? 'Summary' : 'Plan summary';
                 const chartSheet = [];   // filled after the summary - must be the first sheet (charts go on sheet1)
-                add(chartSheet, 'Charts', [12]);
+                add(chartSheet, CN, [12]);
                 const ALL = [['Fabric', LF], ['Steel cord', LS], ['Bucket', LB]].flatMap(([ty, L]) => L.map(e => ({ ty, e })));
                 const VV = [v1, v2, v3].map(v => f1(v.proj / KM)), VN = ['As per CBM', 'Can replace', 'Must replace'], VD = ['every belt due as per CBM is replaced', 'ABP belts + ABP belts replaced this FY that are due again; belts not in the ABP are held', 'only the belts that must be replaced; ABP belts pushed to next FY and all unplanned belts are held'];
                 const nb = L => new Set(L.map(r => r.e.x.conv)).size, mm = L => L.reduce((a, r) => a + (+r.e.m || 0), 0), cc = L => L.reduce((a, r) => a + re(r.e) * (+r.e.m || 0), 0);
@@ -4544,14 +4545,14 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 DEPTS.forEach(d => { const f = r => r.e.x.dept === d[0]; sh.push([d[0], new Set(abpB.filter(a => a.dept === d[0]).map(a => a.conv)).size, nb(dP.filter(f)), nb(dU.filter(f))].concat([0, 1, 2].flatMap(k => [nb(rep(k).filter(f)), nb(sav(k).filter(f))]), [sbc(mm(done.filter(f)) + mm(rep(2).filter(f)))])); });
                 const dE = sh.length;
                 sh.push(['TOTAL', abpN, nb(dP), nb(dU)].concat([0, 1, 2].flatMap(k => [nb(rep(k)), nb(sav(k))]), [sbc(mm(done) + mm(rep(2)))]));
-                add(sh, 'Summary', [46, 12, 14, 14, 20, 20, 16, 16, 16, 16, 16]);
+                add(sh, SN, [46, 12, 14, 14, 20, 20, 16, 16, 16, 16, 16]);
                 const col = c => String.fromCharCode(65 + c), rg = (r, c1, c2) => `$${col(c1)}$${r + 1}:$${col(c2)}$${r + 1}`;
                 const CL5 = ['C9D1DE', '5B8FD1', '9BBCE6', 'F0A35E', '8FD0C8'];
                 const ser = h => [1, 2, 3, 4, 5].map((i, j) => ({ name: `$A$${h + i + 1}`, val: rg(h + i, 1, 5), color: CL5[j] }));
-                planCharts = [{ sheet: 'Summary', title: 'Belts (numbers): ABP plan, replaced, to replace and to save', cat: rg(hB, 1, 5), series: ser(hB), at: [0, 3, 12, 27], yTitle: 'Belts' },
-                    { sheet: 'Summary', title: 'SBC (m/km): ABP plan, replaced, to replace and to save', cat: rg(hS, 1, 5), series: ser(hS), at: [0, 28, 12, 52], yTitle: 'SBC (m/km)', fmt: '0.0' },
-                    { sheet: 'Summary', title: `Belts by department - ${VN[2]} (SBC ${VV[2]})`, cat: `$A$${dH + 1}:$A$${dE}`, dir: 'bar', series: [{ name: `$C$${dH}`, val: `$C$${dH + 1}:$C$${dE}`, color: '5B8FD1' }, { name: `$D$${dH}`, val: `$D$${dH + 1}:$D$${dE}`, color: '9BBCE6' }, { name: `$I$${dH}`, val: `$I$${dH + 1}:$I$${dE}`, color: 'F0A35E' }, { name: `$J$${dH}`, val: `$J$${dH + 1}:$J$${dE}`, color: '8FD0C8' }], at: [0, 53, 12, 80], yTitle: 'Belts' }];
-                XLSX.utils.sheet_add_aoa(wb.Sheets.Charts, [[`FY'${fy} - SBC replace / save plan - charts (as on ${dz(new Date())})`], [`Target ${f1(M.T)} | ${VN.map((n, k) => `${n} = SBC ${VV[k]}`).join(' | ')} | tables and belt lists on the next sheets`]], { origin: 'A1' });
+                planCharts = [{ sheet: SN, title: 'Belts (numbers): ABP plan, replaced, to replace and to save', cat: rg(hB, 1, 5), series: ser(hB), at: [0, 3, 12, 27], yTitle: 'Belts' },
+                    { sheet: SN, title: 'SBC (m/km): ABP plan, replaced, to replace and to save', cat: rg(hS, 1, 5), series: ser(hS), at: [0, 28, 12, 52], yTitle: 'SBC (m/km)', fmt: '0.0' },
+                    { sheet: SN, title: `Belts by department - ${VN[2]} (SBC ${VV[2]})`, cat: `$A$${dH + 1}:$A$${dE}`, dir: 'bar', series: [{ name: `$C$${dH}`, val: `$C$${dH + 1}:$C$${dE}`, color: '5B8FD1' }, { name: `$D$${dH}`, val: `$D$${dH + 1}:$D$${dE}`, color: '9BBCE6' }, { name: `$I$${dH}`, val: `$I$${dH + 1}:$I$${dE}`, color: 'F0A35E' }, { name: `$J$${dH}`, val: `$J$${dH + 1}:$J$${dE}`, color: '8FD0C8' }], at: [0, 53, 12, 80], yTitle: 'Belts' }];
+                XLSX.utils.sheet_add_aoa(wb.Sheets[CN], [[`FY'${fy} - SBC replace / save plan - charts (as on ${dz(new Date())})`], [`Target ${f1(M.T)} | ${VN.map((n, k) => `${n} = SBC ${VV[k]}`).join(' | ')} | tables and belt lists on the next sheets`]], { origin: 'A1' });
                 // belt lists
                 const det = r => { const f = thkF(r.e.x.conv); return [f[0] || '', f[1] || '', f[2] || '']; };
                 const today = new Date(), cst2 = r => re(r.e) * (+r.e.m || 0);
@@ -4573,9 +4574,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const h0 = c0.length; c0.push(['Dept', 'Conveyor', 'Belt type', 'Planned / Unplanned', 'Activity', 'Metres', 'SBC', 'Date(s) - Daily Report', 'Cost (Rs Cr)']);
                 D0.forEach(r => c0.push([r.e.x.dept, r.e.x.name || r.e.x.conv, r.ty, r.e.cls, r.e.act, n1(r.e.m), sbc(r.e.m), r.e.dates || '', cr(cst2(r))]));
                 add(c0, 'Already replaced', [12, 16, 10, 12, 14, 9, 7, 50, 10], h0);
+                if (mode !== 'plan') { wb.SheetNames.splice(wb.SheetNames.indexOf(CN), 1); wb.SheetNames.unshift(CN); }
             }
             else if (mode === 'hold') { wb = XLSX.utils.book_new(); holdSheets.forEach(x => add(x[0], x[1], x[2], x[3])); }
-            else add(holdSheets[1][0], 'Not replacing list', holdSheets[1][2], holdSheets[1][3]);
             const TSB = { 1: 'SBC ' + f1(tot(1).proj / KM), 2: 'SBC ' + f1(tot(2).proj / KM), 3: 'SBC ' + f1(tot(3).proj / KM) };
             const tLbl = v => v.replace(/ total - Table ([123])/g, (x, k) => ' total in the ' + TSB[k] + ' view').replace(/^To be replaced - Table ([123])/, (x, k) => 'To be replaced in the ' + TSB[k] + ' view').replace(/Table 2 \/ 3/g, TSB[2] + ' / ' + TSB[3]).replace(/\b(?:Table|TABLE) ([123])\b/g, (x, k) => TSB[k]);
             // 03-Nov-2026: a cell holding only a date (dd-mm-yyyy) becomes a real Excel date, so Excel's filter groups it by year / month / day
@@ -4583,8 +4584,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const m = c.v.trim().match(/^(\d{2})-(\d{2})-(\d{4})$/); if (!m) return; const ser = (Date.UTC(+m[3], +m[2] - 1, +m[1]) - Date.UTC(1899, 11, 30)) / 864e5; if (!(ser > 0)) return;
                 c.t = 'n'; c.v = ser; c.z = 'dd-mm-yyyy'; delete c.w; delete c.h; delete c.r; }); });
             wb.SheetNames.forEach(sn => { const sh = wb.Sheets[sn]; Object.keys(sh).forEach(k => { const c = sh[k]; if (k[0] !== '!' && c && c.t === 's' && typeof c.v === 'string' && /Table|TABLE/.test(c.v)) { c.v = tLbl(c.v); if (c.w) c.w = c.v; if (c.h) delete c.h; if (c.r) delete c.r; } }); });
-            if (mode === 'plan') { const out = xlsxCharts(XLSX, XLSX.write(wb, { type: 'array', bookType: 'xlsx' }), 1, planCharts); const u = URL.createObjectURL(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); const a = document.createElement('a'); a.href = u; a.download = `SBC_Replace_Save_plan_FY${fy}_${dz(new Date())}.xlsx`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 2000); }
-            else XLSX.writeFile(wb, mode === 'hold' ? `SBC_Not_replacing_FY${fy}_${dz(new Date())}.xlsx` : `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`); if (msg) { msg.innerText = ''; msg.style.display = 'none'; }
+            if (mode !== 'hold') { const out = xlsxCharts(XLSX, XLSX.write(wb, { type: 'array', bookType: 'xlsx' }), 1, planCharts); const u = URL.createObjectURL(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); const a = document.createElement('a'); a.href = u; a.download = mode === 'plan' ? `SBC_Replace_Save_plan_FY${fy}_${dz(new Date())}.xlsx` : `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 2000); }
+            else XLSX.writeFile(wb, `SBC_Not_replacing_FY${fy}_${dz(new Date())}.xlsx`); if (msg) { msg.innerText = ''; msg.style.display = 'none'; }
         }).catch(e => { console.error(e); const m = el('sbcLoading'); if (m) { m.style.display = 'block'; m.innerText = 'Excel file could not be created (library not loaded). Check the internet connection and try again.'; } });
     };
     window.sbcGenCsv = function (id) { const t = document.querySelector('#card-' + id + ' table'); if (!t) return;
