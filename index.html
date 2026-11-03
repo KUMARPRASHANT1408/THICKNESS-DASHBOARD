@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-f</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-g</div>
         </div>
     </div>
 
@@ -3381,9 +3381,14 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     const FY_TARGET = { 27: 252, 26: 270, 25: 318 };
     // belts NOT in the ABP that the field team decided to run till next FY (pushed by decision)
     // steel cord / bucket belts expected to be consumed by 31-Mar (given by the user, 20-Oct-2026). p = planned, otherwise unplanned
-    const SB_FORECAST = [{ c: 'PC1', m: 144, p: true }, { c: 'J24C1', m: 100 }, { c: 'J65C2', m: 300 }, { c: 'J67C1', m: 914 }];
+    const SB_FORECAST = [{ c: 'PC1', m: 144, p: true }, { c: 'J24C1', m: 100, gone: 'J24C1' }, { c: 'J65C2', m: 300 }, { c: 'J67C1', m: 914 }];   // gone: dropped while a pending entry of that conveyor is counted
     // 03-Nov-2026: belts already replaced but not yet in the SBC sheet - counted as consumed (unplanned by the normal rules) until the SBC sheet shows the conveyor this FY
-    const PENDING_CONS = [{ c: 'CCBHAC1', type: 'R', m: 114, d: [2026, 10, 3], note: 'Replaced - told by user 03-Nov-2026; not yet in the SBC sheet / Daily Report' }];
+    // base = SBC sheet FY metres of that conveyor + type before this job; the entry drops out when the sheet shows base + m
+    const PENDING_CONS = [
+        { c: 'CCBHAC1', type: 'R', m: 114, d: [2026, 10, 2], note: 'Replacement 02-Nov-2026 (user daily log) - not yet in the SBC sheet / Daily Report' },
+        { c: '4A', type: 'R', m: 460, d: [2026, 10, 2], note: 'Replacement 02-Nov-2026 (user daily log) - not yet in the SBC sheet / Daily Report' },
+        { c: 'F1', type: 'R', m: 230, d: [2026, 10, 2], note: 'Replacement 02-Nov-2026 (user daily log) - not yet in the SBC sheet / Daily Report' },
+        { c: 'J24C1', type: 'P', m: 100, base: 1750, d: [2026, 10, 2], note: 'Piece addition 02-Nov-2026 (user daily log, the 100 m steel cord forecast) - not yet in the SBC sheet / Daily Report' }];
     // belts that are steel cord although the thickness sheet shows another grade (confirmed by the user)
     const STEEL_CORD_FIX = ['CCBHAC1'];
     // pushed belts brought back into this FY's forecast by decision (21-Oct-2026)
@@ -3499,7 +3504,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 }
             }
             const addPending = () => { S.pending = []; PENDING_CONS.forEach(p => { const c = key(p.c), d = new Date(p.d[0], p.d[1], p.d[2]), fy = fyOf(d);
-                if (S.daily.some(x => x.fy === fy && x.conv === c)) return;   // the SBC sheet has it now - nothing to add
+                const have = S.daily.filter(x => x.fy === fy && x.conv === c && x.type === p.type).reduce((q, x) => q + x.m, 0);
+                if (have >= (p.base || 0) + p.m - 0.01) return;   // the SBC sheet has it now - nothing to add
                 const t = S.thk[c] || {}, dp = nd(t.dept) || t.dept || '';
                 S.daily.push({ fy, dept: cdept[c] || dp, conv: c, name: t.name ? String(t.name).trim() : p.c, vendor: '-', desc: p.note, type: p.type, m: p.m, date: d, pending: true });
                 S.monthly.push({ fy, mi: (d.getMonth() + 9) % 12, date: new Date(d.getFullYear(), d.getMonth(), 1), dept: cdept[c] || dp, conv: c, name: p.c, m: p.m, type: 'X', adj: 'pending SBC sheet entry' });
@@ -3631,7 +3637,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const steelUsed = sum(steelRep) + sum(steelPa), bucketUsed = sum(bucketRep) + sum(bucketPa);
         const steelPlan = sbTarget, bucketPlan = 0;
         const consOfC = c => C.planned.concat(C.unplanned, C.sb).filter(r => r.conv === c).reduce((q, r) => q + (+r.m || 0), 0);
-        const sbFc = SB_FORECAST.filter(x => !(x.done && consOfC(key(x.c)) > 0.01)).map(x => { const c = key(x.c), t = S.thk[c] || {}; return { conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || '', len: x.m, plan: x.m, grade: t.grade || '', next: t.nextCbm || null, cat: t.cat || '', src: 'SB', cls: x.p ? 'P' : 'U', reason: 'SBFC', note: x.done || '' }; });
+        const sbFc = SB_FORECAST.filter(x => !(x.done && consOfC(key(x.c)) > 0.01) && !(x.gone && PENDING_CONS.some(p => key(p.c) === key(x.gone)))).map(x => { const c = key(x.c), t = S.thk[c] || {}; return { conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || '', len: x.m, plan: x.m, grade: t.grade || '', next: t.nextCbm || null, cat: t.cat || '', src: 'SB', cls: x.p ? 'P' : 'U', reason: 'SBFC', note: x.done || '' }; });
         const sbFcP = sbFc.filter(x => x.cls === 'P'), sbFcU = sbFc.filter(x => x.cls === 'U'), sbFcM = sum(sbFc, x => x.len);
         const pendSteel = Math.max(0, sbTarget - steelUsed - bucketUsed - sbFcM), pendBucket = 0;
         const abpTotal = sum(pl, planM), removedM = sum(removed, planM), planTotal = abpTotal - removedM, pushNeeded = Math.max(0, planTotal - fabTarget);
@@ -3699,6 +3705,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (sbcT > T) h += `<div class="sbc-banner red"><i class="fas fa-triangle-exclamation"></i> TARGET EXCEEDED: FY'${fy} SBC ${f1(sbcT)} is above target ${T} (by ${f1(sbcT - T)} m/km = ${fmt((sbcT - T) * TOTAL_KM)} m).</div>`;
         else if (ratio > 0.8) h += `<div class="sbc-banner amber"><i class="fas fa-circle-exclamation"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} / ${T}). Only ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m) left.</div>`;
         else h += `<div class="sbc-banner green"><i class="fas fa-circle-check"></i> ${Math.round(ratio * 100)}% of FY'${fy} target used (${f1(sbcT)} / ${T}). Balance ${f1(T - sbcT)} m/km (${fmt((T - sbcT) * TOTAL_KM)} m).</div>`;
+        { const pd = (S.pending || []).filter(p => p.fy === fy); if (pd.length) h += `<div class="sbc-banner amber"><i class="fas fa-hourglass-half"></i> Counted but not yet in the SBC sheet / Daily Report: ${pd.map(p => `${p.c} ${fmt(p.m)} m (${p.type === 'P' ? 'piece addition' : 'replacement'}, ${dstr(new Date(p.d[0], p.d[1], p.d[2]))})`).join(', ')}. Each drops out by itself once the sheet shows it.</div>`; }
         if (M.abp.length) {
             const t2v = M.consBW + M.fcPm + M.sum(M.u2, a => a.len) + M.pendSteel;   // 02-Nov-2026: incl. the replaced ABP belts due again (counted in Table 2)
             h += `<div class="sbc-banner ${M.gapEnd > 0 ? 'red' : 'green'}"><i class="fas fa-forward"></i> Projected SBC by 31-Mar: <b>Table 1 (as per CBM, nothing pushed) ${f1(M.byMarch / TOTAL_KM)}</b> · <b>Table 2 (only planned belts) ${f1(t2v / TOTAL_KM)}</b> · <b>Table 3 (planned push ${fmt(M.pushPm)} m) ${f1(M.yearEnd / TOTAL_KM)}</b> vs target ${T} - Table 3 is ${M.gapEnd > 0 ? `<b>${fmt(M.gapEnd)} m (${f1(M.gapEnd / TOTAL_KM)}) over</b>` : `${fmt(-M.gapEnd)} m (${f1(-M.gapEnd / TOTAL_KM)}) under`} target.</div>`; }
