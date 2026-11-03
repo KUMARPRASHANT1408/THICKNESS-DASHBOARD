@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-c</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-d</div>
         </div>
     </div>
 
@@ -3380,7 +3380,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     const FY_TARGET = { 27: 252, 26: 270, 25: 318 };
     // belts NOT in the ABP that the field team decided to run till next FY (pushed by decision)
     // steel cord / bucket belts expected to be consumed by 31-Mar (given by the user, 20-Oct-2026). p = planned, otherwise unplanned
-    const SB_FORECAST = [{ c: 'PC1', m: 144, p: true }, { c: 'J24C1', m: 100 }, { c: 'J65C2', m: 300 }, { c: 'J67C1', m: 914 }, { c: 'CCBHAC1', m: 114 }];
+    const SB_FORECAST = [{ c: 'PC1', m: 144, p: true }, { c: 'J24C1', m: 100 }, { c: 'J65C2', m: 300 }, { c: 'J67C1', m: 914 }, { c: 'CCBHAC1', m: 114, p: true, done: 'Replaced (told by user 03-Nov-2026) - not yet in the SBC sheet / Daily Report; counted in all three views, drops out by itself when the SBC sheet shows it' }];
     // belts that are steel cord although the thickness sheet shows another grade (confirmed by the user)
     const STEEL_CORD_FIX = ['CCBHAC1'];
     // pushed belts brought back into this FY's forecast by decision (21-Oct-2026)
@@ -3620,7 +3620,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const steelPa = sbAll.filter(r => isSteel(r.conv) && r.kind !== 'Replacement'), bucketPa = sbAll.filter(r => isBucket(r.conv) && r.kind !== 'Replacement');
         const steelUsed = sum(steelRep) + sum(steelPa), bucketUsed = sum(bucketRep) + sum(bucketPa);
         const steelPlan = sbTarget, bucketPlan = 0;
-        const sbFc = SB_FORECAST.map(x => { const c = key(x.c), t = S.thk[c] || {}; return { conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || '', len: x.m, plan: x.m, grade: t.grade || '', next: t.nextCbm || null, cat: t.cat || '', src: 'SB', cls: x.p ? 'P' : 'U', reason: 'SBFC' }; });
+        const consOfC = c => C.planned.concat(C.unplanned, C.sb).filter(r => r.conv === c).reduce((q, r) => q + (+r.m || 0), 0);
+        const sbFc = SB_FORECAST.filter(x => !(x.done && consOfC(key(x.c)) > 0.01)).map(x => { const c = key(x.c), t = S.thk[c] || {}; return { conv: c, name: t.name ? String(t.name).trim() : x.c, dept: t.dept || '', len: x.m, plan: x.m, grade: t.grade || '', next: t.nextCbm || null, cat: t.cat || '', src: 'SB', cls: x.p ? 'P' : 'U', reason: 'SBFC', note: x.done || '' }; });
         const sbFcP = sbFc.filter(x => x.cls === 'P'), sbFcU = sbFc.filter(x => x.cls === 'U'), sbFcM = sum(sbFc, x => x.len);
         const pendSteel = Math.max(0, sbTarget - steelUsed - bucketUsed - sbFcM), pendBucket = 0;
         const abpTotal = sum(pl, planM), removedM = sum(removed, planM), planTotal = abpTotal - removedM, pushNeeded = Math.max(0, planTotal - fabTarget);
@@ -4147,7 +4148,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 return RS(r); };
             // why a belt is in the forecast
             const whyFc = a => { const n = M.nextOf(a);
-                if (a.src === 'SB') return 'Steel cord / bucket belt expected by 31-Mar (given by user, 20/21-Oct-2026)';
+                if (a.src === 'SB') return a.note || 'Steel cord / bucket belt expected by 31-Mar (given by user, 20/21-Oct-2026)';
                 if (a.extra) return (a.note || 'Moved to planned forecast (decision)') + '; CBM ' + dz(n);
                 if (a.fcNote) return a.fcNote + '; CBM ' + dz(n);
                 if (a.again && a.agUser) return `Replaced this FY and due again - taken into the planned forecast in place of 90 m of REC2 (decision 26-Oct-2026); new belt CBM ` + dz(n);
