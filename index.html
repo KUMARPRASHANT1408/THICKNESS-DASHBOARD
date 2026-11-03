@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-e</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-f</div>
         </div>
     </div>
 
@@ -3381,7 +3381,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     const FY_TARGET = { 27: 252, 26: 270, 25: 318 };
     // belts NOT in the ABP that the field team decided to run till next FY (pushed by decision)
     // steel cord / bucket belts expected to be consumed by 31-Mar (given by the user, 20-Oct-2026). p = planned, otherwise unplanned
-    const SB_FORECAST = [{ c: 'PC1', m: 144, p: true }, { c: 'J24C1', m: 100 }, { c: 'J65C2', m: 300 }, { c: 'J67C1', m: 914 }, { c: 'CCBHAC1', m: 114, p: true, done: 'Replaced (told by user 03-Nov-2026) - not yet in the SBC sheet / Daily Report; counted in all three views, drops out by itself when the SBC sheet shows it' }];
+    const SB_FORECAST = [{ c: 'PC1', m: 144, p: true }, { c: 'J24C1', m: 100 }, { c: 'J65C2', m: 300 }, { c: 'J67C1', m: 914 }];
+    // 03-Nov-2026: belts already replaced but not yet in the SBC sheet - counted as consumed (unplanned by the normal rules) until the SBC sheet shows the conveyor this FY
+    const PENDING_CONS = [{ c: 'CCBHAC1', type: 'R', m: 114, d: [2026, 10, 3], note: 'Replaced - told by user 03-Nov-2026; not yet in the SBC sheet / Daily Report' }];
     // belts that are steel cord although the thickness sheet shows another grade (confirmed by the user)
     const STEEL_CORD_FIX = ['CCBHAC1'];
     // pushed belts brought back into this FY's forecast by decision (21-Oct-2026)
@@ -3496,6 +3498,12 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                     S.monthSrc = 'log';
                 }
             }
+            const addPending = () => { S.pending = []; PENDING_CONS.forEach(p => { const c = key(p.c), d = new Date(p.d[0], p.d[1], p.d[2]), fy = fyOf(d);
+                if (S.daily.some(x => x.fy === fy && x.conv === c)) return;   // the SBC sheet has it now - nothing to add
+                const t = S.thk[c] || {}, dp = nd(t.dept) || t.dept || '';
+                S.daily.push({ fy, dept: cdept[c] || dp, conv: c, name: t.name ? String(t.name).trim() : p.c, vendor: '-', desc: p.note, type: p.type, m: p.m, date: d, pending: true });
+                S.monthly.push({ fy, mi: (d.getMonth() + 9) % 12, date: new Date(d.getFullYear(), d.getMonth(), 1), dept: cdept[c] || dp, conv: c, name: p.c, m: p.m, type: 'X', adj: 'pending SBC sheet entry' });
+                S.pending.push(Object.assign({ conv: c, fy }, p)); }); };
             if (S.monthSrc === 'pivot') (function reconcileMonthly() {
                 const mainBy = {}, pivBy = {};
                 S.daily.forEach(x => { const k = x.fy + '|' + x.conv; mainBy[k] = (mainBy[k] || 0) + x.m; });
@@ -3521,6 +3529,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const arr = Array.from(fys).sort((a, b) => b - a); const sel = el('sbcFy'); const cur = sel.value;
             sel.innerHTML = arr.map(f => `<option value="${f}">FY'${f}</option>`).join(''); sel.value = cur && arr.includes(+cur) ? cur : (arr.includes(27) ? 27 : arr[0]);
             const dsel = el('sbcDeptExp'); dsel.innerHTML = '<option value="">Dept report PDF...</option>' + DEPTS.map(d => `<option>${d[0]}</option>`).join('');
+            addPending();
             el('sbcLoading').style.display = 'none'; S.loaded = true; window.sbcRender();
         });
     };
