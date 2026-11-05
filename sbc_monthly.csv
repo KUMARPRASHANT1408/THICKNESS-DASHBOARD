@@ -951,6 +951,7 @@ fy,dept,conv,mi,month,metres,source
 27,BRIQUETTING,HAC2100,5,September,10,daily report log
 27,SP#1,HV2,1,May,26,pivot copy 27-Oct-2026
 27,SP#1,HV2,5,September,26,daily report log
+27,RMPP,IJ001,0,April,28,pivot copy 27-Oct-2026
 27,RMPP,IJ001,3,July,28,daily report log
 27,RMPP,IJ001,7,November,28,daily report log
 27,RMPP,IJ0010,1,May,16,daily report log
@@ -1096,8 +1097,8 @@ fy,dept,conv,mi,month,metres,source
 27,RMPP,RPPC1,0,April,13,daily report log
 27,RMPP,RPPC2,2,June,12,daily report log
 27,RMPP,RPPC3,2,June,12,daily report log
-27,RMHS,RSC4,2,June,40,pivot copy 27-Oct-2026
 27,RMHS,RSC4,4,August,40,daily report log
+27,RMHS,RSC4,7,November,40,daily report log
 27,BF#2,SC3,0,April,25,pivot copy 27-Oct-2026
 27,BF#2,SC3,4,August,25,daily report log
 27,BF#2,SCA1,0,April,190,daily report log
