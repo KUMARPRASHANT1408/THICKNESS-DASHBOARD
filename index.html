@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 03-Nov-h</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 05-Nov-a</div>
         </div>
     </div>
 
@@ -1515,12 +1515,27 @@
                             
                             document.getElementById('skeleton-screen').style.display = 'none';
 
-                            if (isAbn) { fileType = 'abn'; window.abnRawDataCache = cleanedData; processAbnormality(cleanedData, true); } else if (isThk) { fileType = 'thk'; processThickness(cleanedData, cleanHeaders); fetchAbnormalityDataInBackground(); fetchJointDataInBackground(); } else { resetDashboard(); }
+                            if (isAbn) { fileType = 'abn'; window.abnRawDataCache = cleanedData; processAbnormality(cleanedData, true); } else if (isThk) { fileType = 'thk'; processThickness(cleanedData, cleanHeaders); try { thkStaleCheck(cleanedData); } catch (e) { console.warn(e); } fetchAbnormalityDataInBackground(); fetchJointDataInBackground(); } else { resetDashboard(); }
                         },
                         error: function() { alert("data.csv file not found! Make sure GitHub Action has successfully generated it."); }
                     });
                 })
                 .catch(error => { console.error("Error Fetching Data: ", error); document.getElementById('skeleton-screen').innerHTML = '<h3 style="color:var(--red); text-align:center;">Local data.csv connection error. Run GitHub Action.</h3>'; });
+        }
+
+        // 05-Nov-2026: warn when the thickness sheet stops getting new readings (e.g. the Apps Script / mail flow stops)
+        function thkStaleCheck(rows) {
+            const pd = v => { const s = String(v || '').trim(); if (/^\d{5}(\.\d+)?$/.test(s)) { const e = new Date(Math.round((+s - 25569) * 864e5)); return new Date(e.getUTCFullYear(), e.getUTCMonth(), e.getUTCDate()); }
+                const m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
+            const today = new Date(); let last = null;
+            rows.forEach(r => { const k = Object.keys(r).find(x => x && x.trim().toLowerCase() === 'last thickness date'); const d = k ? pd(r[k]) : null; if (d && d <= today && (!last || d > last)) last = d; });
+            let el2 = document.getElementById('thkStale'); if (el2) el2.remove();
+            if (!last) return;
+            const days = Math.floor((today - last) / 864e5); if (days <= 5) return;
+            el2 = document.createElement('div'); el2.id = 'thkStale';
+            el2.style.cssText = 'margin:10px 16px;padding:12px 16px;border-radius:12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:#fca5a5;font-size:0.9rem;line-height:1.4';
+            el2.innerHTML = `<i class="fas fa-triangle-exclamation"></i> <b>Thickness data may not be updating.</b> The newest reading in the thickness sheet is ${last.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} (${days} days ago). Check the Apps Script "updateSheetFromEmail" (authorization / trigger) and the AUTO_UPDATE_RTG_THICKNESS mail.`;
+            const tabs = document.getElementById('tabs-menu'); if (tabs && tabs.parentNode) tabs.parentNode.insertBefore(el2, tabs);
         }
 
         // 🔗 Abnormality sheet ko background mein (silently) fetch karta hai taaki chatbot
