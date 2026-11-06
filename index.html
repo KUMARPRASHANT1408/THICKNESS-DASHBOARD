@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 06-Nov-d</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 06-Nov-e</div>
         </div>
     </div>
 
@@ -984,6 +984,7 @@
             <h2><i class="fas fa-chart-line" style="color:#f59e0b"></i> SBC - Specific Belt Consumption</h2>
             <select id="sbcFy" class="sbc-sel" onchange="sbcRender()"></select>
             <button class="btn-slate" onclick="sbcExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
+            <button class="btn-slate" onclick="sbcExcel('month')" title="Consumed and still-to-come by month and department - metres, SBC and cost"><i class="fas fa-file-excel"></i> Month-wise Excel</button>
             <button class="btn-slate" onclick="sbcExcel('plan')" title="Belts to replace and belts to save for each SBC view, with charts"><i class="fas fa-file-excel"></i> Replace / save plan</button>
             <button class="btn-slate" onclick="sbcExcel('hold')" title="Belts due as per CBM that will not be replaced this FY - list for the departments"><i class="fas fa-file-excel"></i> Not-replacing list</button>
             <button class="btn-slate" onclick="sbcExport()"><i class="fas fa-file-pdf"></i> PDF</button>
@@ -4268,6 +4269,33 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
       put('/[Content_Types].xml', ct);
       return XLSX.CFB.write(cfb, { type: 'array', fileType: 'zip' });
     }
+    // 06-Nov-2026: cell colours / bold / number formats for a SheetJS workbook (SheetJS community does not write styles)
+    // map = { sheetIndex(1-based): { 'B5': { fill: 'DDEBF7', font: 'b' | 'bw' | 't', fmt: '#,##0' } } }
+    function xlsxStyles(XLSX, wbArr, map) {
+      const enc = s => new TextEncoder().encode(s), dec = u => new TextDecoder().decode(u);
+      const cfb = XLSX.CFB.read(new Uint8Array(wbArr), { type: 'array' });
+      const get = p => { const f = XLSX.CFB.find(cfb, p); return f ? dec(f.content) : null; }, put = (p, s) => { XLSX.CFB.find(cfb, p).content = enc(s); };
+      let st = get('/xl/styles.xml'); const cnt = (tag) => +((st.match(new RegExp(`<${tag} count="(\\d+)"`)) || [0, 0])[1]);
+      const fonts = [], fills = [], fmts = [], xfs = [], sig = {};
+      const nF0 = cnt('fonts'), nL0 = cnt('fills'), nX0 = cnt('cellXfs');
+      const fontId = f => { if (!f) return 0; const x = { b: '<font><b/><sz val="11"/><color theme="1"/><name val="Calibri"/><family val="2"/></font>', bw: '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>', t: '<font><b/><sz val="14"/><color rgb="FF1F3864"/><name val="Calibri"/><family val="2"/></font>' }[f]; let i = fonts.indexOf(x); if (i < 0) { fonts.push(x); i = fonts.length - 1; } return nF0 + i; };
+      const fillId = c => { if (!c) return 0; const x = `<fill><patternFill patternType="solid"><fgColor rgb="FF${c}"/><bgColor indexed="64"/></patternFill></fill>`; let i = fills.indexOf(x); if (i < 0) { fills.push(x); i = fills.length - 1; } return nL0 + i; };
+      const fmtId = f => { if (!f) return 0; let i = fmts.indexOf(f); if (i < 0) { fmts.push(f); i = fmts.length - 1; } return 200 + i; };
+      const xf = s => { const k = JSON.stringify(s); if (sig[k] != null) return sig[k]; const b = s.fill || s.border ? 1 : 0;
+        xfs.push(`<xf numFmtId="${fmtId(s.fmt)}" fontId="${fontId(s.font)}" fillId="${fillId(s.fill)}" borderId="${b ? 'BRD' : 0}" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"${s.wrap ? ' applyAlignment="1"><alignment wrapText="1" vertical="center"/></xf>' : '/>'}`);
+        return (sig[k] = nX0 + xfs.length - 1); };
+      Object.keys(map).forEach(si => { const p = `/xl/worksheets/sheet${si}.xml`, m = map[si]; let x = get(p); if (!x) return;
+        x = x.replace(/<c r="([A-Z]+\d+)"([^>]*?)(\/?)>/g, (all, ref, rest, sl) => { const s = m[ref]; if (!s) return all; return `<c r="${ref}"${rest.replace(/ s="\d+"/, '')} s="${xf(s)}"${sl}>`; }); put(p, x); });
+      const nB0 = cnt('borders');
+      st = st.replace(/<fonts count="\d+">([\s\S]*?)<\/fonts>/, (a, b) => `<fonts count="${nF0 + fonts.length}">${b}${fonts.join('')}</fonts>`)
+        .replace(/<fills count="\d+">([\s\S]*?)<\/fills>/, (a, b) => `<fills count="${nL0 + fills.length}">${b}${fills.join('')}</fills>`)
+        .replace(/<borders count="\d+">([\s\S]*?)<\/borders>/, (a, b) => `<borders count="${nB0 + 1}">${b}<border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders>`)
+        .replace(/<cellXfs count="\d+">([\s\S]*?)<\/cellXfs>/, (a, b) => `<cellXfs count="${nX0 + xfs.length}">${b}${xfs.join('').replace(/BRD/g, nB0)}</cellXfs>`);
+      const nf = fmts.map((f, i) => `<numFmt numFmtId="${200 + i}" formatCode="${f.replace(/"/g, '&quot;')}"/>`).join('');
+      st = /<numFmts count="\d+">/.test(st) ? st.replace(/<numFmts count="(\d+)">([\s\S]*?)<\/numFmts>/, (a, c, b) => `<numFmts count="${+c + fmts.length}">${b}${nf}</numFmts>`) : st.replace('<fonts', `<numFmts count="${fmts.length}">${nf}</numFmts><fonts`);
+      put('/xl/styles.xml', st);
+      return XLSX.CFB.write(cfb, { type: 'array', fileType: 'zip' });
+    }
     window.sbcExcel = function (mode) {
         if (!S.loaded) return;
         const msg = el('sbcLoading'); if (msg) { msg.style.display = 'block'; msg.innerText = 'Preparing Excel file...'; }
@@ -4593,9 +4621,51 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 s2.push([], ['TOTAL', '', '', '', '', '', '', '', n1(tm), sbc(tm), cr(sc(() => true))]);
                 return [[s1, 'Summary', [52, 8, 10, 8, 14, 22, 22, 22]], [s2, 'Not-replacing list', [12, 16, 10, 16, 34, 30, 80, 50, 9, 7, 10, 12, 18].concat(thkH.map(() => 12)), hr]];
             })();
+            // ---------- 06-Nov-2026: month-wise consumption by department - consumed (blue) and still to come (orange), in metres, SBC and cost ----------
+            let monthStyles = null;
+            if (mode === 'month') {
+                wb = XLSX.utils.book_new(); monthStyles = {};
+                const MN = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'], yr = i => i < 9 ? fy - 1 : fy;
+                const today = new Date(), fyS = new Date(2000 + fy - 1, 3, 1), fyE = new Date(2000 + fy, 2, 31);
+                const cur = today < fyS ? 0 : today > fyE ? 12 : (today.getMonth() + 9) % 12;   // month index of today in the FY
+                const DL = DEPTS.map(d => d[0]).concat(['OTHER']), dOf = d => DL.includes(d) ? d : 'OTHER';
+                // consumed by month (Daily Report log) - metres and cost (actual cost sheet rate of the belt)
+                const cM = {}, cC = {}; DL.forEach(d => { cM[d] = Array(12).fill(0); cC[d] = Array(12).fill(0); });
+                (S.monthly || []).filter(r => r.fy === fy).forEach(r => { const d = dOf(r.dept); cM[d][r.mi] += r.m; cC[d][r.mi] += r.m * rateC(r.conv); });
+                // still to come by month: month of the belt's CBM; CBM passed or no date = this month; CBM after 31-Mar (taken in the plan) = March
+                const VV3 = [v1, v2, v3].map(v => f1(v.proj / KM)), VN3 = ['As per CBM', 'Can replace', 'Must replace'];
+                const ALLm = [LF, LS, LB].flat();
+                const fM = [0, 1, 2].map(() => { const o = {}; DL.forEach(d => o[d] = Array(12).fill(0)); return o; }), fC = [0, 1, 2].map(() => { const o = {}; DL.forEach(d => o[d] = Array(12).fill(0)); return o; });
+                ALLm.filter(e => e.st === 'To be replaced').forEach(e => { const n = M.nextOf(e.x); let mi = !n || n < today ? cur : n > fyE ? 11 : (n.getMonth() + 9) % 12; if (mi < cur) mi = cur; mi = Math.min(mi, 11);
+                    const d = dOf(e.x.dept); [0, 1, 2].forEach(k => { if (e.t[k]) { fM[k][d][mi] += +e.m || 0; fC[k][d][mi] += (+e.m || 0) * rate(e.x.conv); } }); });
+                const cols = []; for (let i = 0; i < 12; i++) { if (i < cur) cols.push([i, 'C']); else if (i === cur) { cols.push([i, 'C']); cols.push([i, 'F']); } else cols.push([i, 'F']); }
+                const cl = c => { let s = ''; c++; while (c) { const m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; };
+                const MET = [['Metres', 'Metres', v => Math.round(v), '#,##0', (m, c) => m], ['SBC', 'SBC (m/km)', v => Math.round(v / KM * 100) / 100, '0.00', (m, c) => m], ['Cost', 'Cost (Rs Cr)', v => Math.round(v / 1e7 * 1000) / 1000, '0.000', (m, c) => c]];
+                MET.forEach(([shN, lbl, cv, fmt, pick], si) => {
+                    const a = [], sty = {}; const S2 = (r, c, s) => sty[cl(c) + (r + 1)] = s;
+                    a.push([`FY'${fy} - BELT CONSUMPTION BY MONTH AND DEPARTMENT - ${lbl} - as on ${dz(today)}`]); S2(0, 0, { font: 't' });
+                    a.push(['Blue = already consumed (Daily Report).   Orange = still to be consumed by 31-Mar: each belt in the month of its CBM; CBM already passed = this month; CBM after 31-Mar (taken in the plan by decision) = March.']);
+                    a.push([`${MN[cur] || ''} is split into consumed so far and still to come. Consumed cost = actual cost sheet rate (UMC for the rest); to come = UMC rate.`], []);
+                    [0, 1, 2].forEach(k => {
+                        const r0 = a.length; a.push([`SBC ${VV3[k]} - ${VN3[k]}`]); S2(r0, 0, { font: 'b' });
+                        const h = ['Department'].concat(cols.map(([i, ty]) => `${MN[i]}-${yr(i)}` + (i === cur ? (ty === 'C' ? ' consumed' : ' to come') : '')), ['Consumed total', 'To come total', 'Year-end total']);
+                        const hr = a.length; a.push(h); S2(hr, 0, { fill: '404040', font: 'bw', border: 1, wrap: 1 });
+                        cols.forEach(([i, ty], j) => S2(hr, j + 1, { fill: ty === 'C' ? '2F5597' : 'C55A11', font: 'bw', border: 1, wrap: 1 }));
+                        S2(hr, cols.length + 1, { fill: '2F5597', font: 'bw', border: 1, wrap: 1 }); S2(hr, cols.length + 2, { fill: 'C55A11', font: 'bw', border: 1, wrap: 1 }); S2(hr, cols.length + 3, { fill: '375623', font: 'bw', border: 1, wrap: 1 });
+                        const tot = Array(cols.length + 3).fill(0);
+                        const rowOf = d => { const vals = cols.map(([i, ty]) => ty === 'C' ? pick(cM[d][i], cC[d][i]) : pick(fM[k][d][i], fC[k][d][i]));
+                            const ct = cols.reduce((q, [i, ty], j) => q + (ty === 'C' ? vals[j] : 0), 0), ft = cols.reduce((q, [i, ty], j) => q + (ty === 'F' ? vals[j] : 0), 0); return vals.concat([ct, ft, ct + ft]); };
+                        DL.forEach(d => { const v = rowOf(d); if (!v.some(x => Math.abs(x) > 1e-9)) return; v.forEach((x, j) => tot[j] += x); const r = a.length; a.push([d].concat(v.map(cv)));
+                            S2(r, 0, { border: 1, font: 'b' }); cols.forEach(([i, ty], j) => S2(r, j + 1, { fill: ty === 'C' ? 'DDEBF7' : 'FCE4D6', border: 1, fmt })); S2(r, cols.length + 1, { fill: 'BDD7EE', border: 1, fmt, font: 'b' }); S2(r, cols.length + 2, { fill: 'F8CBAD', border: 1, fmt, font: 'b' }); S2(r, cols.length + 3, { fill: 'E2EFDA', border: 1, fmt, font: 'b' }); });
+                        const tr = a.length; a.push(['TOTAL'].concat(tot.map(cv))); S2(tr, 0, { fill: 'D9D9D9', border: 1, font: 'b' });
+                        cols.forEach(([i, ty], j) => S2(tr, j + 1, { fill: ty === 'C' ? 'BDD7EE' : 'F8CBAD', border: 1, fmt, font: 'b' })); S2(tr, cols.length + 1, { fill: '9DC3E6', border: 1, fmt, font: 'b' }); S2(tr, cols.length + 2, { fill: 'F4B183', border: 1, fmt, font: 'b' }); S2(tr, cols.length + 3, { fill: 'C6E0B4', border: 1, fmt, font: 'b' });
+                        a.push([]); });
+                    add(a, shN, [16].concat(cols.map(() => 10), [12, 12, 12]));
+                    monthStyles[si + 1] = sty; });
+            }
             // ---------- 03-Nov-2026: replace / save plan for the three SBC views - belt numbers first, with native charts ----------
             let planCharts = null;
-            if (mode !== 'hold') {   // 03-Nov-2026: the plan is part of the main Excel too (first sheet = its charts)
+            if (mode !== 'hold' && mode !== 'month') {   // 03-Nov-2026: the plan is part of the main Excel too (first sheet = its charts)
                 if (mode === 'plan') wb = XLSX.utils.book_new();
                 const CN = mode === 'plan' ? 'Charts' : 'Plan charts', SN = mode === 'plan' ? 'Summary' : 'Plan summary';
                 const chartSheet = [];   // filled after the summary - must be the first sheet (charts go on sheet1)
@@ -4672,7 +4742,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 const m = c.v.trim().match(/^(\d{2})-(\d{2})-(\d{4})$/); if (!m) return; const ser = (Date.UTC(+m[3], +m[2] - 1, +m[1]) - Date.UTC(1899, 11, 30)) / 864e5; if (!(ser > 0)) return;
                 c.t = 'n'; c.v = ser; c.z = 'dd-mm-yyyy'; delete c.w; delete c.h; delete c.r; }); });
             wb.SheetNames.forEach(sn => { const sh = wb.Sheets[sn]; Object.keys(sh).forEach(k => { const c = sh[k]; if (k[0] !== '!' && c && c.t === 's' && typeof c.v === 'string' && /Table|TABLE/.test(c.v)) { c.v = tLbl(c.v); if (c.w) c.w = c.v; if (c.h) delete c.h; if (c.r) delete c.r; } }); });
-            if (mode !== 'hold') { const out = xlsxCharts(XLSX, XLSX.write(wb, { type: 'array', bookType: 'xlsx' }), 1, planCharts); const u = URL.createObjectURL(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); const a = document.createElement('a'); a.href = u; a.download = mode === 'plan' ? `SBC_Replace_Save_plan_FY${fy}_${dz(new Date())}.xlsx` : `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 2000); }
+            if (mode === 'month') { const out = xlsxStyles(XLSX, XLSX.write(wb, { type: 'array', bookType: 'xlsx' }), monthStyles); const u = URL.createObjectURL(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); const a = document.createElement('a'); a.href = u; a.download = `SBC_Month_wise_FY${fy}_${dz(new Date())}.xlsx`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 2000); }
+            else if (mode !== 'hold') { const out = xlsxCharts(XLSX, XLSX.write(wb, { type: 'array', bookType: 'xlsx' }), 1, planCharts); const u = URL.createObjectURL(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); const a = document.createElement('a'); a.href = u; a.download = mode === 'plan' ? `SBC_Replace_Save_plan_FY${fy}_${dz(new Date())}.xlsx` : `SBC_Backup_FY${fy}_${dz(new Date())}.xlsx`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 2000); }
             else XLSX.writeFile(wb, `SBC_Not_replacing_FY${fy}_${dz(new Date())}.xlsx`); if (msg) { msg.innerText = ''; msg.style.display = 'none'; }
         }).catch(e => { console.error(e); const m = el('sbcLoading'); if (m) { m.style.display = 'block'; m.innerText = 'Excel file could not be created (library not loaded). Check the internet connection and try again.'; } });
     };
