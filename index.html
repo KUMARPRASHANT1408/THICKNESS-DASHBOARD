@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 06-Nov-b</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 06-Nov-c</div>
         </div>
     </div>
 
@@ -1486,6 +1486,7 @@
                 const sRow = (nm, o, bold) => ({ v: [nm, o.n, o.m, o.GOOD, o.WATCH, o.POOR, o.REPL, o.NOTM, pc(o.GOOD, o.m), f2(o.avg)], bold, color: [null, null, null, '#059669', '#d97706', '#e11d48'] });
                 table(sCols, D.byDept.map(x => sRow(x[0], x[1])).concat([sRow('TOTAL', D.all, true)]), { fs: 9 });
                 // ---- belts (as in the table on screen)
+                newPage();   // poor performers always start on page 3 (page 2 = summary by department only)
                 H2(`Poor performers - wear rate more than 1.2 x planned - ${L.length} belts${st.dept ? ' (' + st.dept + ')' : ''}, highest wear ratio first`, 20);
                 if (!L.length) { doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text('No belt with poor performance in this period.', M, y + 4); y += 8; }
                 const bCols = [['Dept', 20], ['Conveyor', 28], ['Type', 16], ['Length (m)', 16, 'r'], ['Reading date', 26], ['Min thk (mm)', 16, 'r'], ['Wear rate (mm/month)', 21, 'r'], ['Planned wear', 19, 'r'], ['Wear ratio', 16, 'r'], ['Previous ratio', 18, 'r'], ['Performance', 22], ['Next CBM', 22], ['Criticality', 37]];
