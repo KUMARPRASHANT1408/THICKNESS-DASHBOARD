@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 05-Nov-a</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 06-Nov-a</div>
         </div>
     </div>
 
@@ -1374,7 +1374,7 @@
             const chip = (on, js, t) => `<button class="sbc-chip ${on ? 'on' : ''}" onclick="${js}">${t}</button>`;
             const kpi = (b, v, sub) => `<div class="glass-panel sbc-click" onclick="perfPick('','${b}')" style="padding:10px 14px;border-radius:12px;border-bottom:3px solid ${(PERF_BANDS.find(x => x[0] === b) || [0, 0, '#0ea5e9'])[2]};cursor:pointer;min-width:120px"><div style="font-size:.75rem;opacity:.8">${b ? perfBandName(b) : 'Measured'}</div><div style="font-size:1.4rem;font-weight:800">${v}</div><div style="font-size:.7rem;opacity:.7">${sub}</div></div>`;
             const A = D.all;
-            sec.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap"><h3 style="margin:0;font-weight:800"><i class="fas fa-gauge-high" style="color:var(--teal)"></i> Belt Performance - ${cbmEsc(D.per.label)}</h3><button class="sbc-chip" onclick="perfToggle(false)"><i class="fas fa-times"></i> Close</button></div>
+            sec.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap"><h3 style="margin:0;font-weight:800"><i class="fas fa-gauge-high" style="color:var(--teal)"></i> Belt Performance - ${cbmEsc(D.per.label)}</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="sbc-chip on" id="perfPdfBtn" onclick="perfPdf()"><i class="fas fa-file-pdf"></i> Download PDF</button><button class="sbc-chip" onclick="perfToggle(false)"><i class="fas fa-times"></i> Close</button></div></div>
                 <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px"><small style="margin-right:4px">Period:</small>${D.P.map(p => chip(p.k === st.per, `perfSet('per','${p.k}')`, cbmEsc(p.label))).join('')}</div>
                 <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px"><small style="margin-right:4px">Belt type:</small>${['ALL', 'Fabric', 'Steel cord', 'Bucket'].map(x => chip(x === st.type, `perfSet('type','${x}')`, x === 'ALL' ? 'All' : x)).join('')}</div>
                 <div style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px">${kpi('', A.m, `of ${A.n} belts (${A.n ? Math.round(A.m / A.n * 100) : 0}%)`)}${kpi('GOOD', A.GOOD, A.m ? Math.round(A.GOOD / A.m * 100) + '% of measured' : '')}${kpi('WATCH', A.WATCH, A.m ? Math.round(A.WATCH / A.m * 100) + '% of measured' : '')}${kpi('POOR', A.POOR, A.m ? Math.round(A.POOR / A.m * 100) + '% of measured' : '')}${kpi('REPL', A.REPL, 'measured, then replaced')}${kpi('NOTM', A.NOTM, 'no reading in period')}</div>
@@ -1393,11 +1393,15 @@
             perfTable();
         }
         const PERF_COLS = [['dept', 'Dept'], ['conv', 'Conveyor'], ['kind', 'Type'], ['len', 'Length (m)'], ['readOn', 'Reading date'], ['mn', 'Min thk (mm)'], ['w', 'Wear rate (mm/month)'], ['pw', 'Planned wear'], ['ratio', 'Wear ratio'], ['pRatio', 'Previous ratio'], ['band', 'Performance'], ['cbm', 'Next CBM'], ['crit', 'Criticality']];
+        function perfList() {   // the belts of the table: filters + sort (also used by the PDF)
+            const st = window.__perf, D = window.__perfD; if (!D) return [];
+            const L = D.rows.filter(r => (!st.dept || r.dept === st.dept) && (!st.band || r.band === st.band) && (!st.q || r.conv.toLowerCase().includes(st.q.toLowerCase())));
+            const sv = (r, k) => k === 'readOn' ? (r.readOn ? r.readOn.getTime() : -1) : k === 'cbm' ? (v => v ? new Date(+v[2], v[1] - 1, +v[0]).getTime() : 0)(String(r.cbm || '').split('-')) : k === 'band' ? ['POOR', 'WATCH', 'GOOD', 'REPL', 'NOTM'].indexOf(r.band) : r[k] == null ? (st.asc ? Infinity : -Infinity) : r[k];
+            return L.slice().sort((a, b) => { const x = sv(a, st.sort), y = sv(b, st.sort); if (x === y) return 0; return (typeof x === 'string' ? String(x).localeCompare(String(y)) : (x < y ? -1 : 1)) * (st.asc ? 1 : -1); });
+        }
         function perfTable() {
             const st = window.__perf, D = window.__perfD; const wrap = document.getElementById('perf-table-wrap'); if (!D || !wrap) return;
-            let L = D.rows.filter(r => (!st.dept || r.dept === st.dept) && (!st.band || r.band === st.band) && (!st.q || r.conv.toLowerCase().includes(st.q.toLowerCase())));
-            const sv = (r, k) => k === 'readOn' ? (r.readOn ? r.readOn.getTime() : -1) : k === 'cbm' ? (v => v ? new Date(+v[2], v[1] - 1, +v[0]).getTime() : 0)(String(r.cbm || '').split('-')) : k === 'band' ? ['POOR', 'WATCH', 'GOOD', 'REPL', 'NOTM'].indexOf(r.band) : r[k] == null ? (st.asc ? Infinity : -Infinity) : r[k];
-            L = L.slice().sort((a, b) => { const x = sv(a, st.sort), y = sv(b, st.sort); if (x === y) return 0; return (typeof x === 'string' ? String(x).localeCompare(String(y)) : (x < y ? -1 : 1)) * (st.asc ? 1 : -1); });
+            const L = perfList();
             const f2 = v => v == null ? '-' : (+v).toFixed(2), f3 = v => v == null ? '-' : (+v).toFixed(3);
             const bandPill = b => { const x = PERF_BANDS.find(z => z[0] === b); return `<span style="background:${x[2]}22;color:${x[2]};border:1px solid ${x[2]};padding:2px 8px;border-radius:10px;font-weight:700;font-size:.75rem">${x[1]}</span>`; };
             const trend = r => r.pRatio == null || r.ratio == null ? '' : r.ratio > r.pRatio + 0.05 ? ' <span style="color:var(--red)" title="worse than previous reading">&#9650;</span>' : r.ratio < r.pRatio - 0.05 ? ' <span style="color:var(--green)" title="better than previous reading">&#9660;</span>' : '';
@@ -1423,9 +1427,75 @@
         function perfChartImg(cfg, w, h) {
             const c = document.createElement('canvas'); c.width = w; c.height = h; c.style.cssText = 'position:fixed;left:-9999px;top:0'; document.body.appendChild(c);
             const bg = { id: 'mailbg', beforeDraw: ch => { const x = ch.ctx; x.save(); x.fillStyle = '#ffffff'; x.fillRect(0, 0, ch.width, ch.height); x.restore(); } };
-            let url = ''; try { cfg.options = Object.assign({}, cfg.options, { responsive: false, animation: false, devicePixelRatio: 2 }); cfg.plugins = [bg]; const ch = new Chart(c.getContext('2d'), cfg); url = ch.toBase64Image('image/png'); ch.destroy(); } catch (e) { console.error(e); }
+            let url = ''; try { cfg.options = Object.assign({}, cfg.options, { responsive: false, animation: false, devicePixelRatio: 3 }); cfg.plugins = [bg]; const ch = new Chart(c.getContext('2d'), cfg); url = ch.toBase64Image('image/png'); ch.destroy(); } catch (e) { console.error(e); }
             c.remove(); return url;
         }
+        // 06-Nov-2026: Belt Performance as a PDF - drawn with jsPDF (A4 landscape): charts as images, tables paged row by row (no row is cut, header repeats on every page)
+        window.perfPdf = async function () {
+            const D = window.__perfD, st = window.__perf; if (!D) return;
+            const btn = document.getElementById('perfPdfBtn'), btnTxt = btn ? btn.innerHTML : ''; if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Making PDF...'; }
+            try {
+                const J = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF; let doc;
+                if (J) doc = new J({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+                else { doc = await html2pdf().set({ margin: 0, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } }).from(document.createElement('div')).toPdf().get('pdf'); doc.addPage(); doc.deletePage(1); }   // the jsPDF of the html2pdf bundle
+                const PW = 297, PH = 210, M = 10, BOT = PH - 12;
+                const rgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+                const L = perfList(), A = st.dept ? D.sum(D.rows.filter(r => r.dept === st.dept)) : D.all;
+                const pc = (a, b) => b ? Math.round(a / b * 100) + '%' : '-', f2 = v => v == null ? '-' : (+v).toFixed(2), f3 = v => v == null ? '-' : (+v).toFixed(3);
+                const today = new Date(), filt = [st.type !== 'ALL' ? 'Belt type: ' + st.type : 'All belt types', st.dept ? 'Dept: ' + st.dept : 'All departments', st.band ? 'Performance: ' + perfBandName(st.band) : '', st.q ? 'Search: ' + st.q : ''].filter(Boolean).join(' | ');
+                const head = () => { doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(110); doc.text(`Conveyor belt thickness performance - ${D.per.label}`, M, 7); doc.text(`Made on ${cbmDstr(today)}`, PW - M, 7, { align: 'right' }); doc.setDrawColor(200); doc.line(M, 8.5, PW - M, 8.5); doc.setTextColor(20); };
+                let y = 0; const newPage = () => { doc.addPage(); head(); y = 14; };
+                const H2 = (txt, need) => { if (y + 8 + (need || 0) > BOT) newPage(); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(31, 78, 121); doc.text(txt, M, y + 5); doc.setTextColor(20); y += 9; };
+                // table: rows never split across pages, header repeated on each page
+                const table = (cols, rows, opt) => {
+                    opt = opt || {}; const fs = opt.fs || 8, lh = fs * 0.42, pad = 1.4;
+                    const drawHead = () => { doc.setFont('helvetica', 'bold'); doc.setFontSize(fs);
+                        const hl = cols.map(c => doc.splitTextToSize(c[0], c[1] - 2 * pad)), hh = Math.max(...hl.map(l => l.length)) * lh + 2 * pad;
+                        doc.setFillColor(31, 78, 121); doc.rect(M, y, cols.reduce((a, c) => a + c[1], 0), hh, 'F'); doc.setTextColor(255);
+                        let x = M; cols.forEach((c, i) => { if (c[2] === 'r') doc.text(hl[i], x + c[1] - pad, y + pad + lh * 0.8, { align: 'right' }); else doc.text(hl[i], x + pad, y + pad + lh * 0.8); x += c[1]; }); doc.setTextColor(20); y += hh; };
+                    if (y + 18 > BOT) newPage(); drawHead();
+                    rows.forEach((r, ri) => {
+                        doc.setFont('helvetica', 'normal'); doc.setFontSize(fs);
+                        const ls = cols.map((c, i) => doc.splitTextToSize(String(r.v[i] == null ? '' : r.v[i]), c[1] - 2 * pad)), rh = Math.max(...ls.map(l => l.length)) * lh + 2 * pad;
+                        if (y + rh > BOT) { newPage(); drawHead(); doc.setFont('helvetica', 'normal'); doc.setFontSize(fs); }
+                        const tw = cols.reduce((a, c) => a + c[1], 0);
+                        if (r.bold) { doc.setFillColor(226, 232, 240); doc.rect(M, y, tw, rh, 'F'); } else if (ri % 2) { doc.setFillColor(244, 246, 249); doc.rect(M, y, tw, rh, 'F'); }
+                        doc.setDrawColor(210); doc.line(M, y + rh, M + tw, y + rh);
+                        let x = M; cols.forEach((c, i) => { const col = r.color && r.color[i]; doc.setFont('helvetica', r.bold || col ? 'bold' : 'normal'); if (col) doc.setTextColor(...rgb(col)); doc.text(ls[i], c[2] === 'r' ? x + c[1] - pad : x + pad, y + pad + lh * 0.8, c[2] === 'r' ? { align: 'right' } : undefined); doc.setTextColor(20); x += c[1]; });
+                        y += rh; });
+                    y += 4; };
+                // ---- page 1: title, KPIs, charts
+                head(); y = 14;
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.setTextColor(20); doc.text(`Conveyor Belt Thickness Performance - ${D.per.label}`, M, y + 6); y += 10;
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90); doc.text(filt, M, y + 3); y += 7;
+                const K = [['Measured', A.m, `of ${A.n} belts (${pc(A.m, A.n)})`, '#0ea5e9']].concat(PERF_BANDS.map(b => [b[1], A[b[0]], ['GOOD', 'WATCH', 'POOR'].includes(b[0]) ? pc(A[b[0]], A.m) + ' of measured' : b[0] === 'REPL' ? 'measured, then replaced' : 'no reading in the period', b[2]]));
+                const kw = (PW - 2 * M - 5 * 3) / 6; K.forEach((k, i) => { const x = M + i * (kw + 3); doc.setDrawColor(215); doc.setFillColor(250, 251, 252); doc.roundedRect(x, y, kw, 20, 2, 2, 'FD'); doc.setFillColor(...rgb(k[3])); doc.rect(x, y + 18.6, kw, 1.4, 'F');
+                    doc.setTextColor(90); doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.text(k[0], x + 3, y + 5); doc.setTextColor(20); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text(String(k[1]), x + 3, y + 12.5);
+                    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(100); doc.text(doc.splitTextToSize(k[2], kw - 5)[0], x + 3, y + 16.6); });
+                y += 25; doc.setTextColor(60); doc.setFontSize(8);
+                const def = doc.splitTextToSize('Wear ratio = wear rate at the latest thickness reading in the period / planned wear rate. Good: up to 1.0 | Watch: 1.0 to 1.2 | Poor: more than 1.2. Replaced = measured in the period, belt replaced after the reading. Not measured = no reading in the period on the present belt.' + (D.outProg ? ` ${D.outProg} belts with no thickness reading in the last 12 months are not in the thickness programme and are not counted.` : ''), PW - 2 * M);
+                doc.text(def, M, y + 3); y += def.length * 3.4 + 3;
+                const txt0 = '#333333', oCfg = perfCfgO(st.dept ? Object.assign({}, D, { all: A }) : D, txt0); if (st.dept) oCfg.options.plugins.title.text = `${st.dept} (${A.m} measured of ${A.n})`;
+                const iO = perfChartImg(oCfg, 520, 383), iD = perfChartImg(perfCfgD(D, txt0), 880, 433);   // small canvas = bigger text in the PDF
+                const ch = BOT - y - 2, wO = Math.min(92, ch * 520 / 383), wD = Math.min(PW - 2 * M - wO - 5, ch * 880 / 433);
+                if (iO) doc.addImage(iO, 'PNG', M, y, wO, wO * 383 / 520); if (iD) doc.addImage(iD, 'PNG', M + wO + 5, y, wD, wD * 433 / 880);
+                // ---- summary by department
+                newPage(); H2('Summary by department', 20);
+                const sCols = [['Dept', 35], ['Belts', 20, 'r'], ['Measured', 24, 'r'], ['Good', 22, 'r'], ['Watch', 22, 'r'], ['Poor', 22, 'r'], ['Replaced after reading', 34, 'r'], ['Not measured', 28, 'r'], ['% Good (of measured)', 34, 'r'], ['Average wear ratio', 36, 'r']];
+                const sRow = (nm, o, bold) => ({ v: [nm, o.n, o.m, o.GOOD, o.WATCH, o.POOR, o.REPL, o.NOTM, pc(o.GOOD, o.m), f2(o.avg)], bold, color: [null, null, null, '#059669', '#d97706', '#e11d48'] });
+                table(sCols, D.byDept.map(x => sRow(x[0], x[1])).concat([sRow('TOTAL', D.all, true)]), { fs: 9 });
+                // ---- belts (as in the table on screen)
+                H2(`Belts - ${L.length}${filt !== 'All belt types | All departments' ? ' (' + filt + ')' : ''} - sorted by ${(PERF_COLS.find(c => c[0] === st.sort) || [0, st.sort])[1]}, ${st.asc ? 'ascending' : 'descending'}`, 20);
+                const bCols = [['Dept', 20], ['Conveyor', 28], ['Type', 16], ['Length (m)', 16, 'r'], ['Reading date', 26], ['Min thk (mm)', 16, 'r'], ['Wear rate (mm/month)', 21, 'r'], ['Planned wear', 19, 'r'], ['Wear ratio', 16, 'r'], ['Previous ratio', 18, 'r'], ['Performance', 22], ['Next CBM', 22], ['Criticality', 37]];
+                table(bCols, L.map(r => { const b = PERF_BANDS.find(z => z[0] === r.band) || [0, r.band, '#111111'];
+                    const rd = r.readOn ? cbmDstr(r.readOn) + (r.band === 'REPL' && r.replOn ? ` (replaced ${cbmDstr(r.replOn)})` : '') : 'last ' + (r.lastRead ? cbmDstr(r.lastRead) : 'none');
+                    return { v: [r.dept, r.conv, r.kind, r.len ? cbmFmt(r.len) : '-', rd, r.mn == null ? '-' : r.mn, f3(r.w), f3(r.pw), f2(r.ratio), f2(r.pRatio), b[1], r.cbm || '-', r.crit || '-'], color: [null, null, null, null, null, null, null, null, null, null, b[2]] }; }));
+                // ---- page numbers
+                const n = doc.internal.getNumberOfPages(); for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(110); doc.text(`Page ${i} of ${n}`, PW - M, PH - 5, { align: 'right' }); doc.text('TSM conveyor belts - thickness performance', M, PH - 5); }
+                doc.save(`Belt_performance_${D.per.k}_${st.dept ? st.dept.replace(/[^A-Za-z0-9]+/g, '_') : 'All'}_${cbmDstr(today)}.pdf`);
+            } catch (e) { console.error(e); alert('PDF could not be made: ' + e.message); }
+            finally { if (btn) { btn.disabled = false; btn.innerHTML = btnTxt; } }
+        };
         window.perfMail = function (scope) {
             const D = window.__perfD; if (!D) return; const all = scope === 'ALL';
             const R = all ? D.rows : D.rows.filter(r => r.dept === scope), S = all ? D.all : D.sum(R);
