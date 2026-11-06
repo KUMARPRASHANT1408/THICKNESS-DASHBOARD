@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 06-Nov-e</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 06-Nov-f</div>
         </div>
     </div>
 
@@ -1158,6 +1158,7 @@
         const cbmEsc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         const cbmFmt = n => Math.round(n || 0).toLocaleString('en-IN');
         // CBM at every reading of the present belt, oldest first: [{ d, mn, cbm, install }]; the first entry is the replacement (planned wear rate)
+        const LAST_READING_FIX = ['J28C1', 'SCR5'];   // 06-Nov-2026: latest reading missing from the history lists in the thickness sheet (user to correct the sheet)
         function cbmTrailOf(raw) {
             if (!raw) return null; const K = Object.keys(raw);
             const kc = K.find(k => /^Next Prediction\s*\(CBM\)/i.test(k)), kp = K.find(k => /^Planned Wear Rate/i.test(k)), kr = K.find(k => /^Last Belt Replacement/i.test(k));
@@ -1166,6 +1167,11 @@
             const at = (d, mn) => { const age = d != null ? (d - lr) / 30 : 0; let w = age > 0 && mn != null ? (top - mn) / age : 0; if (!(w > 0)) w = pw; return w > 0 ? lr + (top - 0.5) / w * 30 : null; };
             const sp = k => String(raw[k] == null ? '' : raw[k]).split(/\r?\n/);
             const D = sp('Date'), E1 = sp('EDGE1'), C = sp('CENTER'), E2 = sp('EDGE2');
+            // 06-Nov-2026: for these belts the latest reading is only in the single columns (Thickness EDGE 1 / CENTER2 / EDGE2), not in the history lists - use it for the latest date
+            if (LAST_READING_FIX.includes(String(raw['Conveyor'] || '').trim().toUpperCase())) {
+                const kl = K.find(k => /^Last Thickness Date/i.test(k)), ld = cbmSer(raw[kl]), li = D.length - 1;
+                if (li >= 0 && ld != null && cbmSer(D[li]) === ld && ![E1[li], C[li], E2[li]].some(x => cbmN(x) != null)) {
+                    const g = re => raw[K.find(k => re.test(k))]; E1[li] = g(/^Thickness EDGE 1/i); C[li] = g(/^CENTER2/i); E2[li] = g(/^Thickness EDGE 2/i); } }
             const rd = []; D.forEach((s, i) => { const d = cbmSer(s); if (d == null || d <= lr) return; const v = [E1[i], C[i], E2[i]].map(cbmN).filter(x => x != null); rd.push({ ser: d, mn: v.length ? Math.min(...v) : null }); });
             rd.sort((a, b) => a.ser - b.ser);
             const wAt = (d, mn) => { const age = (d - lr) / 30; return age > 0 && mn != null ? (top - mn) / age : null; };   // wear rate at a reading (mm/month)
