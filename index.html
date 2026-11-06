@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 06-Nov-c</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 06-Nov-d</div>
         </div>
     </div>
 
@@ -1474,7 +1474,7 @@
                     doc.setTextColor(90); doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.text(k[0], x + 3, y + 5); doc.setTextColor(20); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text(String(k[1]), x + 3, y + 12.5);
                     doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(100); doc.text(doc.splitTextToSize(k[2], kw - 5)[0], x + 3, y + 16.6); });
                 y += 25; doc.setTextColor(60); doc.setFontSize(8);
-                const def = doc.splitTextToSize('Wear ratio = wear rate at the latest thickness reading in the period / planned wear rate. Good: up to 1.0 | Watch: 1.0 to 1.2 | Poor: more than 1.2. Replaced = measured in the period, belt replaced after the reading. Not measured = no reading in the period on the present belt.' + (D.outProg ? ` ${D.outProg} belts with no thickness reading in the last 12 months are not in the thickness programme and are not counted.` : ''), PW - 2 * M);
+                const def = doc.splitTextToSize('Wear ratio = wear rate at the latest thickness reading in the period / planned wear rate.   Good: up to 1.0   |   Watch: 1.0 to 1.2   |   Poor: more than 1.2', PW - 2 * M);
                 doc.text(def, M, y + 3); y += def.length * 3.4 + 3;
                 const txt0 = '#333333', oCfg = perfCfgO(st.dept ? Object.assign({}, D, { all: A }) : D, txt0); if (st.dept) oCfg.options.plugins.title.text = `${st.dept} (${A.m} measured of ${A.n})`;
                 const iO = perfChartImg(oCfg, 520, 383), iD = perfChartImg(perfCfgD(D, txt0), 880, 433);   // small canvas = bigger text in the PDF
