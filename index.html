@@ -622,7 +622,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 06-Nov-g</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 07-Nov-b</div>
         </div>
     </div>
 
@@ -1332,7 +1332,7 @@
         };
 
         // ================= BELT PERFORMANCE (23-Oct-2026): wear rate at the latest reading in a quarter vs planned wear rate =================
-        const PERF_BANDS = [['GOOD', 'Good', '#10b981', 'wear rate up to planned (ratio up to 1.0)'], ['WATCH', 'Watch', '#f59e0b', '1.0 to 1.2 x planned'], ['POOR', 'Poor', '#f43f5e', 'more than 1.2 x planned'], ['REPL', 'Replaced', '#38bdf8', 'measured in the period, belt replaced after the reading'], ['NOTM', 'Not measured', '#94a3b8', 'no reading in the period on the present belt']];
+        const PERF_BANDS = [['GOOD', 'Good', '#10b981', 'wear rate up to planned (ratio up to 1.0)'], ['WATCH', 'Watch', '#f59e0b', '1.0 to 1.2 x planned'], ['POOR', 'Bad', '#f43f5e', 'more than 1.2 x planned'], ['REPL', 'Replaced', '#38bdf8', 'measured in the period, belt replaced after the reading'], ['NOTM', 'Not measured', '#94a3b8', 'no reading in the period on the present belt']];
         const perfBandOf = r => r <= 1.0 ? 'GOOD' : r <= 1.2 ? 'WATCH' : 'POOR';
         const perfBandName = k => (PERF_BANDS.find(b => b[0] === k) || [k, k])[1];
         window.__perf = { open: false, per: null, type: 'ALL', dept: '', band: '', q: '', sort: 'ratio', asc: false };
@@ -1386,7 +1386,7 @@
                 <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px"><small style="margin-right:4px">Belt type:</small>${['ALL', 'Fabric', 'Steel cord', 'Bucket'].map(x => chip(x === st.type, `perfSet('type','${x}')`, x === 'ALL' ? 'All' : x)).join('')}</div>
                 <div style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px">${kpi('', A.m, `of ${A.n} belts (${A.n ? Math.round(A.m / A.n * 100) : 0}%)`)}${kpi('GOOD', A.GOOD, A.m ? Math.round(A.GOOD / A.m * 100) + '% of measured' : '')}${kpi('WATCH', A.WATCH, A.m ? Math.round(A.WATCH / A.m * 100) + '% of measured' : '')}${kpi('POOR', A.POOR, A.m ? Math.round(A.POOR / A.m * 100) + '% of measured' : '')}${kpi('REPL', A.REPL, 'measured, then replaced')}${kpi('NOTM', A.NOTM, 'no reading in period')}</div>
                 <div id="perf-graphs"><div class="perf-grid"><div class="chart-box glass-panel"><div style="position:relative;height:340px;width:100%"><canvas id="perfChartO"></canvas></div></div><div class="chart-box glass-panel"><div style="position:relative;height:340px;width:100%"><canvas id="perfChartD"></canvas></div></div></div>
-                <div style="font-size:.78rem;opacity:.8;margin:6px 0 10px">Tap a slice or a bar to see its belts in the table. Wear ratio = wear rate at the latest reading in the period &divide; planned wear rate. Good: up to 1.0 &middot; Watch: 1.0 to 1.2 &middot; Poor: more than 1.2.${D.outProg ? ` ${D.outProg} belts with no thickness reading in the last 12 months are not in the thickness programme and are not counted.` : ''}</div></div>
+                <div style="font-size:.78rem;opacity:.8;margin:6px 0 10px">Tap a slice or a bar to see its belts in the table. Wear ratio = wear rate at the latest reading in the period &divide; planned wear rate. Good: up to 1.0 &middot; Watch: 1.0 to 1.2 &middot; Bad: more than 1.2.${D.outProg ? ` ${D.outProg} belts with no thickness reading in the last 12 months are not in the thickness programme and are not counted.` : ''}</div></div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px"><button class="sbc-chip on" onclick="perfMail('ALL')"><i class="fas fa-envelope"></i> Mail all departments (one mail)</button><small>or one department:</small>${D.depts.map(dp => `<button class="sbc-chip" onclick="perfMail('${cbmEsc(dp)}')"><i class="fas fa-envelope"></i> ${cbmEsc(dp)}</button>`).join('')}</div>
                 <div id="perf-table-wrap"></div>`;
             const txt = getCssVar('--text-muted') || '#94a3b8';
@@ -1481,7 +1481,7 @@
                     doc.setTextColor(90); doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.text(k[0], x + 3, y + 5); doc.setTextColor(20); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text(String(k[1]), x + 3, y + 12.5);
                     doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(100); doc.text(doc.splitTextToSize(k[2], kw - 5)[0], x + 3, y + 16.6); });
                 y += 25; doc.setTextColor(60); doc.setFontSize(8);
-                const def = doc.splitTextToSize('Wear ratio = wear rate at the latest thickness reading in the period / planned wear rate.   Good: up to 1.0   |   Watch: 1.0 to 1.2   |   Poor: more than 1.2', PW - 2 * M);
+                const def = doc.splitTextToSize('Wear ratio = wear rate at the latest thickness reading in the period / planned wear rate.   Good: up to 1.0   |   Watch: 1.0 to 1.2   |   Bad: more than 1.2', PW - 2 * M);
                 doc.text(def, M, y + 3); y += def.length * 3.4 + 3;
                 const txt0 = '#333333', oCfg = perfCfgO(st.dept ? Object.assign({}, D, { all: A }) : D, txt0); if (st.dept) oCfg.options.plugins.title.text = `${st.dept} (${A.m} measured of ${A.n})`;
                 const iO = perfChartImg(oCfg, 520, 383), iD = perfChartImg(perfCfgD(D, txt0), 880, 433);   // small canvas = bigger text in the PDF
@@ -1489,17 +1489,17 @@
                 if (iO) doc.addImage(iO, 'PNG', M, y, wO, wO * 383 / 520); if (iD) doc.addImage(iD, 'PNG', M + wO + 5, y, wD, wD * 433 / 880);
                 // ---- summary by department
                 newPage(); H2('Summary by department', 20);
-                const sCols = [['Dept', 35], ['Belts', 20, 'r'], ['Measured', 24, 'r'], ['Good', 22, 'r'], ['Watch', 22, 'r'], ['Poor', 22, 'r'], ['Replaced after reading', 34, 'r'], ['Not measured', 28, 'r'], ['% Good (of measured)', 34, 'r'], ['Average wear ratio', 36, 'r']];
+                const sCols = [['Dept', 35], ['Belts', 20, 'r'], ['Measured', 24, 'r'], ['Good', 22, 'r'], ['Watch', 22, 'r'], ['Bad', 22, 'r'], ['Replaced after reading', 34, 'r'], ['Not measured', 28, 'r'], ['% Good (of measured)', 34, 'r'], ['Average wear ratio', 36, 'r']];
                 const sRow = (nm, o, bold) => ({ v: [nm, o.n, o.m, o.GOOD, o.WATCH, o.POOR, o.REPL, o.NOTM, pc(o.GOOD, o.m), f2(o.avg)], bold, color: [null, null, null, '#059669', '#d97706', '#e11d48'] });
                 table(sCols, D.byDept.map(x => sRow(x[0], x[1])).concat([sRow('TOTAL', D.all, true)]), { fs: 9 });
                 // ---- belts (as in the table on screen)
                 newPage();   // poor performers always start on page 3 (page 2 = summary by department only)
-                H2(`Poor performers - wear rate more than 1.2 x planned - ${L.length} belts${st.dept ? ' (' + st.dept + ')' : ''}, highest wear ratio first`, 20);
-                if (!L.length) { doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text('No belt with poor performance in this period.', M, y + 4); y += 8; }
-                const bCols = [['Dept', 20], ['Conveyor', 28], ['Type', 16], ['Length (m)', 16, 'r'], ['Reading date', 26], ['Min thk (mm)', 16, 'r'], ['Wear rate (mm/month)', 21, 'r'], ['Planned wear', 19, 'r'], ['Wear ratio', 16, 'r'], ['Previous ratio', 18, 'r'], ['Performance', 24], ['Criticality', 57]];
+                H2(`Bad performers - wear rate more than 1.2 x planned - ${L.length} belts${st.dept ? ' (' + st.dept + ')' : ''}, highest wear ratio first`, 20);
+                if (!L.length) { doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text('No belt with bad performance in this period.', M, y + 4); y += 8; }
+                const bCols = [['Dept', 26], ['Conveyor', 38], ['Type', 22], ['Length (m)', 24, 'r'], ['Reading date', 36], ['Min thk (mm)', 26, 'r'], ['Wear rate (mm/month)', 34, 'r'], ['Planned wear (mm/month)', 34, 'r'], ['Performance', 37]];   // 07-Nov-2026: wear ratio, previous ratio and criticality not in the PDF
                 if (L.length) table(bCols, L.map(r => { const b = PERF_BANDS.find(z => z[0] === r.band) || [0, r.band, '#111111'];
                     const rd = r.readOn ? cbmDstr(r.readOn) + (r.band === 'REPL' && r.replOn ? ` (replaced ${cbmDstr(r.replOn)})` : '') : 'last ' + (r.lastRead ? cbmDstr(r.lastRead) : 'none');
-                    return { v: [r.dept, r.conv, r.kind, r.len ? cbmFmt(r.len) : '-', rd, r.mn == null ? '-' : r.mn, f3(r.w), f3(r.pw), f2(r.ratio), f2(r.pRatio), b[1], r.crit || '-'], color: [null, null, null, null, null, null, null, null, null, null, b[2]] }; }));
+                    return { v: [r.dept, r.conv, r.kind, r.len ? cbmFmt(r.len) : '-', rd, r.mn == null ? '-' : r.mn, f3(r.w), f3(r.pw), b[1]], color: [null, null, null, null, null, null, null, null, b[2]] }; }));
                 // ---- page numbers
                 const n = doc.internal.getNumberOfPages(); for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(110); doc.text(`Page ${i} of ${n}`, PW - M, PH - 5, { align: 'right' }); doc.text('TSM conveyor belts - thickness performance', M, PH - 5); }
                 doc.save(`Belt_performance_${D.per.k}_${st.dept ? st.dept.replace(/[^A-Za-z0-9]+/g, '_') : 'All'}_${cbmDstr(today)}.pdf`);
@@ -1513,7 +1513,7 @@
             const p = t => `<p style="font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0 0 8px">${t}</p>`, h = t => `<p style="font-family:Calibri,Arial,sans-serif;font-size:12pt;font-weight:bold;color:#1F4E79;margin:14px 0 6px">${t}</p>`;
             const tbl = (head, rows, colorCol) => `<table style="border-collapse:collapse;margin:6px 0">${'<tr>' + head.map(x => `<th style="${th}">${cbmEsc(x)}</th>`).join('') + '</tr>'}${rows.map(r => '<tr>' + r.map((v, i) => `<td style="${td}${i === colorCol ? ';font-weight:bold;color:' + ((PERF_BANDS.find(b => b[1] === v) || [0, 0, '#111'])[2]) : ''}">${cbmEsc(v)}</td>`).join('') + '</tr>').join('')}</table>`;
             const pc = (a, b) => b ? Math.round(a / b * 100) + '%' : '-', f2 = v => v == null ? '-' : (+v).toFixed(2), f3 = v => v == null ? '-' : (+v).toFixed(3);
-            const sumHead = ['Dept', 'Belts', 'Measured', 'Good', 'Watch', 'Poor', 'Replaced after reading', 'Not measured', '% Good (of measured)', 'Average wear ratio'];
+            const sumHead = ['Dept', 'Belts', 'Measured', 'Good', 'Watch', 'Bad', 'Replaced after reading', 'Not measured', '% Good (of measured)', 'Average wear ratio'];
             const sumRow = (nm, o) => [nm, o.n, o.m, o.GOOD, o.WATCH, o.POOR, o.REPL, o.NOTM, pc(o.GOOD, o.m), f2(o.avg)];
             const sumRows = all ? D.byDept.map(x => sumRow(x[0], x[1])).concat([sumRow('TOTAL', D.all)]) : [sumRow(scope, S)];
             const beltHead = ['Dept', 'Conveyor', 'Type', 'Length (m)', 'Reading date', 'Min thickness (mm)', 'Wear rate (mm/month)', 'Planned wear rate', 'Wear ratio', 'Previous ratio', 'Performance', 'Next CBM', 'Criticality'];
@@ -1526,13 +1526,13 @@
             const img = (cid, w) => imgs.some(x => x.cid === cid) ? `<img src="cid:${cid}" width="${w}" alt="${cid}" style="display:block;margin:6px 0;max-width:100%">` : '';
             const per = D.per.label, who = all ? 'all departments' : scope;
             let html = p('Dear Sir,') + p(`Please find below the conveyor belt thickness performance for <b>${cbmEsc(per)}</b> (${cbmEsc(who)}). Performance is the wear rate at the latest thickness reading in the period compared with the planned wear rate: <b>Good</b> = up to planned, <b>Watch</b> = 1.0 to 1.2 times planned, <b>Poor</b> = more than 1.2 times planned.`);
-            html += p(`<b>${S.m}</b> of ${S.n} belts were measured in the period: <b style="color:#10b981">${S.GOOD} good (${pc(S.GOOD, S.m)})</b>, <b style="color:#d97706">${S.WATCH} watch</b>, <b style="color:#f43f5e">${S.POOR} poor</b>. ${S.REPL} more belts were measured and then replaced.`);
+            html += p(`<b>${S.m}</b> of ${S.n} belts were measured in the period: <b style="color:#10b981">${S.GOOD} good (${pc(S.GOOD, S.m)})</b>, <b style="color:#d97706">${S.WATCH} watch</b>, <b style="color:#f43f5e">${S.POOR} bad</b>. ${S.REPL} more belts were measured and then replaced.`);
             html += h('1. Overall performance') + img('perf_overall', 460) + (all ? h('2. Department-wise performance') + img('perf_dept', 820) : '');
             html += h((all ? '3' : '2') + '. Summary') + tbl(sumHead, sumRows, -1);
-            if (all) html += h('4. Belts with poor performance (wear rate more than 1.2 x planned) - ' + poor.length) + (poor.length ? tbl(beltHead, poor.map(beltRow), 10) : p('None.'));
+            if (all) html += h('4. Belts with bad performance (wear rate more than 1.2 x planned) - ' + poor.length) + (poor.length ? tbl(beltHead, poor.map(beltRow), 10) : p('None.'));
             else { html += h('3. All measured belts (highest wear ratio first) - ' + meas.length) + (meas.length ? tbl(beltHead, meas.map(beltRow), 10) : p('None.')); if (notm.length) html += h('4. Belts not measured in the period - ' + notm.length) + p(notm.map(r => cbmEsc(r.conv)).join(', ')); }
-            html += p('Request you to kindly check the belts with poor performance and share the action plan (root cause - chute, skirt / sealing, scraper, loading - and correction). Belts not measured in the period are to be included in the next thickness schedule.') + p('Regards,<br>Prashant');
-            const txt = [`Belt thickness performance - ${per} - ${who}`, `${S.m} of ${S.n} belts measured: ${S.GOOD} good, ${S.WATCH} watch, ${S.POOR} poor.`, ''].concat(sumRows.map(r => sumHead.map((k, i) => k + ': ' + r[i]).join(' | ')), ['', 'Regards,', 'Prashant']).join('\n');
+            html += p('Request you to kindly check the belts with bad performance and share the action plan (root cause - chute, skirt / sealing, scraper, loading - and correction). Belts not measured in the period are to be included in the next thickness schedule.') + p('Regards,<br>Prashant');
+            const txt = [`Belt thickness performance - ${per} - ${who}`, `${S.m} of ${S.n} belts measured: ${S.GOOD} good, ${S.WATCH} watch, ${S.POOR} bad.`, ''].concat(sumRows.map(r => sumHead.map((k, i) => k + ': ' + r[i]).join(' | ')), ['', 'Regards,', 'Prashant']).join('\n');
             mbOpen({ title: `Performance mail - ${who} (${per})`, subj: `Conveyor belt thickness performance - ${per} - ${all ? 'All departments' : scope}`, html, images: imgs, txt, file: `Belt_performance_${D.per.k}_${all ? 'All' : scope}` });
         };
 
@@ -4808,10 +4808,51 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     };
 
     // ---- export ----
-    function pdf(node, name) {
-        const bg = getComputedStyle(el('sbcScreen')).backgroundColor;
-        return html2pdf().set({ margin: 6, filename: name, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, backgroundColor: bg, useCORS: true, scrollY: 0 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }, pagebreak: { mode: ['css', 'legacy'], avoid: ['img', '.sbc-panel', '.sbc-banner', '.sbc-kpis', 'tr'] } }).from(node).save();
+    // 07-Nov-2026: PDF made section by section (one canvas per section, long tables split with the header repeated) -
+    // the old single-canvas export of an off-screen div came out blank (off-screen clone, canvas size limit on phones)
+    async function pdfSections(parts, name, W) {
+        const bg = getComputedStyle(el('sbcScreen')).backgroundColor, fg = cssv('--text-main');
+        const box = document.createElement('div'); box.style.cssText = `position:fixed;left:0;top:0;z-index:-9999;pointer-events:none;width:max-content;background:${bg};color:${fg};`;
+        el('sbcScreen').appendChild(box);
+        const secs = [];
+        parts.forEach(h => { if (!h || !h.trim()) return; const d = document.createElement('div'); d.style.cssText = `width:${W}px;padding:14px 20px;background:${bg};color:${fg};`; d.innerHTML = h;
+            d.querySelectorAll('table').forEach(tb => tb.dataset.tfSkip = '1');   // keep the table tools from adding search boxes again
+            d.querySelectorAll('.tf-bar, .tf-btn, input, select, button').forEach(x => x.remove());   // no search boxes / filter buttons in the PDF
+            d.querySelectorAll('.sbc-tablewrap, .table-container').forEach(w => { w.style.maxHeight = 'none'; w.style.overflow = 'visible'; w.style.width = 'max-content'; });
+            const tbs = Array.from(d.querySelectorAll('table')).filter(tb => tb.tBodies[0] && tb.tBodies[0].rows.length > 24);
+            if (!tbs.length) { secs.push(d); return; }
+            // long tables: one section per 22 rows, header repeated
+            tbs.forEach(tb => { const rows = Array.from(tb.tBodies[0].rows), hd = tb.tHead ? tb.tHead.outerHTML : '', title = tb.closest('.sbc-tablewrap') ? (tb.closest('.sbc-tablewrap').previousElementSibling || {}).outerHTML || '' : '';
+                for (let k = 0; k < rows.length; k += 22) { const s = document.createElement('div'); s.style.cssText = d.style.cssText;
+                    s.innerHTML = (k ? '' : title) + `<table data-tf-skip="1" class="${tb.className}" style="${tb.getAttribute('style') || ''};width:100%">${hd}<tbody>${rows.slice(k, k + 22).map(r => r.outerHTML).join('')}</tbody></table>`; secs.push(s); } });
+            const rest = d.cloneNode(true); rest.querySelectorAll('table').forEach(tb => { if (tb.tBodies[0] && tb.tBodies[0].rows.length > 24) (tb.closest('.sbc-tablewrap') || tb).remove(); });
+            if (rest.innerText.trim()) secs.unshift(rest); });
+        secs.forEach(s => box.appendChild(s));
+        let doc = null; const PW = 297, PH = 210, M = 6, IW = PW - 2 * M;
+        try {
+            for (const s of secs) {
+                const tw = Math.max(0, ...Array.from(s.querySelectorAll('table')).map(tb => tb.scrollWidth)); if (tw > W) s.style.width = (tw + 4) + 'px';   // wide table: section as wide as the table, banners wrap to it
+                const sw = Math.max(W + 40, s.scrollWidth + 40);   // wide tables: capture the full width, the page image is scaled to fit
+                const cv = await html2pdf().set({ html2canvas: { scale: 2, backgroundColor: bg, useCORS: true, scrollY: 0, scrollX: 0, windowWidth: sw, width: s.scrollWidth } }).from(s).toCanvas().get('canvas');
+                if (!cv || !cv.width || !cv.height) continue;
+                if (!doc) { doc = await html2pdf().set({ margin: 0, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } }).from(document.createElement('div')).toPdf().get('pdf'); doc.addPage(); doc.deletePage(1); doc.__y = M;
+                    const bgc = (bg.match(/\d+/g) || [255, 255, 255]).slice(0, 3).map(Number); doc.__bg = bgc; doc.setFillColor(...bgc); doc.rect(0, 0, PW, PH, 'F'); }
+                const ph = PH - 2 * M - 3; let mmPerPx = IW / cv.width, srcY = 0;
+                if (cv.height * mmPerPx > ph && cv.height * mmPerPx <= ph * 1.45) {   // a bit taller than a page: shrink it onto one page instead of cutting
+                    if (doc.__y > M + 0.1) { doc.addPage(); doc.setFillColor(...doc.__bg); doc.rect(0, 0, PW, PH, 'F'); doc.__y = M; }
+                    const k = ph / (cv.height * mmPerPx), w = IW * k; doc.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', M + (IW - w) / 2, doc.__y, w, ph); doc.__y += ph + 2; continue; }
+                while (srcY < cv.height) {
+                    let hPx = Math.min(cv.height - srcY, Math.floor((PH - M - doc.__y) / mmPerPx));
+                    if (hPx < Math.min(cv.height - srcY, Math.floor(ph / mmPerPx)) && doc.__y > M + 0.1) { doc.addPage(); doc.setFillColor(...doc.__bg); doc.rect(0, 0, PW, PH, 'F'); doc.__y = M; continue; }   // section does not fit the rest of the page -> next page
+                    const pc = document.createElement('canvas'); pc.width = cv.width; pc.height = hPx; pc.getContext('2d').drawImage(cv, 0, srcY, cv.width, hPx, 0, 0, cv.width, hPx);
+                    doc.addImage(pc.toDataURL('image/jpeg', 0.92), 'JPEG', M, doc.__y, IW, hPx * mmPerPx); doc.__y += hPx * mmPerPx + 2; srcY += hPx;
+                    if (srcY < cv.height) { doc.addPage(); doc.setFillColor(...doc.__bg); doc.rect(0, 0, PW, PH, 'F'); doc.__y = M; }   // only a section taller than a page is cut
+                }
+            }
+            if (doc) { const n = doc.internal.getNumberOfPages(); for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(`Page ${i} of ${n}`, PW - M, PH - 2.5, { align: 'right' }); } doc.save(name); }
+        } finally { box.remove(); }
     }
+    function pdfBusy(on) { const b = document.querySelector('button[onclick="sbcExport()"]'); if (!b) return; if (on) { b.dataset.t = b.innerHTML; b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PDF...'; } else { b.disabled = false; if (b.dataset.t) b.innerHTML = b.dataset.t; } }
     window.sbcExport = function () {
         if (!S.loaded || !S.M) return; const fy = fyNow(); const M = S.M; const W = 1060;
         const bg = getComputedStyle(el('sbcScreen')).backgroundColor; const inner = el('sbcReportInner');
@@ -4820,12 +4861,11 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const br = '<div class="html2pdf__page-break"></div>';
         const banners = Array.from(inner.querySelectorAll('.sbc-banner')).map(b => b.outerHTML).join('');
         const kpis = (inner.querySelector('.sbc-kpis') || { outerHTML: '' }).outerHTML;
-        let h = `<h2 style="margin:0 0 4px">SBC - Specific Belt Consumption, FY'${fy}</h2><div class="sbc-note" style="margin-bottom:10px">Generated ${dstr(new Date())} · Total ${TOTAL_KM} km · Target ${M.T} m/km</div>${banners}${kpis}${img('sbcMain', 340)}`;
+        let h = `<h2 style="margin:0 0 4px">SBC - Specific Belt Consumption, FY'${fy}</h2><div class="sbc-note" style="margin-bottom:10px">Generated ${dstr(new Date())} · Total ${TOTAL_KM} km · Target ${M.T} m/km</div>${banners}${kpis}${br}${img('sbcMain', 340)}`;
         ['card-sbcT1', 'card-sbcT2', 'card-sbcT3', 'card-sbcBrk', 'card-sbcCost'].forEach(id => { const stc = el(id); if (stc) { const c = stc.cloneNode(true); c.querySelectorAll('button').forEach(b => b.remove()); h += br + c.outerHTML; } });
-        [['gCons', 'gProj'], ['gDept', 'gThk'], ['gSb', 'gWhy']].forEach(p => { if (!S.cfg[p[0]]) return; h += br; p.forEach(id => { if (S.cfg[id]) h += sub(id) + img(id, 310); }); });
-        const det = inner.querySelector('details'); if (det) h += br + '<h3 style="margin:0 0 8px">Detailed tables</h3>' + Array.from(det.querySelectorAll('.sbc-tablewrap')).map(x => x.outerHTML).join('<div style="height:14px"></div>');
-        const div = document.createElement('div'); div.style.cssText = `position:absolute;left:-10000px;top:0;width:${W + 40}px;padding:20px;background:${bg};color:${cssv('--text-main')};`; div.innerHTML = h; el('sbcScreen').appendChild(div);
-        pdf(div, `SBC_Report_FY${fy}.pdf`).then(() => div.remove()).catch(() => div.remove());
+        ['gCons', 'gProj', 'gDept', 'gThk', 'gSb', 'gWhy'].forEach(id => { if (S.cfg[id]) h += br + sub(id) + img(id, 310); });   // one chart per section - never split
+        const det = inner.querySelector('details'); if (det) h += br + '<h3 style="margin:0 0 8px">Detailed tables</h3>' + Array.from(det.querySelectorAll('.sbc-tablewrap')).map(x => x.outerHTML).join(br);   // each table its own section
+        pdfBusy(true); pdfSections(h.split(br), `SBC_Report_FY${fy}_${dstr(new Date()).replace(/[^0-9A-Za-z]+/g, '-')}.pdf`, W).catch(e => { console.error(e); alert('PDF could not be made: ' + e.message); }).finally(() => pdfBusy(false));
     };
     window.sbcExportDept = function (dept) {
         if (!dept || !S.loaded) return; const fy = fyNow(); const T = target(fy); const st = stats(fy); const abp = S.abp.filter(a => a.fy === fy); const km = KM[dept];
@@ -4835,16 +4875,14 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const av = M.pushP.filter(a => a.dept === dept); const un = M.C.unplanned.filter(x => x.dept === dept);
         const tbl = (head, rows) => `<table class="sbc-table"><thead><tr>${head.map(h => `<th style="text-align:left">${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td style="text-align:left">${c}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${head.length}">None</td></tr>`}</tbody></table>`;
         const mu = chartImg('sbcMain', 1060, 320, 'Plant month-wise SBC - FY\'' + fy); const img = mu ? `<img src="${mu}" style="width:1060px;height:320px;display:block">` : '';
-        const div = document.createElement('div'); div.style.cssText = 'position:absolute;left:-10000px;top:0;width:1100px;padding:16px;background:' + getComputedStyle(el('sbcScreen')).backgroundColor + ';color:' + cssv('--text-main') + ';';
-        div.innerHTML = `<h2 style="margin:0 0 4px">${dept} - Specific Belt Consumption awareness report, FY'${fy}</h2><div class="sbc-note" style="margin-bottom:10px">Generated ${dstr(new Date())}. Plant target ${T} m/km (total ${TOTAL_KM} km). ${dept} length: ${km} km.</div>
+        const html = `<h2 style="margin:0 0 4px">${dept} - Specific Belt Consumption awareness report, FY'${fy}</h2><div class="sbc-note" style="margin-bottom:10px">Generated ${dstr(new Date())}. Plant target ${T} m/km (total ${TOTAL_KM} km). ${dept} length: ${km} km.</div>
         <div class="sbc-kpis"><div class="sbc-kpi glass-panel"><b>${fmt(cons)} m</b><span>Consumed</span></div><div class="sbc-kpi glass-panel"><b class="${clsFor(sb / T)}">${f1(sb)}</b><span>${dept} SBC (m/km)</span></div><div class="sbc-kpi glass-panel"><b>${up.length}</b><span>Planned belts pending (must replace)</span></div><div class="sbc-kpi glass-panel"><b>${un.length}</b><span>Unplanned replaced (${fmt(un.reduce((a, b) => a + b.m, 0))} m)</span></div></div>
         <div class="sbc-banner amber">Unplanned replacements consume the plant's SBC target and force planned belts to be postponed. Please replace only belts in the ABP list and try to push the belts listed as "can be pushed".</div>
-        <h3>Plant monthly SBC trend</h3>${img}
-        <h3>Planned belts pending - must replace - ${dept}</h3>${tbl(['Conveyor', 'ABP', 'Length m', 'Planned m', 'Grade', 'Next CBM (thickness)'], up.map(a => [a.name, a.src === 'NEW' ? 'New ABP' : 'Old ABP', fmt(a.len), fmt(a.plan), a.grade || '-', dstr(M.nextOf(a))]))}
-        <h3>Planned belts that can be pushed - ${dept}</h3>${tbl(['Conveyor', 'ABP', 'Length m', 'Planned m', 'Reason', 'Next CBM (thickness)'], av.map(a => [a.name, a.src === 'NEW' ? 'New ABP' : 'Old ABP', fmt(a.len), fmt(a.plan), RS(a.push), dstr(M.nextOf(a))]))}
-        <h3>Unplanned consumption so far - ${dept}</h3>${tbl(['Date', 'Conveyor', 'Metres', 'Type'], un.sort((a, b) => (a.date || 0) - (b.date || 0)).map(x => [dstr(x.date), x.name, fmt(x.m), x.kind]))}`;
-        el('sbcScreen').appendChild(div);
-        pdf(div, `SBC_${dept.replace(/[^A-Za-z0-9]/g, '')}_FY${fy}.pdf`).then(() => div.remove()).catch(() => div.remove());
+        <!--SEC--><h3>Plant monthly SBC trend</h3>${img}
+        <!--SEC--><h3>Planned belts pending - must replace - ${dept}</h3>${tbl(['Conveyor', 'ABP', 'Length m', 'Planned m', 'Grade', 'Next CBM (thickness)'], up.map(a => [a.name, a.src === 'NEW' ? 'New ABP' : 'Old ABP', fmt(a.len), fmt(a.plan), a.grade || '-', dstr(M.nextOf(a))]))}
+        <!--SEC--><h3>Planned belts that can be pushed - ${dept}</h3>${tbl(['Conveyor', 'ABP', 'Length m', 'Planned m', 'Reason', 'Next CBM (thickness)'], av.map(a => [a.name, a.src === 'NEW' ? 'New ABP' : 'Old ABP', fmt(a.len), fmt(a.plan), RS(a.push), dstr(M.nextOf(a))]))}
+        <!--SEC--><h3>Unplanned consumption so far - ${dept}</h3>${tbl(['Date', 'Conveyor', 'Metres', 'Type'], un.sort((a, b) => (a.date || 0) - (b.date || 0)).map(x => [dstr(x.date), x.name, fmt(x.m), x.kind]))}`;
+        pdfSections(html.split('<!--SEC-->'), `SBC_${dept.replace(/[^A-Za-z0-9]/g, '')}_FY${fy}_${dstr(new Date()).replace(/[^0-9A-Za-z]+/g, '-')}.pdf`, 1060).catch(e => { console.error(e); alert('PDF could not be made: ' + e.message); });
     };
 })();
 </script>
