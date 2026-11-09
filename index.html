@@ -325,8 +325,8 @@
     }
             /* ===== SBC SCREEN ===== */
         .app-card.card-sbc .app-icon { background: rgba(245,158,11,0.15); color: #f59e0b; }
-        #sbcScreen { display: none; position: fixed; inset: 0; z-index: 10000; background: var(--bg); overflow-y: auto; padding: 20px; color: var(--text-main); }
-        #sbcScreen .sbc-wrap { max-width: 1300px; margin: 0 auto; }
+        #sbcScreen, #stkScreen { display: none; position: fixed; inset: 0; z-index: 10000; background: var(--bg); overflow-y: auto; padding: 20px; color: var(--text-main); }
+        #sbcScreen .sbc-wrap, #stkScreen .sbc-wrap { max-width: 1300px; margin: 0 auto; }
         .sbc-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 15px; }
         .sbc-bar h2 { margin: 0; font-size: 1.3rem; flex: 1; min-width: 220px; }
         .sbc-sel { background: var(--slate); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 9px 12px; border-radius: 10px; font-weight: 700; }
@@ -365,7 +365,7 @@
         #sbcDetail { scroll-margin-top: 10px; border: 1px solid var(--teal); }
         details.sbc-panel summary { cursor: pointer; font-size: 0.95rem; }
         .sbc-grid2 .sbc-panel { margin-bottom: 0; } .sbc-grid2 { margin-bottom: 14px; }
-        @media (max-width: 600px) { .sbc-grid2 { grid-template-columns: 1fr; } .sbc-kpi b { font-size: 1.2rem; } #sbcScreen { padding: 12px; } }
+        @media (max-width: 600px) { .sbc-grid2 { grid-template-columns: 1fr; } .sbc-kpi b { font-size: 1.2rem; } #sbcScreen, #stkScreen { padding: 12px; } }
         /* =====================================================================
            PROFESSIONAL THEME (same family as RTG Heater app)
            Clean solid surfaces, navy top bar, system font, light + dark.
@@ -505,12 +505,12 @@
         .chat-send, .bot-icon, .chat-toggle { background: var(--teal); box-shadow: none; }
 
         /* SBC tracker */
-        #sbcScreen { padding: 0 0 24px; }
-        #sbcScreen .sbc-bar { position: sticky; top: 0; z-index: 50; background: var(--topbar); color: #fff; padding: 10px 16px; margin: 0 0 16px; }
-        #sbcScreen .sbc-bar h2 { color: #fff; font-size: 1.1rem; font-weight: 700; }
-        #sbcScreen .sbc-bar .btn-slate, #sbcScreen .sbc-bar .sbc-sel { background: rgba(255,255,255,.1) !important; color: #fff !important; border-color: rgba(255,255,255,.3) !important; }
-        #sbcScreen .sbc-bar .sbc-sel option { color: #000; }
-        #sbcScreen .sbc-wrap > :not(.sbc-bar) { margin-left: 16px; margin-right: 16px; }
+        #sbcScreen, #stkScreen { padding: 0 0 24px; }
+        #sbcScreen .sbc-bar, #stkScreen .sbc-bar { position: sticky; top: 0; z-index: 50; background: var(--topbar); color: #fff; padding: 10px 16px; margin: 0 0 16px; }
+        #sbcScreen .sbc-bar h2, #stkScreen .sbc-bar h2 { color: #fff; font-size: 1.1rem; font-weight: 700; }
+        #sbcScreen .sbc-bar .btn-slate, #sbcScreen .sbc-bar .sbc-sel, #stkScreen .sbc-bar .btn-slate, #stkScreen .sbc-bar .sbc-sel { background: rgba(255,255,255,.1) !important; color: #fff !important; border-color: rgba(255,255,255,.3) !important; }
+        #sbcScreen .sbc-bar .sbc-sel option, #stkScreen .sbc-bar .sbc-sel option { color: #000; }
+        #sbcScreen .sbc-wrap > :not(.sbc-bar), #stkScreen .sbc-wrap > :not(.sbc-bar) { margin-left: 16px; margin-right: 16px; }
         .sbc-panel { border-radius: var(--radius); padding: 16px; }
         .sbc-kpi { text-align: left; }
         .sbc-kpi span { text-transform: none; letter-spacing: 0; font-size: .78rem; }
@@ -532,10 +532,35 @@
         #mainContent > .header .conv-logo { display: none; }
         .sbc-kpi { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; }
         .sbc-kpi b { font-size: 1.45rem; font-variant-numeric: tabular-nums; }
-        #sbcScreen .sbc-bar { gap: 8px; }
-        #sbcScreen .sbc-bar h2 { min-width: 0; flex: 1 1 60%; font-size: 1rem; }
-        #sbcScreen .sbc-bar .btn-slate, #sbcScreen .sbc-bar .sbc-sel { padding: 6px 10px; font-size: .85rem; }
+        #sbcScreen .sbc-bar, #stkScreen .sbc-bar { gap: 8px; }
+        #sbcScreen .sbc-bar h2, #stkScreen .sbc-bar h2 { min-width: 0; flex: 1 1 60%; font-size: 1rem; }
+        #sbcScreen .sbc-bar .btn-slate, #sbcScreen .sbc-bar .sbc-sel, #stkScreen .sbc-bar .btn-slate, #stkScreen .sbc-bar .sbc-sel { padding: 6px 10px; font-size: .85rem; }
         @media (max-width: 768px) { #mainContent > .header { margin: 0 -15px 12px; padding: 10px 15px; } .interactive-section { padding: 14px; } }
+        /* ===== BELT STOCK & UMC FINDER ===== */
+        .app-card.card-stk .app-icon { background: var(--good-soft); color: var(--green); }
+        #stkScreen .sbc-wrap > #stkTabs { margin-left: 16px; margin-right: 16px; }
+        .stk-click { cursor: pointer; } .stk-click:hover { border-color: var(--teal); }
+        .stk-sub { display: block; font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
+        .stk-table td { text-align: right; } .stk-th { cursor: pointer; user-select: none; } .stk-th:hover { color: var(--teal); }
+        .stk-row { cursor: pointer; } .stk-row:hover td { background: var(--brand-soft) !important; } tr.stk-on td { background: var(--brand-soft) !important; }
+        .stk-table tfoot td { font-weight: 800; border-top: 2px solid var(--glass-border); }
+        .stk-sel { margin: 0 6px 6px 0; padding: 6px 10px; }
+        .stk-minis { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 12px 0; }
+        .stk-mini { background: var(--surface-2); border: 1px solid var(--glass-border); border-radius: 10px; padding: 8px 10px; }
+        .stk-mini b { display: block; font-size: 1.05rem; font-variant-numeric: tabular-nums; } .stk-mini span { font-size: .72rem; color: var(--text-muted); }
+        .stk-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px 16px; font-size: .82rem; }
+        .stk-info div { display: flex; flex-direction: column; border-bottom: 1px dashed var(--glass-border); padding: 4px 0; } .stk-info span { color: var(--text-muted); font-size: .72rem; } .stk-info b { font-weight: 600; word-break: break-word; }
+        .stk-ff { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; align-items: end; }
+        .stk-ff label { display: flex; flex-direction: column; gap: 3px; font-size: .74rem; color: var(--text-muted); min-width: 0; } .stk-ff .stk-q { grid-column: span 2; }
+        .stk-ff .sbc-sel { width: 100%; font-weight: 600; padding: 8px 10px; }
+        .stk-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+        .stk-card { border-radius: 12px; padding: 12px; }
+        .stk-ch { display: flex; gap: 8px; align-items: center; justify-content: space-between; } .stk-ch b { font-size: 1rem; }
+        .stk-cs { font-size: .82rem; font-weight: 600; margin: 4px 0 2px; word-break: break-word; } .stk-ct { font-size: .74rem; color: var(--text-muted); }
+        .stk-cst { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .76rem; margin: 8px 0; color: var(--text-muted); } .stk-cst b { color: var(--text-main); }
+        .stk-cst b.sbc-r { color: var(--red); } .stk-cst b.sbc-g { color: var(--green); }
+        .stk-convs { display: flex; flex-wrap: wrap; gap: 4px; } .stk-convs span { font-size: .7rem; padding: 2px 7px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--glass-border); }
+        @media (max-width: 600px) { .stk-ff .stk-q { grid-column: 1 / -1; } .stk-ff { grid-template-columns: 1fr 1fr; } }
         /* table tools: search + Excel-style filter */
         .tf-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 8px; }
         .tf-search { flex: 1 1 220px; max-width: 360px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-base); color: var(--text-main); font: inherit; font-size: .9rem; }
@@ -619,10 +644,15 @@
                 <h3>SBC Tracker</h3>
                 <p>Specific Belt Consumption, FY targets, dept-wise & ABP plan</p>
             </div>
+            <div class="app-card card-stk glass-panel" id="card-stk" style="display:none;" onclick="openStockApp()">
+                <div class="app-icon"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="22" cy="40" r="14" fill="rgba(255,255,255,0.15)"/><circle cx="22" cy="40" r="5"/><path d="M22 26h30M22 54h30"/><path d="M38 12l5 5 10-10" opacity="0.8"/></svg></div>
+                <h3>Belt Stock &amp; UMC Finder</h3>
+                <p>Stock by UMC with cost, belts due in 3/6/8 months & UMC search</p>
+            </div>
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 07-Nov-c</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 09-Nov-a</div>
         </div>
     </div>
 
@@ -995,6 +1025,20 @@
       </div>
     </div>
 
+    <div id="stkScreen">
+      <div class="sbc-wrap">
+        <div class="sbc-bar">
+            <button class="btn-slate" onclick="closeStockApp()"><i class="fas fa-arrow-left"></i> Home</button>
+            <h2><i class="fas fa-boxes-stacked" style="color:#14b8a6"></i> Belt Stock &amp; UMC Finder</h2>
+            <button class="btn-slate" onclick="stkReload()" title="Load the latest sheets again"><i class="fas fa-sync-alt"></i> Refresh</button>
+            <button class="btn-slate" onclick="stkExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
+        </div>
+        <div id="stkTabs" style="margin-bottom:6px"></div>
+        <div id="stkLoading" class="sbc-note">Loading stock data...</div>
+        <div id="stkReport"></div>
+      </div>
+    </div>
+
     <div id="beltInspectorScreen">
         <div class="inspector-header">
             <button class="back-home-btn" onclick="backToHome()" title="Back to Home"><i class="fas fa-arrow-left"></i> Home</button>
@@ -1100,7 +1144,7 @@
             document.getElementById('abn-admin-charts').style.display = currentRole === 'admin' ? 'grid' : 'none';
             document.getElementById('admin-schedule-kpi').style.display = currentRole === 'admin' ? 'block' : 'none';
             document.getElementById('card-bot').style.display = isAdmin ? '' : 'none';
-            const sbcc = document.getElementById('card-sbc'); if (sbcc) sbcc.style.display = isAdmin ? '' : 'none';
+            const sbcc = document.getElementById('card-sbc'); if (sbcc) sbcc.style.display = isAdmin ? '' : 'none'; const stkc = document.getElementById('card-stk'); if (stkc) stkc.style.display = isAdmin ? '' : 'none';
         }
 
         function finalizeLogin(roleText, badgeColor) {
@@ -4888,6 +4932,359 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     };
 })();
 </script>
+<script>
+// =====================================================================
+// BELT STOCK & UMC FINDER (09-Nov-2026)
+// stock.csv = belt stock sheet (key: "UMC as Per New QAP"), umcf.csv = conveyor -> New UMC + belt spec,
+// data.csv = thickness sheet (Next CBM, length) -> belts needed in the next 3 / 6 / 8 months per UMC
+// =====================================================================
+(function () {
+    const K = { loaded: false, loading: false, tab: 'ov', stock: [], byUmc: {}, uf: [], convUmc: {}, thk: {}, need: {}, depts: [], charts: {}, sel: null, filt: 'all', grade: '', sortC: null, sortD: -1, f: {}, q: '' };
+    const el = id => document.getElementById(id);
+    const key = s => String(s || '').trim().toUpperCase().replace(/\s+/g, '');
+    const nh = h => String(h || '').replace(/_x002e_/gi, '.').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const num = v => { const x = parseFloat(String(v == null ? '' : v).replace(/,/g, '')); return isFinite(x) ? x : 0; };
+    const fm = n => Math.round(n || 0).toLocaleString('en-IN');
+    const cr = v => (Math.round((v || 0) / 1e5) / 100).toFixed(2);
+    const lk = v => (Math.round((v || 0) / 1e4) / 10).toFixed(1);
+    const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const dstr = d => d ? String(d.getDate()).padStart(2, '0') + '-' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()] + '-' + String(d.getFullYear()).slice(2) : '-';
+    const cssv = n => getComputedStyle(document.body).getPropertyValue(n).trim();
+    const sg = v => (v < 0 ? '<span class="sbc-r">' + fm(v) + '</span>' : '<span class="sbc-g">' + fm(v) + '</span>');
+    const clean = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+    const blank = s => { const t = clean(s); return t === '0' ? '' : t; };
+    const today = () => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); };
+    const addM = (d, m) => { const x = new Date(d); x.setMonth(x.getMonth() + m); return x; };
+    function ndept(d) {
+        const k = key(d); if (!k || k === '0' || k === '#REF!') return '';
+        if (k === 'BRIQUETTING' || k === 'DRI+BRIQUETTING' || k === 'DRI/BRIQUETTING') return 'DRI';
+        if (/^SMS[-#]?2$/.test(k)) return 'SMS#2';
+        if (/^SP#?2/.test(k) || k === 'SP#3' || k === 'SP3') return 'SP#2#3';
+        return k;
+    }
+    const gradeOf = g => clean(g).toUpperCase().replace(/\s*\(\s*/g, ' (').replace(/(\d)\s*PLY/g, '$1PLY').replace(/\s*\)/g, ')');
+    function pdate(v) { const d = (typeof parseDateCustom === 'function') ? parseDateCustom(v) : null; return d && !isNaN(d) && d.getFullYear() > 2000 ? new Date(d.getFullYear(), d.getMonth(), d.getDate()) : null; }
+
+    function get(u) {
+        return fetch(u + '?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw 0; return r.text(); })
+            .then(t => new Promise(res => Papa.parse(t, { header: true, skipEmptyLines: true, complete: x => res(x.data) }))).catch(() => []);
+    }
+
+    // ---------------- data ----------------
+    function build(stock, uf, thk) {
+        // stock sheet: headers carry odd characters, so columns are found by a cleaned name
+        const H = Object.keys(stock[0] || {});
+        const find = (...res) => { for (const re of res) { const h = H.find(x => re.test(nh(x))); if (h) return h; } return null; };
+        const C = {
+            umc: find(/^umcaspernewqap/), spec: find(/^specification/), grade: find(/^grade$/), old: find(/^umc$/), oldItem: find(/^olditemcode/),
+            arcF: find(/arc\d*forech/), arcO: find(/arc\d*oriental/), vmiF: find(/forechvmi/), vmiO: find(/orientalvmi/),
+            rate: find(/^unitrate/), sup: find(/^arcsupplier/), loc: find(/^installedlocation/), iq: find(/^installedqty/), il: find(/^installedlength/), longest: find(/^longestbelt/),
+            phys: find(/^physicalcurrentstock$/), graph: find(/^physicalcurrentstockgraphene/), vmi: find(/^vmiqty/), sc: find(/^scqty/), pr: find(/^prqty/), po: find(/^podoqty/),
+            total: find(/^totalstock(current|$)/), safety: find(/^safetystock/), cons6: find(/^consumptionin6/), rop: find(/^reorderpoint/), roq: find(/^reorderqty/), rem: find(/^remarks/), reqLen: find(/^requiredlength/)
+        };
+        const deptCols = H.filter(h => /nos$/.test(nh(h))).map(h => { const base = nh(h).replace(/nos$/, ''); return { label: String(h).split(/[\s �(]/)[0], n: h, l: H.find(x => nh(x) === base + 'length') }; });
+        const g = (r, c) => c ? r[c] : '';
+        K.stock = []; K.byUmc = {};
+        stock.forEach(r => {
+            const u = key(g(r, C.umc)); if (!u || u === '0') return;
+            const o = {
+                umc: u, spec: clean(g(r, C.spec)), grade: gradeOf(g(r, C.grade)), rate: num(g(r, C.rate)),
+                old: blank(g(r, C.old)), oldItem: blank(g(r, C.oldItem)), arcF: blank(g(r, C.arcF)), arcO: blank(g(r, C.arcO)), vmiF: blank(g(r, C.vmiF)), vmiO: blank(g(r, C.vmiO)),
+                sup: blank(g(r, C.sup)), loc: blank(g(r, C.loc)), iq: num(g(r, C.iq)), il: num(g(r, C.il)), longest: num(g(r, C.longest)),
+                phys: num(g(r, C.phys)), graph: num(g(r, C.graph)), vmi: num(g(r, C.vmi)), sc: num(g(r, C.sc)), pr: num(g(r, C.pr)), po: num(g(r, C.po)),
+                safety: num(g(r, C.safety)), cons6: num(g(r, C.cons6)), rop: num(g(r, C.rop)), roq: num(g(r, C.roq)), rem: blank(g(r, C.rem)), reqLen: blank(g(r, C.reqLen)),
+                depts: deptCols.map(d => ({ d: d.label, n: num(r[d.n]), l: d.l ? num(r[d.l]) : 0 })).filter(d => d.n || d.l)
+            };
+            o.total = num(g(r, C.total)) || (o.phys + o.graph + o.vmi + o.sc + o.pr + o.po);
+            o.order = o.vmi + o.sc + o.pr + o.po;   // not yet in store
+            o.vPhys = o.phys * o.rate; o.vGraph = o.graph * o.rate; o.vOrder = o.order * o.rate; o.vTotal = o.total * o.rate;
+            if (K.byUmc[u]) { ['phys', 'graph', 'vmi', 'sc', 'pr', 'po', 'total', 'order', 'vPhys', 'vGraph', 'vOrder', 'vTotal'].forEach(f => K.byUmc[u][f] += o[f]); return; }
+            K.byUmc[u] = o; K.stock.push(o);
+        });
+        // thickness sheet: length + next CBM of every belt
+        K.thk = {};
+        const cbmCol = Object.keys(thk[0] || {}).find(k => /^next prediction\s*\(cbm\)/i.test(String(k).replace(/\s+/g, ' ')));
+        thk.forEach(r => {
+            const c = key(r['Conveyor']); if (!c || c === '#REF!') return;
+            K.thk[c] = { dept: ndept(r['DEPT']), name: clean(r['Conveyor']), len: num(r['belt Length'] || r['Belt Length']), cbm: pdate(r[cbmCol]), lastRep: pdate(r['Last Belt Replacement']), lastThk: pdate(r['Last Thickness Date']), minThk: clean(r['MIN THICKNESS']), cat: clean(r['CATEGORY']).toUpperCase() };
+        });
+        // UMC finder sheet: conveyor -> New UMC + spec
+        K.uf = []; K.convUmc = {};
+        const UH = Object.keys(uf[0] || {});
+        const uc = re => UH.find(x => re.test(nh(x)));
+        const U = { dept: uc(/^dept/), sec: uc(/^section/), conv: uc(/^conveyorno/), mat: uc(/^conveyingmaterial/), width: uc(/^beltwidth/), spec: uc(/^beltspecification/), old: uc(/^oldumc/), umc: uc(/^newumc/), carcass: uc(/^carcass/), rating: uc(/^rating/), top: uc(/^topcover/), bot: uc(/^bottomcover/), thick: uc(/^beltthickness/), grade: uc(/^covergrade/), len: uc(/^length/), ga: uc(/^gaspec/), rem: uc(/^remarks/) };
+        uf.forEach(r => {
+            const c = key(r[U.conv]); if (!c || c === '0') return;
+            const t = K.thk[c] || {};
+            const umc = key(r[U.umc]);
+            const o = {
+                conv: c, name: clean(r[U.conv]), dept: t.dept || ndept(r[U.dept]) || '-', sec: blank(r[U.sec]), mat: blank(r[U.mat]), width: blank(r[U.width]), spec: blank(r[U.spec]), old: blank(r[U.old]),
+                umc: umc && umc !== '0' ? umc : '', carcass: blank(r[U.carcass]).toUpperCase(), rating: blank(r[U.rating]), top: blank(r[U.top]), bot: blank(r[U.bot]), thick: blank(r[U.thick]),
+                grade: gradeOf(blank(r[U.grade])), len: t.len || num(r[U.len]), ga: blank(r[U.ga]), rem: blank(r[U.rem]),
+                cbm: t.cbm || null, lastRep: t.lastRep || null, lastThk: t.lastThk || null, minThk: t.minThk || '', inThk: !!K.thk[c]
+            };
+            if (K.convUmc[c]) return; K.convUmc[c] = o.umc; K.uf.push(o);
+        });
+        // belts needed: next CBM already passed or inside the next 3 / 6 / 8 months -> full belt length
+        const t0 = today(), h3 = addM(t0, 3), h6 = addM(t0, 6), h8 = addM(t0, 8);
+        K.h = { t0, h3, h6, h8 };
+        K.need = {};
+        K.uf.forEach(b => {
+            if (!b.umc || !b.cbm || !b.len) return;
+            const n = K.need[b.umc] = K.need[b.umc] || { m3: 0, m6: 0, m8: 0, over: 0, belts: [] };
+            if (b.cbm <= h8) { n.m8 += b.len; n.belts.push(b); }
+            if (b.cbm <= h6) n.m6 += b.len;
+            if (b.cbm <= h3) n.m3 += b.len;
+            if (b.cbm < t0) n.over += b.len;
+        });
+        K.stock.forEach(s => {
+            const n = K.need[s.umc] || { m3: 0, m6: 0, m8: 0, over: 0, belts: [] };
+            s.n3 = n.m3; s.n6 = n.m6; s.n8 = n.m8; s.over = n.over;
+            s.b3 = s.phys - s.n3; s.b6 = s.total - s.n6; s.b8 = s.total - s.n8;     // balance after need (as in the Power BI cards)
+            s.belowSafe = s.phys < s.safety; s.safeGap = s.phys - s.safety;
+            s.conv = K.uf.filter(b => b.umc === s.umc);
+        });
+        K.depts = Array.from(new Set(K.uf.map(b => b.dept).filter(d => d && d !== '-'))).sort();
+        K.loaded = true;
+    }
+
+    // ---------------- open / close ----------------
+    window.openStockApp = function () {
+        if (typeof currentRole === 'undefined' || currentRole !== 'admin') return;
+        el('landingPage').style.display = 'none'; el('stkScreen').style.display = 'block'; el('stkScreen').scrollTop = 0;
+        if (K.loaded) { render(); return; }
+        load();
+    };
+    window.closeStockApp = function () { el('stkScreen').style.display = 'none'; el('landingPage').style.display = 'flex'; };
+    function load() {
+        if (K.loading) return; K.loading = true;
+        el('stkLoading').style.display = 'block'; el('stkLoading').innerText = 'Loading stock data...';
+        Promise.all([get('./stock.csv'), get('./umcf.csv'), get('./data.csv')]).then(([st, uf, thk]) => {
+            K.loading = false;
+            if (!st.length || !uf.length) { el('stkLoading').innerText = 'Stock or UMC sheet not found. Check the Google Sheet / GitHub sync.'; return; }
+            build(st, uf, thk);
+            el('stkLoading').style.display = 'none';
+            render();
+        });
+    }
+    window.stkReload = function () { K.loaded = false; K.sel = null; load(); };
+    window.stkTab = function (t) { K.tab = t; render(); el('stkScreen').scrollTop = 0; };
+
+    // ---------------- render ----------------
+    function render() {
+        Object.values(K.charts).forEach(c => { try { c.destroy(); } catch (e) { } }); K.charts = {};
+        const tabs = [['ov', 'fa-gauge-high', 'Overview'], ['st', 'fa-boxes-stacked', 'UMC Stock'], ['fd', 'fa-magnifying-glass', 'UMC Finder']];
+        el('stkTabs').innerHTML = tabs.map(t => `<button class="sbc-chip ${K.tab === t[0] ? 'on' : ''}" onclick="stkTab('${t[0]}')"><i class="fas ${t[1]}"></i> ${t[2]}</button>`).join('');
+        const R = el('stkReport');
+        if (K.tab === 'ov') R.innerHTML = overview();
+        else if (K.tab === 'st') R.innerHTML = stockTab();
+        else R.innerHTML = finderTab();
+        if (K.tab === 'ov') drawCharts();
+        if (K.tab === 'st' && K.sel) drawDetail();
+        if (K.tab === 'fd') finderRun();
+    }
+
+    function totals() {
+        const s = (f, arr) => (arr || K.stock).reduce((a, x) => a + (x[f] || 0), 0);
+        const below = K.stock.filter(x => x.belowSafe);
+        return {
+            n: K.stock.length, phys: s('phys'), graph: s('graph'), order: s('order'), total: s('total'), vPhys: s('vPhys'), vGraph: s('vGraph'), vOrder: s('vOrder'), vTotal: s('vTotal'),
+            safety: s('safety'), inst: s('il'), below, belowM: below.reduce((a, x) => a - x.safeGap, 0), belowV: below.reduce((a, x) => a - x.safeGap * x.rate, 0),
+            n3: s('n3'), n6: s('n6'), n8: s('n8'),
+            short3: K.stock.filter(x => x.b3 < 0), short8: K.stock.filter(x => x.b8 < 0)
+        };
+    }
+    const kpi = (v, l, sub, cls, click) => `<div class="sbc-kpi glass-panel${click ? ' stk-click' : ''}"${click ? ` onclick="${click}"` : ''}>${sub ? `<small class="stk-sub">${sub}</small>` : ''}<b class="${cls || ''}">${v}</b><span>${l}</span></div>`;
+
+    function overview() {
+        const T = totals();
+        const s3 = T.short3.reduce((a, x) => a - x.b3, 0), s8 = T.short8.reduce((a, x) => a - x.b8, 0);
+        const v8 = T.short8.reduce((a, x) => a - x.b8 * x.rate, 0);
+        let h = `<div class="sbc-kpis">
+            ${kpi('Rs ' + cr(T.vPhys + T.vGraph) + ' Cr', 'Stock in store', fm(T.phys + T.graph) + ' m' + (T.graph ? ` (incl. ${fm(T.graph)} m graphene)` : ''))}
+            ${kpi('Rs ' + cr(T.vOrder) + ' Cr', 'On order (PO/DO, PR, VMI)', fm(T.order) + ' m')}
+            ${kpi('Rs ' + cr(T.vTotal) + ' Cr', 'Total stock', fm(T.total) + ' m &middot; ' + T.n + ' UMCs')}
+            ${kpi(T.below.length + ' UMCs', 'Below safety stock', fm(T.belowM) + ' m short &middot; Rs ' + cr(T.belowV) + ' Cr', T.below.length ? 'sbc-r' : 'sbc-g', "stkGo('below')")}
+            ${kpi(fm(T.n3) + ' m', 'Belts due in 3 months', T.short3.length + ' UMCs short of store stock (' + fm(s3) + ' m)', T.short3.length ? 'sbc-y' : '', "stkGo('s3')")}
+            ${kpi(fm(T.n8) + ' m', 'Belts due in 8 months', T.short8.length + ' UMCs short of total stock (' + fm(s8) + ' m, Rs ' + cr(v8) + ' Cr)', T.short8.length ? 'sbc-y' : '', "stkGo('s8')")}
+        </div>
+        <div class="sbc-note" style="margin:-4px 0 12px">Belts due = belts whose next CBM (thickness sheet) has already passed or falls in the next 3 / 6 / 8 months; the full belt length is counted against its New UMC (conveyor &rarr; UMC from the UMC finder sheet). Stock value = metres &times; unit rate of the stock sheet. Tap a card to see the UMCs.</div>
+        <div class="sbc-grid2">
+            <div class="glass-panel sbc-panel"><h3><i class="fas fa-layer-group"></i> Stock value by grade (Rs crore)</h3><div class="sbc-chart"><canvas id="stkChGrade"></canvas></div></div>
+            <div class="glass-panel sbc-panel"><h3><i class="fas fa-triangle-exclamation"></i> UMCs short for the next 8 months (m)</h3><div class="sbc-chart"><canvas id="stkChShort"></canvas></div><div class="sbc-tap">Tap a bar to open the UMC</div></div>
+        </div>
+        <div class="glass-panel sbc-panel"><h3><i class="fas fa-industry"></i> Belts due by department (m)</h3><div class="sbc-chart" style="height:300px"><canvas id="stkChDept"></canvas></div></div>`;
+        // below-safety list
+        const rows = T.below.slice().sort((a, b) => a.safeGap * a.rate - b.safeGap * b.rate);
+        h += `<div class="glass-panel sbc-panel"><h3><i class="fas fa-circle-exclamation" style="color:var(--red)"></i> Below safety stock - ${rows.length} UMCs</h3>
+            <div class="sbc-tablewrap"><table class="sbc-table stk-table"><thead><tr><th>UMC</th><th>Specification</th><th>Grade</th><th>Physical (m)</th><th>Safety (m)</th><th>Short (m)</th><th>Short value (Rs lakh)</th><th>On order (m)</th><th>Due 3M (m)</th></tr></thead><tbody>
+            ${rows.map(x => `<tr class="stk-row" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td class="sbc-r">${fm(x.phys)}</td><td>${fm(x.safety)}</td><td class="sbc-r">${fm(-x.safeGap)}</td><td>${lk(-x.safeGap * x.rate)}</td><td>${x.order ? fm(x.order) : '-'}</td><td>${x.n3 ? fm(x.n3) : '-'}</td></tr>`).join('')}
+            </tbody></table></div></div>`;
+        return h;
+    }
+
+    function drawCharts() {
+        if (typeof Chart === 'undefined') return;
+        const c = { tick: cssv('--text-muted') || '#8592a6', grid: cssv('--glass-border') || 'rgba(148,163,184,.15)' };
+        const BLUE = '#3987e5', TEAL = '#14b8a6', AMB = '#f2a93b', RED = '#ef6b6b', GREY = '#94a3b8';
+        const sc = (t) => ({ ticks: { color: c.tick }, grid: { color: c.grid }, title: t ? { display: true, text: t, color: c.tick } : undefined });
+        // 1. grade
+        const G = {}; K.stock.forEach(x => { const o = G[x.grade || '-'] = G[x.grade || '-'] || { p: 0, g: 0, o: 0 }; o.p += x.vPhys; o.g += x.vGraph; o.o += x.vOrder; });
+        const gl = Object.keys(G).sort((a, b) => (G[b].p + G[b].g + G[b].o) - (G[a].p + G[a].g + G[a].o));
+        const ds = [{ label: 'In store', data: gl.map(k => +(G[k].p / 1e7).toFixed(2)), backgroundColor: BLUE }];
+        if (gl.some(k => G[k].g)) ds.push({ label: 'Graphene', data: gl.map(k => +(G[k].g / 1e7).toFixed(2)), backgroundColor: TEAL });
+        ds.push({ label: 'On order', data: gl.map(k => +(G[k].o / 1e7).toFixed(2)), backgroundColor: AMB });
+        if (el('stkChGrade')) K.charts.g = new Chart(el('stkChGrade'), { type: 'bar', data: { labels: gl, datasets: ds }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { label: x => x.dataset.label + ': Rs ' + x.raw.toFixed(2) + ' Cr' } } }, scales: { x: Object.assign(sc('Rs crore'), { stacked: true, beginAtZero: true }), y: Object.assign(sc(), { stacked: true, ticks: { color: cssv('--text-muted') || '#8592a6', autoSkip: false, font: { size: 10 } } }) } } });
+        // 2. short UMCs
+        const sh = K.stock.filter(x => x.b8 < 0 || x.b3 < 0).sort((a, b) => Math.min(a.b8, a.b3) - Math.min(b.b8, b.b3)).slice(0, 12);
+        if (el('stkChShort')) {
+            if (!sh.length) { el('stkChShort').parentNode.innerHTML = '<div class="sbc-note" style="padding:40px;text-align:center">No UMC is short for the next 8 months.</div>'; }
+            else K.charts.s = new Chart(el('stkChShort'), { type: 'bar', data: { labels: sh.map(x => x.umc), datasets: [{ label: 'In store', data: sh.map(x => x.phys + x.graph), backgroundColor: BLUE }, { label: 'Total stock', data: sh.map(x => x.total), backgroundColor: TEAL }, { label: 'Due 3M', data: sh.map(x => x.n3), backgroundColor: AMB }, { label: 'Due 8M', data: sh.map(x => x.n8), backgroundColor: RED }] }, options: { responsive: true, maintainAspectRatio: false, onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOpen(sh[a[0].index].umc); }, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { title: x => { const s = sh[x[0].dataIndex]; return s.umc + ' - ' + s.spec; }, label: x => x.dataset.label + ': ' + fm(x.raw) + ' m' } } }, scales: { x: sc(), y: Object.assign(sc('metres'), { beginAtZero: true }) } } });
+        }
+        // 3. dept
+        const D = {}; K.uf.forEach(b => { if (!b.cbm || !b.len || !b.umc) return; const d = b.dept || '-'; const o = D[d] = D[d] || [0, 0, 0, 0]; if (b.cbm < K.h.t0) o[0] += b.len; else if (b.cbm <= K.h.h3) o[1] += b.len; else if (b.cbm <= K.h.h6) o[2] += b.len; else if (b.cbm <= K.h.h8) o[3] += b.len; });
+        const dl = Object.keys(D).filter(d => D[d].some(v => v)).sort((a, b) => D[b].reduce((x, y) => x + y) - D[a].reduce((x, y) => x + y));
+        const lab = ['CBM passed', 'Next 3 months', '3-6 months', '6-8 months'], col = [RED, AMB, BLUE, GREY];
+        if (el('stkChDept')) K.charts.d = new Chart(el('stkChDept'), { type: 'bar', data: { labels: dl, datasets: lab.map((l, i) => ({ label: l, data: dl.map(d => D[d][i]), backgroundColor: col[i] })) }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { label: x => x.dataset.label + ': ' + fm(x.raw) + ' m' } } }, scales: { x: Object.assign(sc(), { stacked: true, ticks: { color: cssv('--text-muted') || '#8592a6', autoSkip: false, maxRotation: 60, font: { size: 10 } } }), y: Object.assign(sc('metres'), { stacked: true, beginAtZero: true }) } } });
+    }
+
+    // ---------------- UMC stock tab ----------------
+    window.stkGo = function (f) { K.filt = f; K.tab = 'st'; K.sel = null; render(); el('stkScreen').scrollTop = 0; };
+    window.stkFilt = function (f) { K.filt = f; render(); };
+    window.stkGrade = function (g) { K.grade = g; render(); };
+    window.stkSort = function (c) { if (K.sortC === c) K.sortD = -K.sortD; else { K.sortC = c; K.sortD = (c === 'umc' || c === 'spec' || c === 'grade') ? 1 : -1; } render(); };
+    window.stkOpen = function (u) { K.sel = u; K.tab = 'st'; render(); setTimeout(() => { const d = el('stkDetail'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30); };
+    window.stkCloseDetail = function () { K.sel = null; render(); };
+    const COLS = [['umc', 'UMC (New QAP)'], ['spec', 'Specification'], ['grade', 'Grade'], ['rate', 'Rate (Rs/m)'], ['il', 'Installed (m)'], ['longest', 'Longest belt (m)'], ['safety', 'Safety (m)'], ['phys', 'Physical (m)'], ['graph', 'Graphene (m)'], ['order', 'On order (m)'], ['total', 'Total stock (m)'], ['vTotal', 'Total value (Rs lakh)'], ['n3', 'Due 3M (m)'], ['n6', 'Due 6M (m)'], ['n8', 'Due 8M (m)'], ['b3', 'Physical - due 3M'], ['b6', 'Total - due 6M'], ['b8', 'Total - due 8M']];
+    function stockList() {
+        let L = K.stock.slice();
+        if (K.filt === 'below') L = L.filter(x => x.belowSafe);
+        else if (K.filt === 's3') L = L.filter(x => x.b3 < 0);
+        else if (K.filt === 's8') L = L.filter(x => x.b8 < 0);
+        else if (K.filt === 'order') L = L.filter(x => x.order > 0);
+        if (K.grade) L = L.filter(x => x.grade === K.grade);
+        if (K.sortC) { const c = K.sortC, d = K.sortD; L.sort((a, b) => (typeof a[c] === 'string' ? String(a[c]).localeCompare(String(b[c])) : (a[c] || 0) - (b[c] || 0)) * d); }
+        else L.sort((a, b) => (a.belowSafe === b.belowSafe ? Math.min(a.b3, a.b8) - Math.min(b.b3, b.b8) : (a.belowSafe ? -1 : 1)));
+        return L;
+    }
+    function stockTab() {
+        const L = stockList(), all = K.stock;
+        const cnt = f => all.filter(f).length;
+        const chips = [['all', 'All UMCs', all.length], ['below', 'Below safety', cnt(x => x.belowSafe)], ['s3', 'Short for 3M', cnt(x => x.b3 < 0)], ['s8', 'Short for 8M', cnt(x => x.b8 < 0)], ['order', 'On order', cnt(x => x.order > 0)]];
+        const grades = Array.from(new Set(all.map(x => x.grade).filter(Boolean))).sort();
+        const s = (f) => L.reduce((a, x) => a + (x[f] || 0), 0);
+        let h = K.sel ? `<div class="glass-panel sbc-panel" id="stkDetail"></div>` : '';
+        h += `<div class="glass-panel sbc-panel"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1"><i class="fas fa-boxes-stacked"></i> Stock by UMC</h3></div>
+            <div>${chips.map(c => `<button class="sbc-chip ${K.filt === c[0] ? 'on' : ''}" onclick="stkFilt('${c[0]}')">${c[1]} (${c[2]})</button>`).join('')}
+            <select class="sbc-sel stk-sel" onchange="stkGrade(this.value)"><option value="">All grades</option>${grades.map(g => `<option ${K.grade === g ? 'selected' : ''}>${esc(g)}</option>`).join('')}</select></div>
+            <div class="sbc-note" style="margin:4px 0 6px"><span class="sbc-r">Red</span> physical = below safety stock. Last three columns = stock left after the belts due (negative = short). Tap a column name to sort, tap a row for the belts of that UMC.</div>
+            <div class="sbc-tablewrap"><table class="sbc-table stk-table" id="stkTable"><thead><tr>${COLS.map(c => `<th onclick="stkSort('${c[0]}')" class="stk-th">${c[1]}${K.sortC === c[0] ? (K.sortD > 0 ? ' &#9650;' : ' &#9660;') : ''}</th>`).join('')}</tr></thead><tbody>
+            ${L.map(x => `<tr class="stk-row${K.sel === x.umc ? ' stk-on' : ''}" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${fm(x.rate)}</td><td>${fm(x.il)}</td><td>${fm(x.longest)}</td><td>${fm(x.safety)}</td><td class="${x.belowSafe ? 'sbc-r' : 'sbc-g'}"><b>${fm(x.phys)}</b></td><td>${x.graph ? fm(x.graph) : '-'}</td><td>${x.order ? fm(x.order) : '-'}</td><td class="${x.total >= x.safety ? 'sbc-g' : 'sbc-y'}"><b>${fm(x.total)}</b></td><td>${lk(x.vTotal)}</td><td>${x.n3 ? fm(x.n3) : '-'}</td><td>${x.n6 ? fm(x.n6) : '-'}</td><td>${x.n8 ? fm(x.n8) : '-'}</td><td>${sg(x.b3)}</td><td>${sg(x.b6)}</td><td>${sg(x.b8)}</td></tr>`).join('')}
+            </tbody><tfoot><tr class="tot"><td>Total (${L.length})</td><td></td><td></td><td></td><td>${fm(s('il'))}</td><td></td><td>${fm(s('safety'))}</td><td>${fm(s('phys'))}</td><td>${fm(s('graph'))}</td><td>${fm(s('order'))}</td><td>${fm(s('total'))}</td><td>${lk(s('vTotal'))}</td><td>${fm(s('n3'))}</td><td>${fm(s('n6'))}</td><td>${fm(s('n8'))}</td><td></td><td></td><td></td></tr></tfoot></table></div></div>`;
+        return h;
+    }
+    function drawDetail() {
+        const x = K.byUmc[K.sel], box = el('stkDetail'); if (!box) return;
+        if (!x) { box.innerHTML = `<div class="sbc-note">UMC ${esc(K.sel)} is not in the stock sheet.</div>`; return; }
+        const t0 = K.h.t0;
+        const belts = x.conv.slice().sort((a, b) => (a.cbm ? a.cbm.getTime() : 9e15) - (b.cbm ? b.cbm.getTime() : 9e15));
+        const due = b => { if (!b.cbm) return ['-', '']; const m = Math.round((b.cbm - t0) / 2629800000 * 10) / 10; return [m < 0 ? 'Passed' : m.toFixed(1) + ' mo', b.cbm < t0 ? 'sbc-r' : (b.cbm <= K.h.h3 ? 'sbc-y' : (b.cbm <= K.h.h8 ? '' : 'sbc-g'))]; };
+        const mini = (v, l, cls) => `<div class="stk-mini"><b class="${cls || ''}">${v}</b><span>${l}</span></div>`;
+        const info = [['Grade', x.grade], ['Unit rate', x.rate ? 'Rs ' + fm(x.rate) + ' / m' : ''], ['Old UMCs', x.old], ['Old item code', x.oldItem], ['UMC against ARC (Forech)', x.arcF], ['UMC against ARC (Oriental)', x.arcO], ['UMC against Forech VMI', x.vmiF], ['UMC against Oriental VMI', x.vmiO], ['ARC suppliers', x.sup], ['Re-order point / qty (m)', x.rop || x.roq ? fm(x.rop) + ' / ' + fm(x.roq) : ''], ['Consumption in 6 months (m)', x.cons6 ? fm(x.cons6) : ''], ['Required length', x.reqLen], ['Remarks', x.rem]].filter(r => r[1]);
+        box.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h3 style="margin:0;flex:1"><i class="fas fa-tag"></i> ${x.umc} <span style="font-weight:500;color:var(--text-muted)">${esc(x.spec)}</span></h3><button class="sbc-chip sbc-png" onclick="stkCloseDetail()"><i class="fas fa-times"></i> Close</button></div>
+            <div class="stk-minis">${mini(fm(x.phys) + ' m', 'Physical', x.belowSafe ? 'sbc-r' : 'sbc-g')}${x.graph ? mini(fm(x.graph) + ' m', 'Graphene') : ''}${mini(fm(x.order) + ' m', 'On order')}${mini(fm(x.total) + ' m', 'Total stock')}${mini(fm(x.safety) + ' m', 'Safety stock')}${mini(fm(x.longest) + ' m', 'Longest belt')}${mini('Rs ' + lk(x.vTotal) + ' L', 'Total value')}${mini(fm(x.n3) + ' m', 'Due 3M', x.b3 < 0 ? 'sbc-r' : '')}${mini(fm(x.n6) + ' m', 'Due 6M', x.b6 < 0 ? 'sbc-r' : '')}${mini(fm(x.n8) + ' m', 'Due 8M', x.b8 < 0 ? 'sbc-r' : '')}</div>
+            <div class="stk-info">${info.map(r => `<div><span>${r[0]}</span><b>${esc(r[1])}</b></div>`).join('')}</div>
+            ${x.depts.length ? `<div class="sbc-note" style="margin:6px 0">Installed (stock sheet): ${x.depts.map(d => `<b>${esc(d.d)}</b> ${d.n} nos / ${fm(d.l)} m`).join(' &middot; ')}</div>` : ''}
+            <h3 style="margin:12px 0 6px;font-size:.95rem">Belts on this UMC - ${belts.length} conveyors, ${fm(belts.reduce((a, b) => a + (b.len || 0), 0))} m</h3>
+            <div class="sbc-tablewrap"><table class="sbc-table stk-table"><thead><tr><th>Conveyor</th><th>Dept</th><th>Section</th><th>Material</th><th>Length (m)</th><th>Last replacement</th><th>Last thickness</th><th>Min thk (mm)</th><th>Next CBM</th><th>Due in</th></tr></thead><tbody>
+            ${belts.map(b => { const d = due(b); return `<tr><td><b>${esc(b.name)}</b></td><td style="text-align:left">${esc(b.dept)}</td><td style="text-align:left">${esc(b.sec || '-')}</td><td style="text-align:left">${esc(b.mat || '-')}</td><td>${b.len ? fm(b.len) : '-'}</td><td>${dstr(b.lastRep)}</td><td>${dstr(b.lastThk)}</td><td>${esc(b.minThk || '-')}</td><td class="${d[1]}">${dstr(b.cbm)}</td><td class="${d[1]}">${d[0]}</td></tr>`; }).join('') || '<tr><td colspan="10">No conveyor in the UMC finder sheet uses this UMC.</td></tr>'}
+            </tbody></table></div>
+            <div class="sbc-note"><span class="sbc-r">Red</span> = CBM passed, <span class="sbc-y">amber</span> = due in the next 3 months. Conveyors not in the thickness sheet have no CBM.</div>`;
+    }
+
+    // ---------------- UMC finder ----------------
+    const FF = [['width', 'Belt width (mm)'], ['rating', 'Rating'], ['top', 'Top cover (mm)'], ['bot', 'Bottom cover (mm)'], ['grade', 'Cover grade'], ['carcass', 'Carcass'], ['dept', 'Department']];
+    function finderTab() {
+        return `<div class="glass-panel sbc-panel"><h3><i class="fas fa-magnifying-glass"></i> UMC Finder</h3>
+            <div class="stk-ff"><label class="stk-q"><span>Conveyor / UMC / spec</span><input type="search" id="stkQ" class="sbc-sel" placeholder="e.g. J28C1 or 1000X800" value="${esc(K.q)}" oninput="stkFind()"></label>
+            ${FF.map(f => `<label><span>${f[1]}</span><select id="stkF_${f[0]}" class="sbc-sel" onchange="stkFind()"></select></label>`).join('')}
+            <label><span>&nbsp;</span><button class="sbc-chip" style="margin:0" onclick="stkFindClear()"><i class="fas fa-eraser"></i> Clear</button></label></div>
+            <div id="stkFindOut"></div></div>`;
+    }
+    window.stkFindClear = function () { K.f = {}; K.q = ''; render(); };
+    window.stkFind = function () {
+        const q = el('stkQ'); K.q = q ? q.value : '';
+        FF.forEach(f => { const s = el('stkF_' + f[0]); if (s) K.f[f[0]] = s.value; });
+        finderRun();
+    };
+    function finderRun() {
+        const q = key(K.q);
+        const match = (b, skip) => FF.every(f => f[0] === skip || !K.f[f[0]] || String(b[f[0]]) === K.f[f[0]]) && (!q || key(b.conv + '|' + b.umc + '|' + b.spec + '|' + b.old).includes(q));
+        // options cascade like slicers: each list shows only values that fit the other filters
+        FF.forEach(f => {
+            const s = el('stkF_' + f[0]); if (!s) return;
+            const vals = Array.from(new Set(K.uf.filter(b => match(b, f[0])).map(b => String(b[f[0]] || '')).filter(v => v && v !== '-'))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+            const cur = K.f[f[0]] || '';
+            s.innerHTML = `<option value="">All</option>` + vals.map(v => `<option ${v === cur ? 'selected' : ''}>${esc(v)}</option>`).join('');
+            if (cur && !vals.includes(cur)) { s.innerHTML += `<option selected>${esc(cur)}</option>`; }
+        });
+        const L = K.uf.filter(b => match(b));
+        const G = {}; L.forEach(b => { const u = b.umc || '(no UMC)'; (G[u] = G[u] || []).push(b); });
+        const us = Object.keys(G).sort((a, b) => G[b].length - G[a].length);
+        const any = q || FF.some(f => K.f[f[0]]);
+        let h = `<div class="sbc-note" style="margin:8px 0">${L.length} conveyors &middot; ${us.length} UMCs${any ? '' : ' - pick a filter or type a conveyor to narrow down'}</div><div class="stk-cards">`;
+        h += us.slice(0, any ? 60 : 12).map(u => {
+            const x = K.byUmc[u], bs = G[u], b0 = bs[0];
+            const st = x ? `<div class="stk-cst"><span>Physical <b class="${x.belowSafe ? 'sbc-r' : 'sbc-g'}">${fm(x.phys)} m</b></span><span>Total <b>${fm(x.total)} m</b></span><span>Safety <b>${fm(x.safety)} m</b></span><span>Due 8M <b class="${x.b8 < 0 ? 'sbc-r' : ''}">${fm(x.n8)} m</b></span></div>` : `<div class="stk-cst"><span class="sbc-y">Not in the stock sheet</span></div>`;
+            return `<div class="glass-panel stk-card${x ? ' stk-click' : ''}"${x ? ` onclick="stkOpen('${u}')"` : ''}><div class="stk-ch"><b>${esc(u)}</b>${x && x.belowSafe ? '<span class="sbc-pill" style="background:var(--bad-soft);color:var(--red)">Below safety</span>' : ''}</div>
+                <div class="stk-cs">${esc((x && x.spec) || b0.spec)}</div>
+                <div class="stk-ct">${[b0.width && b0.width + ' mm', b0.rating, b0.top && b0.bot && b0.top + '/' + b0.bot + ' mm', b0.grade, b0.carcass].filter(Boolean).map(esc).join(' &middot; ')}</div>${st}
+                <div class="stk-convs">${bs.slice(0, 14).map(b => `<span>${esc(b.name)}</span>`).join('')}${bs.length > 14 ? `<span>+${bs.length - 14} more</span>` : ''}</div></div>`;
+        }).join('');
+        h += `</div>`;
+        if (!any && us.length > 12) h += `<div class="sbc-note">Showing the 12 UMCs with the most conveyors.</div>`;
+        if (any) {
+            h += `<div class="sbc-tablewrap" style="margin-top:12px"><table class="sbc-table stk-table"><thead><tr><th>Conveyor</th><th>Dept</th><th>New UMC</th><th>Specification</th><th>Width</th><th>Rating</th><th>Top</th><th>Bottom</th><th>Grade</th><th>Length (m)</th><th>Next CBM</th><th>Old UMC</th></tr></thead><tbody>
+            ${L.slice(0, 400).map(b => `<tr class="stk-row"${b.umc && K.byUmc[b.umc] ? ` onclick="stkOpen('${b.umc}')"` : ''}><td><b>${esc(b.name)}</b></td><td style="text-align:left">${esc(b.dept)}</td><td>${esc(b.umc || '-')}</td><td style="text-align:left">${esc(b.spec)}</td><td>${esc(b.width)}</td><td>${esc(b.rating)}</td><td>${esc(b.top)}</td><td>${esc(b.bot)}</td><td style="text-align:left">${esc(b.grade)}</td><td>${b.len ? fm(b.len) : '-'}</td><td class="${b.cbm && b.cbm < K.h.t0 ? 'sbc-r' : ''}">${dstr(b.cbm)}</td><td style="text-align:left">${esc(b.old || '-')}</td></tr>`).join('')}
+            </tbody></table></div>${L.length > 400 ? `<div class="sbc-note">First 400 of ${L.length} conveyors shown - narrow the filters.</div>` : ''}`;
+        }
+        el('stkFindOut').innerHTML = h;
+    }
+
+    // ---------------- Excel ----------------
+    function loadXlsx() {
+        if (window.XLSX) return Promise.resolve();
+        const urls = ['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js', 'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'];
+        const one = u => new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = u; sc.onload = () => window.XLSX ? ok() : bad(); sc.onerror = bad; document.head.appendChild(sc); });
+        return urls.reduce((p, u) => p.catch(() => one(u)), Promise.reject());
+    }
+    // real Excel dates: day serial number + dd-mm-yyyy format (no time-zone seconds)
+    const xd = d => d ? Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(1899, 11, 30)) / 864e5) : '';
+    function dcol(X, ws, name) { const r = X.utils.decode_range(ws['!ref']); for (let c = r.s.c; c <= r.e.c; c++) { const h = ws[X.utils.encode_cell({ r: 0, c })]; if (!h || h.v !== name) continue; for (let i = 1; i <= r.e.r; i++) { const cell = ws[X.utils.encode_cell({ r: i, c })]; if (cell && cell.t === 'n') cell.z = 'dd-mm-yyyy'; } } }
+    window.stkExcel = function () {
+        if (!K.loaded) return;
+        loadXlsx().then(() => {
+            const X = window.XLSX, wb = X.utils.book_new();
+            const T = totals();
+            const sum = [['Belt stock summary', ''], ['Date', dstr(K.h.t0)], [], ['Item', 'Metres', 'Value (Rs crore)'],
+                ['Physical stock', T.phys, +cr(T.vPhys)], ['Graphene stock', T.graph, +cr(T.vGraph)], ['On order (PO/DO, PR, SC, VMI)', T.order, +cr(T.vOrder)], ['Total stock', T.total, +cr(T.vTotal)],
+                ['Safety stock', T.safety, ''], ['UMCs below safety stock', T.below.length, ''], ['Shortfall to safety stock', T.belowM, +cr(T.belowV)],
+                ['Belts due in 3 months (CBM passed or within 3 months)', T.n3, ''], ['Belts due in 6 months', T.n6, ''], ['Belts due in 8 months', T.n8, '']];
+            const ws0 = X.utils.aoa_to_sheet(sum); ws0['!cols'] = [{ wch: 52 }, { wch: 14 }, { wch: 16 }]; X.utils.book_append_sheet(wb, ws0, 'Summary');
+            const rows = K.stock.slice().sort((a, b) => (a.belowSafe === b.belowSafe ? Math.min(a.b3, a.b8) - Math.min(b.b3, b.b8) : (a.belowSafe ? -1 : 1))).map(x => ({ 'UMC (New QAP)': x.umc, 'Specification': x.spec, 'Grade': x.grade, 'Rate (Rs/m)': x.rate, 'Installed qty': x.iq, 'Installed length (m)': x.il, 'Longest belt (m)': x.longest, 'Safety stock (m)': x.safety, 'Physical stock (m)': x.phys, 'Graphene stock (m)': x.graph, 'VMI (m)': x.vmi, 'SC (m)': x.sc, 'PR (m)': x.pr, 'PO/DO (m)': x.po, 'Total stock (m)': x.total, 'Physical value (Rs)': Math.round(x.vPhys), 'Total value (Rs)': Math.round(x.vTotal), 'Physical - safety (m)': x.safeGap, 'Below safety': x.belowSafe ? 'Yes' : 'No', 'Due 3M (m)': x.n3, 'Due 6M (m)': x.n6, 'Due 8M (m)': x.n8, 'Physical - due 3M (m)': x.b3, 'Total - due 6M (m)': x.b6, 'Total - due 8M (m)': x.b8, 'Old UMCs': x.old, 'Remarks': x.rem }));
+            const ws1 = X.utils.json_to_sheet(rows); ws1['!cols'] = Object.keys(rows[0] || {}).map(k => ({ wch: k === 'Specification' ? 34 : (k === 'Old UMCs' || k === 'Remarks' ? 40 : Math.max(10, k.length + 2)) })); X.utils.book_append_sheet(wb, ws1, 'UMC stock');
+            const due = []; K.stock.forEach(x => (K.need[x.umc] || { belts: [] }).belts.forEach(b => due.push({ 'UMC (New QAP)': x.umc, 'Specification': x.spec, 'Dept': b.dept, 'Conveyor': b.name, 'Length (m)': b.len, 'Next CBM': xd(b.cbm), 'Due': b.cbm < K.h.t0 ? 'CBM passed' : (b.cbm <= K.h.h3 ? 'Next 3 months' : (b.cbm <= K.h.h6 ? '3-6 months' : '6-8 months')) })));
+            due.sort((a, b) => (a['Next CBM'] || 0) - (b['Next CBM'] || 0));
+            const ws2 = X.utils.json_to_sheet(due); dcol(X, ws2, 'Next CBM'); ws2['!cols'] = [{ wch: 14 }, { wch: 34 }, { wch: 10 }, { wch: 16 }, { wch: 11 }, { wch: 12 }, { wch: 14 }]; X.utils.book_append_sheet(wb, ws2, 'Belts due 8M');
+            const cv = K.uf.map(b => ({ 'Dept': b.dept, 'Conveyor': b.name, 'Section': b.sec, 'Material': b.mat, 'New UMC': b.umc, 'Specification': b.spec, 'Width (mm)': b.width, 'Rating': b.rating, 'Top cover (mm)': b.top, 'Bottom cover (mm)': b.bot, 'Cover grade': b.grade, 'Carcass': b.carcass, 'Length (m)': b.len, 'Next CBM': xd(b.cbm), 'Old UMC': b.old }));
+            const ws3 = X.utils.json_to_sheet(cv); dcol(X, ws3, 'Next CBM'); ws3['!cols'] = [{ wch: 9 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 34 }, { wch: 10 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 12 }, { wch: 9 }, { wch: 10 }, { wch: 12 }, { wch: 14 }]; X.utils.book_append_sheet(wb, ws3, 'Conveyor UMC list');
+            const d = K.h.t0; X.writeFile(wb, `Belt_Stock_${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}.xlsx`);
+        }).catch(() => alert('Could not load the Excel library. Check the internet connection and try again.'));
+    };
+    window.__stk = K;
+})();
+</script>
+
 <script>
 // ===== Table tools: search + Excel-style column filter on every table =====
 (function () {
