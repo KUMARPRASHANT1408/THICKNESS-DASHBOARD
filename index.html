@@ -559,6 +559,13 @@
         .stk-cs { font-size: .82rem; font-weight: 600; margin: 4px 0 2px; word-break: break-word; } .stk-ct { font-size: .74rem; color: var(--text-muted); }
         .stk-cst { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .76rem; margin: 8px 0; color: var(--text-muted); } .stk-cst b { color: var(--text-main); }
         .stk-cst b.sbc-r { color: var(--red); } .stk-cst b.sbc-g { color: var(--green); }
+        .stk-viz { --stk-c1: #2a78d6; --stk-c2: #7fb3ee; --stk-short: #e34948; --stk-u1: #e34948; --stk-u2: #eb6834; --stk-u3: #eda100; --stk-u4: #c3cad5; }
+        body:not(.light-mode) .stk-viz { --stk-c1: #3987e5; --stk-c2: #2f5f99; --stk-short: #e66767; --stk-u1: #e66767; --stk-u2: #d95926; --stk-u3: #c98500; --stk-u4: #4a5568; }
+        .stk-vh { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+        .stk-vh h3 { margin: 0 0 2px !important; font-size: 1rem; } .stk-vs { font-size: .76rem; color: var(--text-muted); }
+        .stk-lg { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .75rem; color: var(--text-2); }
+        .stk-lg span { display: inline-flex; align-items: center; gap: 5px; } .stk-lg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+        .stk-chart { position: relative; height: 300px; }
         .stk-convs { display: flex; flex-wrap: wrap; gap: 4px; } .stk-convs span { font-size: .7rem; padding: 2px 7px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--glass-border); }
         @media (max-width: 600px) { .stk-ff .stk-q { grid-column: 1 / -1; } .stk-ff { grid-template-columns: 1fr 1fr; } }
         /* table tools: search + Excel-style filter */
@@ -5109,11 +5116,11 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             ${kpi(fm(T.n8) + ' m', 'Belts due in 8 months', T.short8.length + ' UMCs short of total stock (' + fm(s8) + ' m, Rs ' + cr(v8) + ' Cr)', T.short8.length ? 'sbc-y' : '', "stkGo('s8')")}
         </div>
         <div class="sbc-note" style="margin:-4px 0 12px">Belts due = belts whose next CBM (thickness sheet) has already passed or falls in the next 3 / 6 / 8 months; the full belt length is counted against its New UMC (conveyor &rarr; UMC from the UMC finder sheet). Stock value = metres &times; unit rate of the stock sheet. Tap a card to see the UMCs.</div>
+        <div class="glass-panel sbc-panel stk-viz"><div class="stk-vh"><div><h3>Will the stock last 8 months?</h3><div class="stk-vs">UMCs whose total stock is less than the belts due in the next 8 months - the red part is the shortfall</div></div><div class="stk-lg"><span><i style="background:var(--stk-c1)"></i>Total stock</span><span><i style="background:var(--stk-short)"></i>Shortfall</span></div></div><div class="stk-chart" id="stkBoxShort"><canvas id="stkChShort"></canvas></div><div class="sbc-tap">Tap a bar to open the UMC</div></div>
         <div class="sbc-grid2">
-            <div class="glass-panel sbc-panel"><h3><i class="fas fa-layer-group"></i> Stock value by grade (Rs crore)</h3><div class="sbc-chart"><canvas id="stkChGrade"></canvas></div></div>
-            <div class="glass-panel sbc-panel"><h3><i class="fas fa-triangle-exclamation"></i> UMCs short for the next 8 months (m)</h3><div class="sbc-chart"><canvas id="stkChShort"></canvas></div><div class="sbc-tap">Tap a bar to open the UMC</div></div>
-        </div>
-        <div class="glass-panel sbc-panel"><h3><i class="fas fa-industry"></i> Belts due by department (m)</h3><div class="sbc-chart" style="height:300px"><canvas id="stkChDept"></canvas></div></div>`;
+            <div class="glass-panel sbc-panel stk-viz"><div class="stk-vh"><div><h3>Where the money is</h3><div class="stk-vs">Stock value by grade, Rs crore</div></div><div class="stk-lg"><span><i style="background:var(--stk-c1)"></i>In store</span><span><i style="background:var(--stk-c2)"></i>On order</span></div></div><div class="stk-chart" id="stkBoxGrade"><canvas id="stkChGrade"></canvas></div></div>
+            <div class="glass-panel sbc-panel stk-viz"><div class="stk-vh"><div><h3>Belts due by department</h3><div class="stk-vs">Metres, by when the next CBM falls</div></div><div class="stk-lg"><span><i style="background:var(--stk-u1)"></i>CBM passed</span><span><i style="background:var(--stk-u2)"></i>0-3 months</span><span><i style="background:var(--stk-u3)"></i>3-6 months</span><span><i style="background:var(--stk-u4)"></i>6-8 months</span></div></div><div class="stk-chart" id="stkBoxDept"><canvas id="stkChDept"></canvas></div></div>
+        </div>`;
         // below-safety list
         const rows = T.below.slice().sort((a, b) => a.safeGap * a.rate - b.safeGap * b.rate);
         h += `<div class="glass-panel sbc-panel"><h3><i class="fas fa-circle-exclamation" style="color:var(--red)"></i> Below safety stock - ${rows.length} UMCs</h3>
@@ -5125,27 +5132,71 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
 
     function drawCharts() {
         if (typeof Chart === 'undefined') return;
-        const c = { tick: cssv('--text-muted') || '#8592a6', grid: cssv('--glass-border') || 'rgba(148,163,184,.15)' };
-        const BLUE = '#3987e5', TEAL = '#14b8a6', AMB = '#f2a93b', RED = '#ef6b6b', GREY = '#94a3b8';
-        const sc = (t) => ({ ticks: { color: c.tick }, grid: { color: c.grid }, title: t ? { display: true, text: t, color: c.tick } : undefined });
-        // 1. grade
-        const G = {}; K.stock.forEach(x => { const o = G[x.grade || '-'] = G[x.grade || '-'] || { p: 0, g: 0, o: 0 }; o.p += x.vPhys; o.g += x.vGraph; o.o += x.vOrder; });
-        const gl = Object.keys(G).sort((a, b) => (G[b].p + G[b].g + G[b].o) - (G[a].p + G[a].g + G[a].o));
-        const ds = [{ label: 'In store', data: gl.map(k => +(G[k].p / 1e7).toFixed(2)), backgroundColor: BLUE }];
-        if (gl.some(k => G[k].g)) ds.push({ label: 'Graphene', data: gl.map(k => +(G[k].g / 1e7).toFixed(2)), backgroundColor: TEAL });
-        ds.push({ label: 'On order', data: gl.map(k => +(G[k].o / 1e7).toFixed(2)), backgroundColor: AMB });
-        if (el('stkChGrade')) K.charts.g = new Chart(el('stkChGrade'), { type: 'bar', data: { labels: gl, datasets: ds }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { label: x => x.dataset.label + ': Rs ' + x.raw.toFixed(2) + ' Cr' } } }, scales: { x: Object.assign(sc('Rs crore'), { stacked: true, beginAtZero: true }), y: Object.assign(sc(), { stacked: true, ticks: { color: cssv('--text-muted') || '#8592a6', autoSkip: false, font: { size: 10 } } }) } } });
-        // 2. short UMCs
-        const sh = K.stock.filter(x => x.b8 < 0 || x.b3 < 0).sort((a, b) => Math.min(a.b8, a.b3) - Math.min(b.b8, b.b3)).slice(0, 12);
+        const vz = document.querySelector('#stkReport .stk-viz') || document.body; const v = n => getComputedStyle(vz).getPropertyValue(n).trim();
+        const ink = v('--text-2') || '#4a5568', mute = v('--text-muted') || '#8592a6', grid = v('--glass-border') || '#e1e6ef', surf = v('--glass-base') || '#fff', txt = v('--text-main') || '#0f1b2d';
+        const C1 = v('--stk-c1'), C2 = v('--stk-c2'), SH = v('--stk-short'), U = [v('--stk-u1'), v('--stk-u2'), v('--stk-u3'), v('--stk-u4')];
+        const font = { family: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif', size: 11 };
+        const tip = { backgroundColor: txt, titleColor: surf, bodyColor: surf, padding: 10, cornerRadius: 8, displayColors: true, boxPadding: 4, usePointStyle: true };
+        const narrow = window.innerWidth < 600;
+        // value label at the end of each bar row (total of the stack)
+        const endLabel = (fmtFn, totals) => ({ id: 'stkEnd', afterDatasetsDraw(ch) {
+            const ctx = ch.ctx, meta = ch.getDatasetMeta(ch.data.datasets.length - 1); ctx.save(); ctx.font = '600 11px ' + font.family; ctx.fillStyle = ink; ctx.textBaseline = 'middle';
+            meta.data.forEach((bar, i) => { const t = totals[i]; if (t == null) return; const x = ch.scales.x.getPixelForValue(t.at); ctx.fillText(fmtFn(t), x + 6, bar.y); }); ctx.restore(); } });
+        const hAxis = (title, max) => ({ beginAtZero: true, suggestedMax: max, grid: { color: grid, drawTicks: false }, border: { display: false }, ticks: { color: mute, font, padding: 6, maxTicksLimit: 6, callback: x => fm(x) }, title: title ? { display: true, text: title, color: mute, font } : undefined });
+        const cat = { grid: { display: false }, border: { display: false }, ticks: { color: ink, font: Object.assign({}, font, { size: 11, weight: '600' }), autoSkip: false, padding: 6 } };
+        const size = (box, n, row) => { const b = el(box); if (b) b.style.height = Math.max(160, n * row + 40) + 'px'; };
+
+        // 1. will the stock last: total stock (blue) + shortfall (red) = belts due in 8 months
+        const sh = K.stock.filter(x => x.b8 < 0).sort((a, b) => a.b8 - b.b8);
         if (el('stkChShort')) {
-            if (!sh.length) { el('stkChShort').parentNode.innerHTML = '<div class="sbc-note" style="padding:40px;text-align:center">No UMC is short for the next 8 months.</div>'; }
-            else K.charts.s = new Chart(el('stkChShort'), { type: 'bar', data: { labels: sh.map(x => x.umc), datasets: [{ label: 'In store', data: sh.map(x => x.phys + x.graph), backgroundColor: BLUE }, { label: 'Total stock', data: sh.map(x => x.total), backgroundColor: TEAL }, { label: 'Due 3M', data: sh.map(x => x.n3), backgroundColor: AMB }, { label: 'Due 8M', data: sh.map(x => x.n8), backgroundColor: RED }] }, options: { responsive: true, maintainAspectRatio: false, onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOpen(sh[a[0].index].umc); }, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { title: x => { const s = sh[x[0].dataIndex]; return s.umc + ' - ' + s.spec; }, label: x => x.dataset.label + ': ' + fm(x.raw) + ' m' } } }, scales: { x: sc(), y: Object.assign(sc('metres'), { beginAtZero: true }) } } });
+            if (!sh.length) el('stkBoxShort').innerHTML = '<div class="sbc-note" style="padding:40px;text-align:center">Stock covers every UMC for the next 8 months.</div>';
+            else {
+                size('stkBoxShort', sh.length, narrow ? 34 : 30);
+                const lab = sh.map(x => narrow ? x.umc : x.umc + '  ' + (x.spec.split('X')[0] || '') + ' ' + x.grade);
+                const tot = sh.map(x => ({ at: x.n8, short: -x.b8 }));
+                const mx = Math.max(...sh.map(x => x.n8)) * (narrow ? 1.45 : 1.22);
+                K.charts.s = new Chart(el('stkChShort'), { type: 'bar', data: { labels: lab, datasets: [
+                    { label: 'Total stock', data: sh.map(x => Math.min(x.total, x.n8)), backgroundColor: C1, borderColor: surf, borderWidth: { right: 2 }, borderSkipped: false, borderRadius: { topLeft: 4, bottomLeft: 4 }, barPercentage: 0.75, categoryPercentage: 0.9 },
+                    { label: 'Shortfall', data: sh.map(x => -x.b8), backgroundColor: SH, borderRadius: { topRight: 4, bottomRight: 4 }, borderSkipped: false, barPercentage: 0.75, categoryPercentage: 0.9 }] },
+                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 500 }, layout: { padding: { right: 8 } },
+                        onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOpen(sh[a[0].index].umc); },
+                        plugins: { legend: { display: false }, tooltip: Object.assign({}, tip, { callbacks: { title: x => { const s = sh[x[0].dataIndex]; return s.umc + '  ' + s.spec; }, label: x => { const s = sh[x.dataIndex]; return x.datasetIndex ? ' Short: ' + fm(-s.b8) + ' m (Rs ' + lk(-s.b8 * s.rate) + ' lakh)' : ' Total stock: ' + fm(s.total) + ' m'; }, afterBody: x => { const s = sh[x[0].dataIndex]; return ['Belts due in 8 months: ' + fm(s.n8) + ' m', 'Physical ' + fm(s.phys) + ' m, on order ' + fm(s.order) + ' m']; } } }) },
+                        scales: { x: Object.assign(hAxis('metres', mx), { stacked: true }), y: Object.assign({}, cat, { stacked: true }) } },
+                    plugins: [endLabel(t => '-' + fm(t.short) + ' m', tot)] });
+            }
         }
-        // 3. dept
+
+        // 2. where the money is: grades, smallest ones folded into "Others"
+        const G = {}; K.stock.forEach(x => { const k = (x.grade || '-').replace(/\s*\(3-4PLY\)/, ' (3-4 ply)'); const o = G[k] = G[k] || { p: 0, o: 0 }; o.p += x.vPhys + x.vGraph; o.o += x.vOrder; });
+        let gl = Object.keys(G).sort((a, b) => (G[b].p + G[b].o) - (G[a].p + G[a].o));
+        if (gl.length > 8) { const rest = gl.slice(7), o = { p: 0, o: 0 }; rest.forEach(k => { o.p += G[k].p; o.o += G[k].o; }); gl = gl.slice(0, 7); G['Others'] = o; gl.push('Others'); }
+        if (el('stkChGrade')) {
+            size('stkBoxGrade', gl.length, 34);
+            const gt = gl.map(k => ({ at: (G[k].p + G[k].o) / 1e7, v: (G[k].p + G[k].o) / 1e7 }));
+            const mx = Math.max(...gt.map(t => t.at)) * 1.25;
+            K.charts.g = new Chart(el('stkChGrade'), { type: 'bar', data: { labels: gl, datasets: [
+                { label: 'In store', data: gl.map(k => G[k].p / 1e7), backgroundColor: C1, borderColor: surf, borderWidth: { right: 2 }, borderSkipped: false, borderRadius: { topLeft: 4, bottomLeft: 4 }, barPercentage: 0.72, categoryPercentage: 0.9 },
+                { label: 'On order', data: gl.map(k => G[k].o / 1e7), backgroundColor: C2, borderRadius: { topRight: 4, bottomRight: 4 }, borderSkipped: false, barPercentage: 0.72, categoryPercentage: 0.9 }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 500 },
+                    plugins: { legend: { display: false }, tooltip: Object.assign({}, tip, { callbacks: { label: x => ' ' + x.dataset.label + ': Rs ' + x.raw.toFixed(2) + ' Cr' } }) },
+                    scales: { x: Object.assign(hAxis('', mx), { stacked: true, ticks: { color: mute, font, maxTicksLimit: 5, callback: x => x } }), y: Object.assign({}, cat, { stacked: true }) } },
+                plugins: [endLabel(t => 'Rs ' + t.v.toFixed(1) + ' Cr', gt)] });
+        }
+
+        // 3. belts due by department, stacked by urgency
         const D = {}; K.uf.forEach(b => { if (!b.cbm || !b.len || !b.umc || !K.byUmc[b.umc]) return; const d = b.dept || '-'; const o = D[d] = D[d] || [0, 0, 0, 0]; if (b.cbm < K.h.t0) o[0] += b.len; else if (b.cbm <= K.h.h3) o[1] += b.len; else if (b.cbm <= K.h.h6) o[2] += b.len; else if (b.cbm <= K.h.h8) o[3] += b.len; });
-        const dl = Object.keys(D).filter(d => D[d].some(v => v)).sort((a, b) => D[b].reduce((x, y) => x + y) - D[a].reduce((x, y) => x + y));
-        const lab = ['CBM passed', 'Next 3 months', '3-6 months', '6-8 months'], col = [RED, AMB, BLUE, GREY];
-        if (el('stkChDept')) K.charts.d = new Chart(el('stkChDept'), { type: 'bar', data: { labels: dl, datasets: lab.map((l, i) => ({ label: l, data: dl.map(d => D[d][i]), backgroundColor: col[i] })) }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { label: x => x.dataset.label + ': ' + fm(x.raw) + ' m' } } }, scales: { x: Object.assign(sc(), { stacked: true, ticks: { color: cssv('--text-muted') || '#8592a6', autoSkip: false, maxRotation: 60, font: { size: 10 } } }), y: Object.assign(sc('metres'), { stacked: true, beginAtZero: true }) } } });
+        const dl = Object.keys(D).filter(d => D[d].some(x => x)).sort((a, b) => D[b].reduce((x, y) => x + y) - D[a].reduce((x, y) => x + y));
+        if (el('stkChDept')) {
+            size('stkBoxDept', dl.length, 30);
+            const dt = dl.map(d => { const t = D[d].reduce((x, y) => x + y); return { at: t, v: t }; });
+            const mx = Math.max(...dt.map(t => t.at)) * 1.22;
+            const lab = ['CBM passed', '0-3 months', '3-6 months', '6-8 months'];
+            K.charts.d = new Chart(el('stkChDept'), { type: 'bar', data: { labels: dl, datasets: lab.map((l, i) => ({ label: l, data: dl.map(d => D[d][i]), backgroundColor: U[i], borderColor: surf, borderWidth: { right: 2 }, borderSkipped: false, borderRadius: 3, barPercentage: 0.72, categoryPercentage: 0.9 })) },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 500 },
+                    plugins: { legend: { display: false }, tooltip: Object.assign({}, tip, { filter: x => x.raw > 0, callbacks: { label: x => ' ' + x.dataset.label + ': ' + fm(x.raw) + ' m', footer: x => 'Total: ' + fm(D[dl[x[0].dataIndex]].reduce((a, b) => a + b)) + ' m' } }) },
+                    scales: { x: Object.assign(hAxis('', mx), { stacked: true }), y: Object.assign({}, cat, { stacked: true }) } },
+                plugins: [endLabel(t => fm(t.v) + ' m', dt)] });
+        }
     }
 
     // ---------------- UMC stock tab ----------------
