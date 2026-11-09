@@ -5030,7 +5030,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         K.h = { t0, h3, h6, h8 };
         K.need = {};
         K.uf.forEach(b => {
-            if (!b.umc || !b.cbm || !b.len) return;
+            if (!b.umc || !K.byUmc[b.umc] || !b.cbm || !b.len) return;   // only UMCs kept in stock (the stock sheet list)
             const n = K.need[b.umc] = K.need[b.umc] || { m3: 0, m6: 0, m8: 0, over: 0, belts: [] };
             if (b.cbm <= h8) { n.m8 += b.len; n.belts.push(b); }
             if (b.cbm <= h6) n.m6 += b.len;
@@ -5142,7 +5142,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             else K.charts.s = new Chart(el('stkChShort'), { type: 'bar', data: { labels: sh.map(x => x.umc), datasets: [{ label: 'In store', data: sh.map(x => x.phys + x.graph), backgroundColor: BLUE }, { label: 'Total stock', data: sh.map(x => x.total), backgroundColor: TEAL }, { label: 'Due 3M', data: sh.map(x => x.n3), backgroundColor: AMB }, { label: 'Due 8M', data: sh.map(x => x.n8), backgroundColor: RED }] }, options: { responsive: true, maintainAspectRatio: false, onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOpen(sh[a[0].index].umc); }, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { title: x => { const s = sh[x[0].dataIndex]; return s.umc + ' - ' + s.spec; }, label: x => x.dataset.label + ': ' + fm(x.raw) + ' m' } } }, scales: { x: sc(), y: Object.assign(sc('metres'), { beginAtZero: true }) } } });
         }
         // 3. dept
-        const D = {}; K.uf.forEach(b => { if (!b.cbm || !b.len || !b.umc) return; const d = b.dept || '-'; const o = D[d] = D[d] || [0, 0, 0, 0]; if (b.cbm < K.h.t0) o[0] += b.len; else if (b.cbm <= K.h.h3) o[1] += b.len; else if (b.cbm <= K.h.h6) o[2] += b.len; else if (b.cbm <= K.h.h8) o[3] += b.len; });
+        const D = {}; K.uf.forEach(b => { if (!b.cbm || !b.len || !b.umc || !K.byUmc[b.umc]) return; const d = b.dept || '-'; const o = D[d] = D[d] || [0, 0, 0, 0]; if (b.cbm < K.h.t0) o[0] += b.len; else if (b.cbm <= K.h.h3) o[1] += b.len; else if (b.cbm <= K.h.h6) o[2] += b.len; else if (b.cbm <= K.h.h8) o[3] += b.len; });
         const dl = Object.keys(D).filter(d => D[d].some(v => v)).sort((a, b) => D[b].reduce((x, y) => x + y) - D[a].reduce((x, y) => x + y));
         const lab = ['CBM passed', 'Next 3 months', '3-6 months', '6-8 months'], col = [RED, AMB, BLUE, GREY];
         if (el('stkChDept')) K.charts.d = new Chart(el('stkChDept'), { type: 'bar', data: { labels: dl, datasets: lab.map((l, i) => ({ label: l, data: dl.map(d => D[d][i]), backgroundColor: col[i] })) }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { label: x => x.dataset.label + ': ' + fm(x.raw) + ' m' } } }, scales: { x: Object.assign(sc(), { stacked: true, ticks: { color: cssv('--text-muted') || '#8592a6', autoSkip: false, maxRotation: 60, font: { size: 10 } } }), y: Object.assign(sc('metres'), { stacked: true, beginAtZero: true }) } } });
