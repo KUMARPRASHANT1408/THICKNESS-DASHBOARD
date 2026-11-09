@@ -666,7 +666,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 09-Nov-d</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 09-Nov-e</div>
         </div>
     </div>
 
@@ -5155,7 +5155,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             ${kpi(fm(T.n8) + ' m', 'Belts due in 8 months', T.short8.length + ' UMCs short of total stock (' + fm(s8) + ' m, Rs ' + cr(v8) + ' Cr)', T.short8.length ? 'sbc-y' : '', "stkGo('s8')")}
         </div>
         <div class="sbc-note" style="margin:-4px 0 12px">Belts due = belts whose next CBM (thickness sheet) has already passed or falls in the next 3 / 6 / 8 months; the full belt length is counted against its New UMC (conveyor &rarr; UMC from the UMC finder sheet). Stock value = metres &times; unit rate of the stock sheet. Tap a card to see the UMCs.</div>${ovPanel()}
-        <div class="glass-panel sbc-panel"><h3><i class="fas fa-triangle-exclamation"></i> UMCs that run short - ${K.stock.filter(x => x.b8 < 0 || x.b3 < 0).length} UMCs (m)</h3><div class="sbc-note" style="margin:-4px 0 8px">A UMC is shown when its store stock is less than the belts due in 3 months, or its total stock (store + on order) is less than the belts due in 8 months. This is a different list from the ${K.stock.filter(x => x.belowSafe).length} UMCs below safety stock.</div><div class="sbc-chart" style="height:380px"><canvas id="stkChShort"></canvas></div><div class="sbc-tap">Tap a bar to open the UMC</div></div>
+        <div class="glass-panel sbc-panel"><h3><i class="fas fa-triangle-exclamation"></i> UMCs that run short - ${K.stock.filter(x => x.b8 < 0 || x.b3 < 0).length} UMCs (m)</h3><div class="sbc-note" style="margin:-4px 0 8px">A UMC is shown when its store stock is less than the belts due in 3 months, or its total stock (store + on order) is less than the belts due in 8 months. This is a different list from the ${K.stock.filter(x => x.belowSafe).length} UMCs below safety stock.</div><div style="overflow-x:auto"><div class="sbc-chart" id="stkBoxShort" style="height:380px;min-width:${Math.max(0, K.stock.filter(x => x.b8 < 0 || x.b3 < 0).length * 62)}px"><canvas id="stkChShort"></canvas></div></div><div class="sbc-tap">Tap a bar to open the UMC</div></div>
         <div class="sbc-grid2">
             <div class="glass-panel sbc-panel"><h3><i class="fas fa-layer-group"></i> Stock value by grade (Rs crore)</h3><div class="sbc-chart"><canvas id="stkChGrade"></canvas></div></div>
             <div class="glass-panel sbc-panel"><h3><i class="fas fa-industry"></i> Belts due by department (m)</h3><div class="sbc-chart"><canvas id="stkChDept"></canvas></div></div>
@@ -5184,7 +5184,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         // 2. short UMCs
         const sh = K.stock.filter(x => x.b8 < 0 || x.b3 < 0).sort((a, b) => Math.min(a.b8, a.b3) - Math.min(b.b8, b.b3));
         if (el('stkChShort')) {
-            if (!sh.length) { el('stkChShort').parentNode.innerHTML = '<div class="sbc-note" style="padding:40px;text-align:center">No UMC is short for the next 8 months.</div>'; }
+            if (!sh.length) { el('stkChShort').parentNode.innerHTML = '<div class="sbc-note" style="padding:40px;text-align:center">Good news - stock covers every UMC for the next 3 and 8 months.</div>'; el('stkBoxShort').style.minWidth = '0'; el('stkBoxShort').style.height = 'auto'; }
             else K.charts.s = new Chart(el('stkChShort'), { type: 'bar', data: { labels: sh.map(x => x.umc), datasets: [{ label: 'In store', data: sh.map(x => x.phys + x.graph), backgroundColor: BLUE }, { label: 'Total stock', data: sh.map(x => x.total), backgroundColor: TEAL }, { label: 'Due 3M', data: sh.map(x => x.n3), backgroundColor: AMB }, { label: 'Due 8M', data: sh.map(x => x.n8), backgroundColor: RED }] }, options: { responsive: true, maintainAspectRatio: false, onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOpen(sh[a[0].index].umc); }, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { title: x => { const s = sh[x[0].dataIndex]; return s.umc + ' - ' + s.spec; }, label: x => x.dataset.label + ': ' + fm(x.raw) + ' m' } } }, scales: { x: sc(), y: Object.assign(sc('metres'), { beginAtZero: true }) } } });
         }
         // 3. dept
