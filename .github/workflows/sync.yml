@@ -40,6 +40,16 @@ jobs:
         run: |
           curl -fL "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWKjd9swnkqU7NLBWL_RP7J5KTumUQslWnJ3GZyglyYZRt9xJy6WqvJa7ST297K4F4w01K24xJ5cvN/pub?gid=663645953&single=true&output=csv" -o sbc.csv
 
+      - name: Download latest Belt Stock CSV from Google Sheet
+        continue-on-error: true
+        run: |
+          curl -fL "https://docs.google.com/spreadsheets/d/e/2PACX-1vTLBcBPIjh0mcFU3agrC8qtWxxAg8bSJBeJZ_0dNv-O7bTZ8UcpItTCmXGPzBPM4od-SZQiw4E-4-c9/pub?gid=1903244991&single=true&output=csv" -o stock.tmp && [ $(wc -l < stock.tmp) -gt 20 ] && mv stock.tmp stock.csv || rm -f stock.tmp
+
+      - name: Download latest UMC Finder CSV from Google Sheet
+        continue-on-error: true
+        run: |
+          curl -fL "https://docs.google.com/spreadsheets/d/e/2PACX-1vTLBcBPIjh0mcFU3agrC8qtWxxAg8bSJBeJZ_0dNv-O7bTZ8UcpItTCmXGPzBPM4od-SZQiw4E-4-c9/pub?gid=941146178&single=true&output=csv" -o umcf.tmp && [ $(wc -l < umcf.tmp) -gt 100 ] && mv umcf.tmp umcf.csv || rm -f umcf.tmp
+
       - name: Build month-wise consumption (Daily Report log + SBC main table)
         continue-on-error: true
         run: python3 tools/consumption.py all
@@ -48,5 +58,5 @@ jobs:
         run: |
           git config --global user.name 'GitHub Actions Bot'
           git config --global user.email 'actions@github.com'
-          git add data.csv abn.csv daily.csv patching.csv sbc.csv abp.csv consumption_log.csv sbc_monthly.csv
+          git add data.csv abn.csv daily.csv patching.csv sbc.csv abp.csv consumption_log.csv sbc_monthly.csv $(ls stock.csv umcf.csv 2>/dev/null)
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-sync latest CSV data from Google Sheet" && git push)
