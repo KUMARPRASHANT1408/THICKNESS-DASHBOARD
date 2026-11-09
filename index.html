@@ -536,6 +536,12 @@
         #sbcScreen .sbc-bar h2, #stkScreen .sbc-bar h2 { min-width: 0; flex: 1 1 60%; font-size: 1rem; }
         #sbcScreen .sbc-bar .btn-slate, #sbcScreen .sbc-bar .sbc-sel, #stkScreen .sbc-bar .btn-slate, #stkScreen .sbc-bar .sbc-sel { padding: 6px 10px; font-size: .85rem; }
         @media (max-width: 768px) { #mainContent > .header { margin: 0 -15px 12px; padding: 10px 15px; } .interactive-section { padding: 14px; } }
+        .app-theme-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.1); color: #fff; font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-text-fill-color: #fff; }
+        .app-theme-btn:hover { background: rgba(255,255,255,.2); }
+        .landing-header { display: flex; align-items: center; gap: 10px; }
+        .landing-header h1 { flex: 1; margin: 0 !important; max-width: none !important; }
+        #mainContent > .header .header-title { display: flex; align-items: center; gap: 8px; flex: 1; }
+        #mainContent > .header .app-theme-btn { color: var(--text-main); -webkit-text-fill-color: currentColor; border-color: var(--glass-border); background: var(--glass-base); }
         /* ===== BELT STOCK & UMC FINDER ===== */
         .app-card.card-stk .app-icon { background: var(--good-soft); color: var(--green); }
         #stkScreen .sbc-wrap > #stkTabs { margin-left: 16px; margin-right: 16px; }
@@ -598,7 +604,7 @@
         let isDarkMode = true;
         (function () { let t = null; try { t = localStorage.getItem('rtgTheme'); } catch (e) {}
             // no saved choice -> follow the phone / PC setting
-            if (t === 'light' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)) { isDarkMode = false; document.body.classList.add('light-mode'); }
+            if (t === 'light' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)) { isDarkMode = false; document.body.classList.add('light-mode'); } document.addEventListener('DOMContentLoaded', () => document.querySelectorAll('.js-theme-ico').forEach(x => { x.classList.toggle('fa-moon', isDarkMode); x.classList.toggle('fa-sun', !isDarkMode); }));
             const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', isDarkMode ? '#14223d' : '#1f3a68'); })();
     </script>
 
@@ -628,7 +634,7 @@
     <!-- LANDING PAGE: 3-app launcher -->
     <div id="landingPage">
         <div class="landing-header">
-            <h1>RTG Master Control</h1>
+            <h1>RTG Master Control</h1><button class="app-theme-btn" onclick="toggleTheme()" title="Switch light / dark theme"><i class="fas fa-moon js-theme-ico"></i><span> Theme</span></button>
         </div>
         <div class="app-card-grid">
             <div class="app-card card-thk glass-panel" onclick="openThicknessApp()">
@@ -659,7 +665,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 09-Nov-a</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 09-Nov-b</div>
         </div>
     </div>
 
@@ -694,7 +700,7 @@
                     <button class="back-home-btn" onclick="backToHome()" title="Back to Home"><i class="fas fa-arrow-left"></i> Home</button>
                     <button class="menu-toggle" onclick="toggleSidebar(event)" title="Open Menu"><i class="fas fa-bars"></i></button>
                     <div class="conv-logo" title="System Active"><div class="conv-belt"></div><div class="conv-pulley left"></div><div class="conv-idler i1"></div><div class="conv-idler i2"></div><div class="conv-idler i3"></div><div class="conv-pulley right"></div></div>
-                    RTG Dashboard
+                    RTG Dashboard<button class="app-theme-btn" onclick="toggleTheme()" title="Switch light / dark theme"><i class="fas fa-moon js-theme-ico"></i><span> Theme</span></button>
                 </div>
             </div>
             
@@ -1025,6 +1031,7 @@
             <button class="btn-slate" onclick="sbcExcel('plan')" title="Belts to replace and belts to save for each SBC view, with charts"><i class="fas fa-file-excel"></i> Replace / save plan</button>
             <button class="btn-slate" onclick="sbcExcel('hold')" title="Belts due as per CBM that will not be replaced this FY - list for the departments"><i class="fas fa-file-excel"></i> Not-replacing list</button>
             <button class="btn-slate" onclick="sbcExport()"><i class="fas fa-file-pdf"></i> PDF</button>
+            <button class="btn-slate" onclick="toggleTheme()" title="Switch light / dark theme"><i class="fas fa-moon js-theme-ico"></i> Theme</button>
             <select id="sbcDeptExp" class="sbc-sel" onchange="sbcExportDept(this.value); this.value='';"><option value="">Dept report PDF...</option></select>
         </div>
         <div id="sbcLoading" class="sbc-note">Loading data...</div>
@@ -1039,6 +1046,7 @@
             <h2><i class="fas fa-boxes-stacked" style="color:#14b8a6"></i> Belt Stock &amp; UMC Finder</h2>
             <button class="btn-slate" onclick="stkReload()" title="Load the latest sheets again"><i class="fas fa-sync-alt"></i> Refresh</button>
             <button class="btn-slate" onclick="stkExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
+            <button class="btn-slate" onclick="toggleTheme()" title="Switch light / dark theme"><i class="fas fa-moon js-theme-ico"></i> Theme</button>
         </div>
         <div id="stkTabs" style="margin-bottom:6px"></div>
         <div id="stkLoading" class="sbc-note">Loading stock data...</div>
@@ -1050,7 +1058,7 @@
         <div class="inspector-header">
             <button class="back-home-btn" onclick="backToHome()" title="Back to Home"><i class="fas fa-arrow-left"></i> Home</button>
             <div class="bot-icon"><i class="fas fa-bolt"></i></div>
-            <div class="inspector-header-title">RTG Belt Inspector</div>
+            <div class="inspector-header-title">RTG Belt Inspector</div><button class="app-theme-btn" onclick="toggleTheme()" title="Switch light / dark theme"><i class="fas fa-moon js-theme-ico"></i><span> Theme</span></button>
             <button onclick="clearChat()" title="Clear Chat" style="background:transparent; border:none; color:var(--red); font-size:1.2rem; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>
         </div>
         <div class="chat-body" id="chatBody"><div class="msg msg-bot">Systems Online. Kisi conveyor ka naam batao ya apna sawaal poochho!</div></div>
@@ -1086,6 +1094,7 @@
         
         window.addEventListener('DOMContentLoaded', () => {
              const icons = ['themeIcon', 'loginThemeIcon'];
+            document.querySelectorAll('.js-theme-ico').forEach(i => { i.classList.toggle('fa-moon', isDarkMode); i.classList.toggle('fa-sun', !isDarkMode); });
              icons.forEach(id => { 
                 const el = document.getElementById(id); 
                 if(el) { el.classList.toggle('fa-moon', isDarkMode); el.classList.toggle('fa-sun', !isDarkMode); } 
@@ -1102,6 +1111,8 @@
             Chart.defaults.color = getCssVar('--text-muted');
             if(fileType === 'abn') showAbnCharts(); if(fileType === 'thk') showThkCharts();
             if (window.sbcRender && document.getElementById('sbcScreen') && document.getElementById('sbcScreen').style.display === 'block') window.sbcRender();
+            if (window.stkRender && document.getElementById('stkScreen') && document.getElementById('stkScreen').style.display === 'block') window.stkRender();
+            try { if (fileType === 'thk' && typeof perfRefresh === 'function') perfRefresh(); } catch (e) {}
         }
 
         function switchTab(tabId, btnId) {
@@ -5333,6 +5344,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         }).catch(() => alert('Could not load the Excel library. Check the internet connection and try again.'));
     };
     window.__stk = K;
+    window.stkRender = function () { if (K.loaded) render(); };
 })();
 </script>
 

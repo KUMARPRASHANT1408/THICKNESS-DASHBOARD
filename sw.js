@@ -1,6 +1,6 @@
 // Version bump karo (v2, v3, v4...) sirf tab jab STATIC_ASSETS list badle -
 // baaki HTML/data updates ab automatically pick ho jayenge, cache-bump ki zaroorat nahi.
-const CACHE_NAME = 'rtg-app-v6';
+const CACHE_NAME = 'rtg-app-v7';
 
 // Sirf woh files jo shayad hi kabhi badlein - inhe cache-first rakha hai (fast load)
 const STATIC_ASSETS = [
@@ -34,7 +34,8 @@ self.addEventListener('fetch', event => {
   // Offline hone par hi purane cached version par fallback hoga.
   if (req.mode === 'navigate' || req.url.includes('index.html') || req.url.includes('data.csv') || req.url.includes('abn.csv') || req.url.includes('daily.csv') || req.url.includes('patching.csv') || req.url.includes('abp.csv') || req.url.includes('abp_master.csv') || req.url.includes('abp_overrides.csv') || req.url.includes('sbc.csv') || req.url.includes('umc.csv') || req.url.includes('cost_actual.csv') || req.url.includes('belt_analysis.csv') || req.url.includes('sbc_monthly.csv') || req.url.includes('stock.csv') || req.url.includes('umcf.csv')) {
     event.respondWith(
-      fetch(req)
+      // cache: 'no-cache' -> ask GitHub every time, so a new build shows on the first refresh
+      (req.mode === 'navigate' ? fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(req, { cache: 'no-cache' }))
         .then(res => {
           const resClone = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(req, resClone));
