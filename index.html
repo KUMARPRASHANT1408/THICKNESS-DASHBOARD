@@ -574,7 +574,7 @@
         .stk-lg span { display: inline-flex; align-items: center; gap: 5px; } .stk-lg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
         .stk-chart { position: relative; height: 300px; }
         .stk-scroll { max-height: 340px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
-        .stk-safe { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; } .stk-pie { position: relative; width: 220px; height: 240px; margin: 0 auto; }
+        .stk-safe { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; } .stk-pie { position: relative; width: 240px; height: 270px; margin: 0 auto; }
         .stk-flow td, .stk-flow th { padding: 6px 8px !important; font-size: .8rem; }
         .stk-flow td:first-child { white-space: normal !important; min-width: 170px; } .stk-flow { width: 100% !important; min-width: 0 !important; } .stk-flow td:not(:first-child), .stk-flow th:not(:first-child) { text-align: right; white-space: nowrap; }
         #stkScreen .sbc-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } @media (max-width: 900px) { #stkScreen .sbc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -671,7 +671,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-b</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-c</div>
         </div>
     </div>
 
@@ -5221,15 +5221,14 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             <button class="sbc-chip ${N.P ? '' : 'on'}" onclick="stkPb('total')">Total stock</button><button class="sbc-chip ${N.P ? 'on' : ''}" onclick="stkPb('phys')">Physical only</button></div>
             <div class="stk-safe"><div class="stk-pie"><canvas id="stkChSafe"></canvas></div>
             <div class="sbc-tablewrap" style="flex:1;min-width:250px"><table class="sbc-table stk-table stk-flow" data-tf-skip="1"><thead><tr><th style="text-align:left">Safety stock check</th><th>Metres</th><th>Rs crore</th></tr></thead><tbody>
-            ${row('Safety stock to maintain (@20% or longest belt)', fm(N.S), cr(N.SV))}
-            ${row(lbl, fm(N.ST), cr(N.STV))}
-            ${row(lbl.split(' (')[0] + ' - safety stock', sgn(N.ST - N.S), cr(N.STV - N.SV), N.ST - N.S < 0 ? 'sbc-r' : 'sbc-g')}
-            ${row('Safety deficit today - ' + N.def.length + ' UMCs', fm(N.dM), cr(N.dV), 'sbc-r', "stkOv('safe:def')")}
-            ${row('Belts due in the next 6 months (CBM, up to ' + dstr(K.h.h6) + ')', fm(N.N6), cr(N.N6V))}
-            ${row('Left after 6 months - safety stock', sgn(N.left), cr(N.leftV), N.left < 0 ? 'sbc-r' : 'sbc-g')}
-            ${row('Safety deficit after 6 months - ' + N.d6.length + ' UMCs', fm(N.d6M), cr(N.d6V), 'sbc-r', "stkOv('safe:6m')")}
+            ${row('1. Safety stock to maintain (@20% or longest belt)', fm(N.S), cr(N.SV))}
+            ${row('2. ' + lbl + ' today', fm(N.ST), cr(N.STV))}
+            ${row('Today: ' + (N.ST - N.S < 0 ? 'deficit' : 'above safety stock') + ' (2 - 1)', sgn(N.ST - N.S), cr(N.STV - N.SV), N.ST - N.S < 0 ? 'sbc-r' : 'sbc-g')}
+            ${row('3. Belt replacement plan, next 6 months (up to ' + dstr(K.h.h6) + ')', fm(N.N6), cr(N.N6V))}
+            ${row('Stock left after 6 months (2 - 3)', fm(N.ST - N.N6), cr(N.STV - N.N6V))}
+            ${row('<b>After 6 months: ' + (N.left < 0 ? 'safety stock deficit' : 'above safety stock') + '</b> = 1 - (2 - 3)', (N.left < 0 ? '' : '+') + fm(Math.abs(N.left)), cr(Math.abs(N.leftV)), N.left < 0 ? 'sbc-r' : 'sbc-g')}
             </tbody></table></div></div>
-            <div class="sbc-tap">Tap the pie or a red row to list the UMCs. Plant total can look fine while single UMCs are short - the deficit rows add up only the UMCs that are short.</div>`;
+            <div class="sbc-tap">Outer ring = today, inner ring = after the next 6 months of replacements. Hover for metres and Rs, tap a ring to list the UMCs.</div><div class="sbc-note" style="margin-top:4px">UMC-wise: <a href="javascript:void(0)" onclick="stkOv('safe:def')">${N.def.length} UMCs below safety today</a> &middot; <a href="javascript:void(0)" onclick="stkOv('safe:6m')">${N.d6.length} UMCs below safety after 6 months</a> (a UMC's extra stock cannot cover another UMC, so these lists show where to order).</div>`;
     }
 
     function overview() {
@@ -5288,13 +5287,20 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                         scales: { x: Object.assign(sc('metres'), { beginAtZero: true, position: 'top' }), y: Object.assign(sc(), { ticks: { color: cssv('--text-muted') || '#8592a6', autoSkip: false, font: { size: 11, weight: '600' } } }) } } });
             }
         }
-        // 4. safety pie (covered vs deficit), total or physical stock
+        // 4. safety pie: outer ring = today, inner ring = after 6 months (plant level, against the safety stock)
         if (el('stkChSafe')) {
-            const N = safeNums();
-            K.charts.p = new Chart(el('stkChSafe'), { type: 'doughnut', data: { labels: ['Covered by stock', 'Deficit'], datasets: [{ data: [Math.round(N.cov), Math.round(N.dM)], backgroundColor: ['#22a06b', RED], borderColor: cssv('--glass-base') || '#fff', borderWidth: 2 }] },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '55%', onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOv(a[0].index ? 'safe:def' : 'safe:ok'); },
-                    plugins: { legend: { position: 'bottom', labels: { color: c.tick, boxWidth: 12 } }, tooltip: { callbacks: { label: x => { const v = x.dataIndex ? [N.dM, N.dV, N.def.length] : [N.cov, N.covV, K.stock.length - N.def.length]; return ' ' + x.label + ': ' + fm(v[0]) + ' m, Rs ' + cr(v[1]) + ' Cr (' + v[2] + ' UMCs, ' + (v[0] / N.S * 100).toFixed(1) + '%)'; } } } } },
-                plugins: [{ id: 'stkMid', afterDraw(ch) { const m = ch.getDatasetMeta(0).data[0]; if (!m) return; const g = ch.ctx; g.save(); g.textAlign = 'center'; g.fillStyle = cssv('--text-main') || '#111'; g.font = '700 15px system-ui'; g.fillText(fm(N.S) + ' m', m.x, m.y - 2); g.font = '11px system-ui'; g.fillStyle = c.tick; g.fillText('safety stock', m.x, m.y + 14); g.restore(); } }] });
+            const N = safeNums(), GRN = '#22a06b', XTR = '#7fb3ee', RD = RED;
+            const today = N.ST - N.S, after = N.left;              // + above safety, - deficit
+            const ring = v => v >= 0 ? [N.S, 0, v] : [N.S + v, -v, 0];   // [covered, deficit, extra]
+            const r1 = ring(today), r2 = ring(after);
+            const vRs = (k, v) => cr(k === 0 ? Math.min(N.SV, N.SV + (v < 0 ? (v === today ? N.STV - N.SV : N.leftV) : 0)) : Math.abs(v === today ? N.STV - N.SV : N.leftV));
+            K.charts.p = new Chart(el('stkChSafe'), { type: 'doughnut', data: { labels: ['Safety stock covered', 'Deficit', 'Above safety stock'], datasets: [
+                { label: 'Today', data: r1, backgroundColor: [GRN, RD, XTR], borderColor: cssv('--glass-base') || '#fff', borderWidth: 2 },
+                { label: 'After 6 months', data: r2, backgroundColor: [GRN, RD, XTR], borderColor: cssv('--glass-base') || '#fff', borderWidth: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '38%', onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOv(a[0].datasetIndex ? 'safe:6m' : 'safe:def'); },
+                    plugins: { legend: { position: 'bottom', labels: { color: c.tick, boxWidth: 12, filter: (it, d) => it.index !== 2 || r1[2] > 0 || r2[2] > 0 } },
+                        tooltip: { callbacks: { title: x => x[0].dataset.label + (x[0].datasetIndex ? ' (stock ' + fm(N.ST) + ' - due ' + fm(N.N6) + ' = ' + fm(N.ST - N.N6) + ' m)' : ' (stock ' + fm(N.ST) + ' m)'), label: x => { const v = x.datasetIndex ? after : today; return ' ' + x.label + ': ' + fm(x.raw) + ' m, Rs ' + vRs(x.dataIndex, v) + ' Cr (' + (x.raw / N.S * 100).toFixed(1) + '% of safety stock)'; } }, filter: x => x.raw > 0 } } },
+                plugins: [{ id: 'stkMid', afterDraw(ch) { const m = ch.getDatasetMeta(0).data[0]; if (!m) return; const g = ch.ctx; g.save(); g.textAlign = 'center'; g.fillStyle = after < 0 ? (cssv('--red') || '#d33') : (cssv('--green') || '#22a06b'); g.font = '800 13px system-ui'; g.fillText((after < 0 ? '-' : '+') + fm(Math.abs(after)), m.x, m.y - 1); g.font = '10px system-ui'; g.fillStyle = c.tick; g.fillText('after 6M', m.x, m.y + 12); g.restore(); } }] });
         }
         // 3. dept
         const D = {}; K.uf.forEach(b => { if (!b.cbm || !b.len || !b.umc || !K.byUmc[b.umc] || b.notEx) return; const d = b.dept || '-'; const o = D[d] = D[d] || [0, 0, 0, 0]; if (b.cbm < K.h.t0) o[0] += b.len; else if (b.cbm <= K.h.h3) o[1] += b.len; else if (b.cbm <= K.h.h6) o[2] += b.len; else if (b.cbm <= K.h.h8) o[3] += b.len; });
