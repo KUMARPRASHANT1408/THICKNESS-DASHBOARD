@@ -673,7 +673,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-d</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-e</div>
         </div>
     </div>
 
@@ -5225,12 +5225,12 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             <div class="sbc-tablewrap" style="flex:1;min-width:250px"><table class="sbc-table stk-table stk-flow" data-tf-skip="1"><thead><tr><th style="text-align:left">Safety stock check</th><th>Metres</th><th>Rs crore</th></tr></thead><tbody>
             ${row('1. Safety stock to maintain (@20% or longest belt)', fm(N.S), cr(N.SV))}
             ${row('2. ' + lbl + ' today', fm(N.ST), cr(N.STV))}
-            ${row('Today: ' + (N.ST - N.S < 0 ? 'deficit' : 'above safety stock') + ' (2 - 1)', sgn(N.ST - N.S), cr(N.STV - N.SV), N.ST - N.S < 0 ? 'sbc-r' : 'sbc-g')}
+            ${row('<b>Today: safety stock deficit</b> - ' + N.def.length + ' UMCs below safety', fm(N.dM), cr(N.dV), 'sbc-r', "stkOv('safe:def')")}
             ${row('3. Belt replacement plan, next 6 months (up to ' + dstr(K.h.h6) + ')', fm(N.N6), cr(N.N6V))}
             ${row('Stock left after 6 months (2 - 3)', fm(N.ST - N.N6), cr(N.STV - N.N6V))}
-            ${row('<b>After 6 months: ' + (N.left < 0 ? 'safety stock deficit' : 'above safety stock') + '</b> = 1 - (2 - 3)', (N.left < 0 ? '' : '+') + fm(Math.abs(N.left)), cr(Math.abs(N.leftV)), N.left < 0 ? 'sbc-r' : 'sbc-g')}
+            ${row('<b>After 6 months: safety stock deficit</b> - ' + N.d6.length + ' UMCs below safety', fm(N.d6M), cr(N.d6V), 'sbc-r', "stkOv('safe:6m')")}
             </tbody></table></div></div>
-            <div class="sbc-tap">Outer ring = today, inner ring = after the next 6 months of replacements. Hover for metres and Rs, tap a ring to list the UMCs.</div><div class="sbc-note" style="margin-top:4px">UMC-wise: <a href="javascript:void(0)" onclick="stkOv('safe:def')">${N.def.length} UMCs below safety today</a> &middot; <a href="javascript:void(0)" onclick="stkOv('safe:6m')">${N.d6.length} UMCs below safety after 6 months</a> (a UMC's extra stock cannot cover another UMC, so these lists show where to order).</div>`;
+            <div class="sbc-tap">Outer ring = today, inner ring = after the next 6 months of replacements. Hover for metres and Rs, tap a ring or a red row to list the UMCs.</div><div class="sbc-note" style="margin-top:4px">Deficit is added UMC by UMC: extra stock of one UMC cannot be used for another UMC's conveyor, so only the short UMCs are counted.</div></div>`;
     }
 
     function overview() {
@@ -5292,29 +5292,27 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         // 4. safety pie: outer ring = today, inner ring = after 6 months (plant level, against the safety stock)
         if (el('stkChSafe')) {
             const N = safeNums(), GRN = '#22a06b', XTR = '#7fb3ee', RD = RED;
-            const today = N.ST - N.S, after = N.left;              // + above safety, - deficit
-            const ring = v => v >= 0 ? [N.S, 0, v] : [N.S + v, -v, 0];   // [covered, deficit, extra]
-            const r1 = ring(today), r2 = ring(after);
-            const vRs = (k, v) => cr(k === 0 ? Math.min(N.SV, N.SV + (v < 0 ? (v === today ? N.STV - N.SV : N.leftV) : 0)) : Math.abs(v === today ? N.STV - N.SV : N.leftV));
-            K.charts.p = new Chart(el('stkChSafe'), { type: 'doughnut', data: { labels: ['Safety stock covered', 'Deficit', 'Above safety stock'], datasets: [
+            const r1 = [N.S - N.dM, N.dM, 0], r2 = [N.S - N.d6M, N.d6M, 0];   // UMC-wise: covered vs deficit
+            const vRs = (k, six) => cr(k === 0 ? N.SV - (six ? N.d6V : N.dV) : (six ? N.d6V : N.dV));
+            K.charts.p = new Chart(el('stkChSafe'), { type: 'doughnut', data: { labels: ['Safety stock covered', 'Deficit', ''], datasets: [
                 { label: 'Today', data: r1, backgroundColor: [GRN, RD, XTR], borderColor: cssv('--glass-base') || '#fff', borderWidth: 2 },
                 { label: 'After 6 months', data: r2, backgroundColor: [GRN, RD, XTR], borderColor: cssv('--glass-base') || '#fff', borderWidth: 2 }] },
                 options: { responsive: true, maintainAspectRatio: false, cutout: '38%', onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOv(a[0].datasetIndex ? 'safe:6m' : 'safe:def'); },
-                    plugins: { legend: { position: 'bottom', labels: { color: c.tick, boxWidth: 12, filter: (it, d) => it.index !== 2 || r1[2] > 0 || r2[2] > 0 } },
+                    plugins: { legend: { position: 'bottom', labels: { color: c.tick, boxWidth: 12, filter: it => it.index !== 2 } },
                         tooltip: { enabled: false, filter: x => x.raw > 0, external: ctx => {   // HTML tooltip so it is never cut by the small pie box
                             let tt = document.getElementById('stkPieTip');
                             if (!tt) { tt = document.createElement('div'); tt.id = 'stkPieTip'; tt.className = 'stk-tip'; document.body.appendChild(tt); }
                             const m = ctx.tooltip; if (!m || m.opacity === 0 || !m.dataPoints || !m.dataPoints.length) { tt.style.opacity = 0; return; }
-                            const x = m.dataPoints[0], six = x.datasetIndex === 1, v = six ? after : today;
+                            const x = m.dataPoints[0], six = x.datasetIndex === 1, nU = six ? N.d6.length : N.def.length;
                             const col = ['#22a06b', RD, XTR][x.dataIndex];
-                            tt.innerHTML = `<b>${six ? 'After 6 months' : 'Today'}</b><div class="stk-tip-s">${six ? 'Stock ' + fm(N.ST) + ' - due ' + fm(N.N6) + ' = ' + fm(N.ST - N.N6) + ' m' : 'Stock ' + fm(N.ST) + ' m'}</div><div><i style="background:${col}"></i>${x.label}: <b>${fm(x.raw)} m</b></div><div>Rs ${vRs(x.dataIndex, v)} Cr &middot; ${(x.raw / N.S * 100).toFixed(1)}% of safety stock</div>`;
+                            tt.innerHTML = `<b>${six ? 'After 6 months' : 'Today'}</b><div class="stk-tip-s">${six ? 'Stock ' + fm(N.ST) + ' - due ' + fm(N.N6) + ' = ' + fm(N.ST - N.N6) + ' m' : 'Stock ' + fm(N.ST) + ' m'}</div><div><i style="background:${col}"></i>${x.label}: <b>${fm(x.raw)} m</b></div><div>Rs ${vRs(x.dataIndex, six)} Cr &middot; ${(x.raw / N.S * 100).toFixed(1)}% of safety stock</div>${x.dataIndex === 1 ? `<div class="stk-tip-s">${nU} UMCs below safety stock - tap for list</div>` : ''}`;
                             const r = ctx.chart.canvas.getBoundingClientRect();
                             let L = r.left + window.scrollX + m.caretX + 14, Tp = r.top + window.scrollY + m.caretY - 10;
                             tt.style.opacity = 1; const w = tt.offsetWidth;
                             if (L + w > window.scrollX + document.documentElement.clientWidth - 8) L = Math.max(8, r.left + window.scrollX + m.caretX - w - 14);
                             tt.style.left = L + 'px'; tt.style.top = Tp + 'px';
                         } } } },
-                plugins: [{ id: 'stkMid', afterDraw(ch) { const m = ch.getDatasetMeta(0).data[0]; if (!m) return; const g = ch.ctx; g.save(); g.textAlign = 'center'; g.fillStyle = after < 0 ? (cssv('--red') || '#d33') : (cssv('--green') || '#22a06b'); g.font = '800 13px system-ui'; g.fillText((after < 0 ? '-' : '+') + fm(Math.abs(after)), m.x, m.y - 1); g.font = '10px system-ui'; g.fillStyle = c.tick; g.fillText('after 6M', m.x, m.y + 12); g.restore(); } }] });
+                plugins: [{ id: 'stkMid', afterDraw(ch) { const m = ch.getDatasetMeta(0).data[0]; if (!m) return; const g = ch.ctx; g.save(); g.textAlign = 'center'; g.fillStyle = cssv('--red') || '#d33'; g.font = '800 13px system-ui'; g.fillText('-' + fm(N.d6M), m.x, m.y - 1); g.font = '10px system-ui'; g.fillStyle = c.tick; g.fillText('after 6M', m.x, m.y + 12); g.restore(); } }] });
         }
         // 3. dept
         const D = {}; K.uf.forEach(b => { if (!b.cbm || !b.len || !b.umc || !K.byUmc[b.umc] || b.notEx) return; const d = b.dept || '-'; const o = D[d] = D[d] || [0, 0, 0, 0]; if (b.cbm < K.h.t0) o[0] += b.len; else if (b.cbm <= K.h.h3) o[1] += b.len; else if (b.cbm <= K.h.h6) o[2] += b.len; else if (b.cbm <= K.h.h8) o[3] += b.len; });
@@ -5498,7 +5496,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             if (T.graph) rows.push(R('Graphene Stock', '', km(T.graph), crs(T.vGraph)));
             rows.push(R('PR', '', km(sum(S, 'pr')), crs(sum(S, x => x.pr * x.rate))), R('PO / DO', '', km(sum(S, 'po')), crs(sum(S, x => x.po * x.rate))), R('VMI', '', km(sum(S, 'vmi')), crs(sum(S, x => x.vmi * x.rate))));
             if (sum(S, 'sc')) rows.push(R('SC', '', km(sum(S, 'sc')), crs(sum(S, x => x.sc * x.rate))));
-            rows.push(R('Inventory', '', km(T.phys), crs(T.vPhys)), R('Safety Stock (@20% or longest belt)', '', km(T.safety), crs(sum(S, x => x.safety * x.rate))), R('Belt replacement Plan in next 3 Months', d3.length, km(sum(d3, o => o.b.len)), crs(sum(d3, o => o.b.len * o.x.rate))), R('Belt replacement Plan in next 6 Months', d6.length, km(sum(d6, o => o.b.len)), crs(sum(d6, o => o.b.len * o.x.rate))), R('Safety Stock Deficit after next 6 Months', '', km(Math.max(0, -SN.left)), SN.left < 0 ? crs(-SN.leftV) : '0.00'));
+            rows.push(R('Inventory', '', km(T.phys), crs(T.vPhys)), R('Safety Stock (@20% or longest belt)', '', km(T.safety), crs(sum(S, x => x.safety * x.rate))), R('Belt replacement Plan in next 3 Months', d3.length, km(sum(d3, o => o.b.len)), crs(sum(d3, o => o.b.len * o.x.rate))), R('Belt replacement Plan in next 6 Months', d6.length, km(sum(d6, o => o.b.len)), crs(sum(d6, o => o.b.len * o.x.rate))), R('Safety Stock Deficit today (UMC-wise)', SN.def.length, km(SN.dM), crs(SN.dV)), R('Safety Stock Deficit after next 6 Months (UMC-wise)', SN.d6.length, km(SN.d6M), crs(SN.d6V)));
             const tw = W, w1 = Math.round(tw * 0.55), w2 = Math.round(tw * 0.15);
             const head = `<w:tbl><w:tblPr><w:tblW w:w="${W}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(b => `<w:${b} w:val="single" w:sz="8" w:space="0" w:color="404040"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${w1 + w2}"/><w:gridCol w:w="${tw - w1 - w2}"/></w:tblGrid><w:tr><w:trPr><w:trHeight w:val="760"/></w:trPr>${cell('Fabric Belt  MIS (Summary)', w1 + w2, { b: 1, sz: 36, fill: 'D9E1F2', jc: 'center' })}${cell('Date:  ' + ds(d0), tw - w1 - w2, { b: 1, sz: 32, fill: 'D9E1F2', jc: 'center' })}</w:tr></w:tbl>`;
             let body = head + table([{ h: '', w: 0.55, hf: 'FFFFFF' }, { h: 'Nos', w: 0.15 }, { h: 'Km', w: 0.15 }, { h: '₹ Cr', w: 0.15 }], rows, { sz: big, hsz: 26, rh: 540, hh: 560, bc: '404040', plainHead: 1 })
@@ -5507,7 +5505,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const n = []; const sh3 = S.filter(x => x.b3 < 0);
             n.push(`Deficit in Safety stock for ${physLow.length} UMCs. (Physical stock; with belts under PR / PO / DO / VMI, ${totLow.length} UMCs remain below safety stock - ${fm(defT)} m, ₹ ${crs(defTV)} Cr.)`);
             n.push(`Deficit in Belt stock in ${sh3.length} UMCs for Conveyors to be replaced in next 3 months.` + (sh3.filter(x => x.order > 0).length ? ` (Belts are under PO - ${sh3.filter(x => x.order > 0).length} UMCs.)` : ''));
-            n.push(`Safety stock to maintain ${fm(SN.S)} m. Total stock (Physical+PR+PO+DO+VMI) ${fm(SN.ST)} m, belt replacement plan for next 6 months ${fm(SN.N6)} m (${d6.length} belts). Stock after 6 months ${fm(SN.ST - SN.N6)} m, so safety stock ${SN.left < 0 ? 'deficit' : 'surplus'} after next 6 months = ${fm(Math.abs(SN.left))} m (₹ ${crs(Math.abs(SN.leftV))} Cr). UMC-wise ${d6L.length} UMCs will be below safety stock.`);
+            n.push(`Safety stock to maintain ${fm(SN.S)} m. Total stock (Physical+PR+PO+DO+VMI) ${fm(SN.ST)} m, belt replacement plan for next 6 months ${fm(SN.N6)} m (${d6.length} belts). Safety stock deficit today ${fm(SN.dM)} m in ${SN.def.length} UMCs; after next 6 months' replacements it becomes ${fm(SN.d6M)} m (₹ ${crs(SN.d6V)} Cr) in ${SN.d6.length} UMCs (deficit counted UMC-wise, as extra stock of one UMC cannot be used for another).`);
             zero.forEach(x => n.push(`For UMC ${x.umc} critical stock currently not available.` + (x.order ? ` Belt under PO / DO: ${fm(x.order)} m.` : '') + (x.rem ? ' ' + x.rem : '')));
             physLow.filter(x => !x.zero && x.rem).forEach(x => n.push(`For UMC ${x.umc} current stock below safety stock (${fm(x.phys)} m against ${fm(x.safety)} m). ${x.rem}`));
             const hw = Object.values(K.thk).filter(t => !t.notEx && t.wr > 1.2 && K.byUmc[K.convUmc[key(t.name)]]).sort((a, b) => b.wr - a.wr);
