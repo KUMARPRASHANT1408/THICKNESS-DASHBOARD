@@ -573,6 +573,11 @@
         .stk-lg { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .75rem; color: var(--text-2); }
         .stk-lg span { display: inline-flex; align-items: center; gap: 5px; } .stk-lg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
         .stk-chart { position: relative; height: 300px; }
+        .stk-scroll { max-height: 340px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
+        .stk-safe { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; } .stk-pie { position: relative; width: 220px; height: 240px; margin: 0 auto; }
+        .stk-flow td, .stk-flow th { padding: 6px 8px !important; font-size: .8rem; }
+        .stk-flow td:first-child { white-space: normal !important; min-width: 170px; } .stk-flow { width: 100% !important; min-width: 0 !important; } .stk-flow td:not(:first-child), .stk-flow th:not(:first-child) { text-align: right; white-space: nowrap; }
+        #stkScreen .sbc-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } @media (max-width: 900px) { #stkScreen .sbc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         .stk-convs { display: flex; flex-wrap: wrap; gap: 4px; } .stk-convs span { font-size: .7rem; padding: 2px 7px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--glass-border); }
         @media (max-width: 600px) { .stk-ff .stk-q { grid-column: 1 / -1; } .stk-ff { grid-template-columns: 1fr 1fr; } }
         /* table tools: search + Excel-style filter */
@@ -1047,6 +1052,7 @@
             <h2><i class="fas fa-boxes-stacked" style="color:#14b8a6"></i> Belt Stock &amp; UMC Finder</h2>
             <button class="btn-slate" onclick="stkReload()" title="Load the latest sheets again"><i class="fas fa-sync-alt"></i> Refresh</button>
             <button class="btn-slate" onclick="stkExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
+            <button class="btn-slate" onclick="stkWord()" title="Monthly Fabric Belt MIS report as an editable Word file"><i class="fas fa-file-word"></i> MIS Report (Word)</button>
             <button class="btn-slate" onclick="toggleTheme()" title="Switch light / dark theme"><i class="fas fa-moon js-theme-ico"></i> Theme</button>
         </div>
         <div id="stkTabs" style="margin-bottom:6px"></div>
@@ -4999,7 +5005,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             arcF: find(/arc\d*forech/), arcO: find(/arc\d*oriental/), vmiF: find(/forechvmi/), vmiO: find(/orientalvmi/),
             rate: find(/^unitrate/), sup: find(/^arcsupplier/), loc: find(/^installedlocation/), iq: find(/^installedqty/), il: find(/^installedlength/), longest: find(/^longestbelt/),
             phys: find(/^physicalcurrentstock$/), graph: find(/^physicalcurrentstockgraphene/), vmi: find(/^vmiqty/), sc: find(/^scqty/), pr: find(/^prqty/), po: find(/^podoqty/),
-            total: find(/^totalstock(current|$)/), safety: find(/^safetystock/), cons6: find(/^consumptionin6/), rop: find(/^reorderpoint/), roq: find(/^reorderqty/), rem: find(/^remarks/), reqLen: find(/^requiredlength/)
+            total: find(/^totalstock(current|$)/), inv: find(/^inventory/), safety: find(/^safetystock/), cons6: find(/^consumptionin6/), rop: find(/^reorderpoint/), roq: find(/^reorderqty/), rem: find(/^remarks/), reqLen: find(/^requiredlength/)
         };
         const deptCols = H.filter(h => /nos$/.test(nh(h))).map(h => { const base = nh(h).replace(/nos$/, ''); return { label: String(h).split(/[\s �(]/)[0], n: h, l: H.find(x => nh(x) === base + 'length') }; });
         const g = (r, c) => c ? r[c] : '';
@@ -5016,7 +5022,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             };
             o.total = num(g(r, C.total)) || (o.phys + o.graph + o.vmi + o.sc + o.pr + o.po);
             o.order = o.vmi + o.sc + o.pr + o.po;   // not yet in store
-            o.vPhys = o.phys * o.rate; o.vGraph = o.graph * o.rate; o.vOrder = o.order * o.rate; o.vTotal = o.total * o.rate;
+            o.inv = C.inv ? num(g(r, C.inv)) : o.phys * o.rate;
+            o.vPhys = C.inv ? o.inv : o.phys * o.rate; o.vGraph = o.graph * o.rate; o.vOrder = o.order * o.rate; o.vTotal = o.total * o.rate;
             if (K.byUmc[u]) { ['phys', 'graph', 'vmi', 'sc', 'pr', 'po', 'total', 'order', 'vPhys', 'vGraph', 'vOrder', 'vTotal'].forEach(f => K.byUmc[u][f] += o[f]); return; }
             K.byUmc[u] = o; K.stock.push(o);
         });
@@ -5025,7 +5032,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const cbmCol = Object.keys(thk[0] || {}).find(k => /^next prediction\s*\(cbm\)/i.test(String(k).replace(/\s+/g, ' ')));
         thk.forEach(r => {
             const c = key(r['Conveyor']); if (!c || c === '#REF!') return;
-            K.thk[c] = { dept: ndept(r['DEPT']), name: clean(r['Conveyor']), len: num(r['belt Length'] || r['Belt Length']), cbm: pdate(r[cbmCol]), lastRep: pdate(r['Last Belt Replacement']), lastThk: pdate(r['Last Thickness Date']), minThk: clean(r['MIN THICKNESS']), cat: clean(r['CATEGORY']).toUpperCase() };
+            K.thk[c] = { dept: ndept(r['DEPT']), name: clean(r['Conveyor']), len: num(r['belt Length'] || r['Belt Length']), cbm: pdate(r[cbmCol]), lastRep: pdate(r['Last Belt Replacement']), lastThk: pdate(r['Last Thickness Date']), minThk: clean(r['MIN THICKNESS']), cat: clean(r['CATEGORY']).toUpperCase(), wr: (() => { const kc = Object.keys(r).find(k => /^current wear rate/i.test(k)), kp = Object.keys(r).find(k => /^planned wear rate/i.test(k)); const c = num(r[kc]), pl = num(r[kp]); return pl > 0 ? c / pl : 0; })(), notEx: /not\s*exist|bucket/i.test(String(r['Belt CoverGrade'] || '')) };   // 'Not Existing' / bucket conveyor belts are not planned from stock
         });
         // UMC finder sheet: conveyor -> New UMC + spec
         K.uf = []; K.convUmc = {};
@@ -5040,7 +5047,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 conv: c, name: clean(r[U.conv]), dept: t.dept || ndept(r[U.dept]) || '-', sec: blank(r[U.sec]), mat: blank(r[U.mat]), width: blank(r[U.width]), spec: blank(r[U.spec]), old: blank(r[U.old]),
                 umc: umc && umc !== '0' ? umc : '', carcass: blank(r[U.carcass]).toUpperCase(), rating: blank(r[U.rating]), top: blank(r[U.top]), bot: blank(r[U.bot]), thick: blank(r[U.thick]),
                 grade: gradeOf(blank(r[U.grade])), len: t.len || num(r[U.len]), ga: blank(r[U.ga]), rem: blank(r[U.rem]),
-                cbm: t.cbm || null, lastRep: t.lastRep || null, lastThk: t.lastThk || null, minThk: t.minThk || '', inThk: !!K.thk[c]
+                cbm: t.cbm || null, lastRep: t.lastRep || null, lastThk: t.lastThk || null, minThk: t.minThk || '', inThk: !!K.thk[c], notEx: !!t.notEx
             };
             if (K.convUmc[c]) return; K.convUmc[c] = o.umc; K.uf.push(o);
         });
@@ -5050,7 +5057,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         K.h = { t0, h3, h6, h8 };
         K.need = {};
         K.uf.forEach(b => {
-            if (!b.umc || !K.byUmc[b.umc] || !b.cbm || !b.len) return;   // only UMCs kept in stock (the stock sheet list)
+            if (!b.umc || !K.byUmc[b.umc] || !b.cbm || !b.len || b.notEx) return;   // only UMCs kept in stock; belts marked 'Not Existing' in the thickness sheet are skipped
             const n = K.need[b.umc] = K.need[b.umc] || { m3: 0, m6: 0, m8: 0, over: 0, belts: [] };
             if (b.cbm <= h8) { n.m8 += b.len; n.belts.push(b); }
             if (b.cbm <= h6) n.m6 += b.len;
@@ -5062,6 +5069,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             s.n3 = n.m3; s.n6 = n.m6; s.n8 = n.m8; s.over = n.over;
             s.b3 = s.phys - s.n3; s.b6 = s.total - s.n6; s.b8 = s.total - s.n8;     // balance after need (as in the Power BI cards)
             s.belowSafe = s.phys < s.safety; s.safeGap = s.phys - s.safety;
+            s.zero = s.phys <= 0;
+            s.defT = Math.max(0, s.safety - s.total); s.defP = Math.max(0, s.safety - s.phys);                 // safety stock deficit today
+            s.def6T = Math.max(0, s.safety - (s.total - s.n6)); s.def6P = Math.max(0, s.safety - (s.phys - s.n6)); // deficit after the next 6 months of replacements
             s.conv = K.uf.filter(b => b.umc === s.umc);
         });
         K.depts = Array.from(new Set(K.uf.map(b => b.dept).filter(d => d && d !== '-'))).sort();
@@ -5111,7 +5121,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             n: K.stock.length, phys: s('phys'), graph: s('graph'), order: s('order'), total: s('total'), vPhys: s('vPhys'), vGraph: s('vGraph'), vOrder: s('vOrder'), vTotal: s('vTotal'),
             safety: s('safety'), inst: s('il'), below, belowM: below.reduce((a, x) => a - x.safeGap, 0), belowV: below.reduce((a, x) => a - x.safeGap * x.rate, 0),
             n3: s('n3'), n6: s('n6'), n8: s('n8'),
-            short3: K.stock.filter(x => x.b3 < 0), short8: K.stock.filter(x => x.b8 < 0)
+            short3: K.stock.filter(x => x.b3 < 0), short6: K.stock.filter(x => x.b6 < 0), short8: K.stock.filter(x => x.b8 < 0), zero: K.stock.filter(x => x.zero)
         };
     }
     const kpi = (v, l, sub, cls, click) => `<div class="sbc-kpi glass-panel${click ? ' stk-click' : ''}"${click ? ` onclick="${click}"` : ''}>${sub ? `<small class="stk-sub">${sub}</small>` : ''}<b class="${cls || ''}">${v}</b><span>${l}</span></div>`;
@@ -5131,6 +5141,30 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 ${L.map(x => { const g = x.phys + x.graph + x.order - x.safety; return `<tr class="stk-row" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${d(x.po)}</td><td>${d(x.pr)}</td><td>${d(x.sc)}</td><td>${d(x.vmi)}</td><td><b>${fm(x.order)}</b></td><td>${lk(x.vOrder)}</td><td class="${x.belowSafe ? 'sbc-r' : ''}">${fm(x.phys + x.graph)}</td><td>${fm(x.safety)}</td><td>${sg(g)}</td><td>${d(x.n3)}</td><td style="text-align:left;white-space:normal;min-width:220px">${esc(x.rem || '-')}</td></tr>`; }).join('')}
                 </tbody><tfoot><tr class="tot"><td>Total</td><td></td><td></td><td>${fm(t('po'))}</td><td>${fm(t('pr'))}</td><td>${fm(t('sc'))}</td><td>${fm(t('vmi'))}</td><td>${fm(t('order'))}</td><td>${lk(t('vOrder'))}</td><td></td><td></td><td></td><td></td><td></td></tr></tfoot></table></div></div>`;
         }
+        if (K.ov === 'zero') {
+            const L = K.stock.filter(x => x.zero).sort((a, b) => b.n3 - a.n3 || b.safety - a.safety);
+            return `<div class="glass-panel sbc-panel" id="stkOvPanel">${head('<i class="fas fa-ban"></i> Zero physical stock - ' + L.length + ' UMCs')}
+                <div class="sbc-tablewrap"><table class="sbc-table stk-table"><thead><tr><th>UMC</th><th>Specification</th><th>Grade</th><th>Safety (m)</th><th>Longest belt (m)</th><th>On order (m)</th><th>Due 3M (m)</th><th>Due 6M (m)</th><th>Conveyors</th><th>Remarks</th></tr></thead><tbody>
+                ${L.map(x => `<tr class="stk-row" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${fm(x.safety)}</td><td>${fm(x.longest)}</td><td class="${x.order ? 'sbc-g' : 'sbc-r'}">${x.order ? fm(x.order) : 'None'}</td><td class="${x.n3 ? 'sbc-r' : ''}">${d(x.n3)}</td><td>${d(x.n6)}</td><td style="text-align:left;white-space:normal;min-width:160px">${esc(x.loc || '-')}</td><td style="text-align:left;white-space:normal;min-width:200px">${esc(x.rem || '-')}</td></tr>`).join('')}
+                </tbody></table></div></div>`;
+        }
+        if (K.ov.indexOf('safe:') === 0) {
+            const N = safeNums(), k = K.ov.slice(5), st = N.st, bl = N.P ? 'Physical' : 'Total stock';
+            if (k === '6m') {
+                const L = N.d6.slice().sort((a, b) => (b.safety - (st(b) - b.n6)) * b.rate - (a.safety - (st(a) - a.n6)) * a.rate);
+                return `<div class="glass-panel sbc-panel" id="stkOvPanel">${head('<i class="fas fa-shield-halved"></i> Safety deficit after 6 months (' + bl + ') - ' + L.length + ' UMCs, ' + fm(N.d6M) + ' m, Rs ' + cr(N.d6V) + ' Cr')}
+                    <div class="sbc-note" style="margin:0 0 6px">${bl} minus belts due by ${dstr(K.h.h6)} (CBM), compared with the safety stock.</div>
+                    <div class="sbc-tablewrap"><table class="sbc-table stk-table"><thead><tr><th>UMC</th><th>Specification</th><th>Grade</th><th>Safety (m)</th><th>${bl} (m)</th><th>Due 6M (m)</th><th>Left after 6M (m)</th><th>Deficit (m)</th><th>Deficit (Rs lakh)</th><th>On order (m)</th></tr></thead><tbody>
+                    ${L.map(x => { const l = st(x) - x.n6; return `<tr class="stk-row" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${fm(x.safety)}</td><td>${fm(st(x))}</td><td>${d(x.n6)}</td><td>${sg(l)}</td><td class="sbc-r"><b>${fm(x.safety - l)}</b></td><td>${lk((x.safety - l) * x.rate)}</td><td>${d(x.order)}</td></tr>`; }).join('')}
+                    </tbody><tfoot><tr class="tot"><td>Total</td><td></td><td></td><td>${fm(L.reduce((a, x) => a + x.safety, 0))}</td><td>${fm(L.reduce((a, x) => a + st(x), 0))}</td><td>${fm(L.reduce((a, x) => a + x.n6, 0))}</td><td></td><td>${fm(N.d6M)}</td><td>${lk(N.d6V)}</td><td></td></tr></tfoot></table></div></div>`;
+            }
+            const def = k === 'def', L = K.stock.filter(x => def ? st(x) < x.safety : st(x) >= x.safety).sort((a, b) => def ? (b.safety - st(b)) * b.rate - (a.safety - st(a)) * a.rate : (st(b) - b.safety) - (st(a) - a.safety));
+            const t = f => L.reduce((a, x) => a + f(x), 0);
+            return `<div class="glass-panel sbc-panel" id="stkOvPanel">${head('<i class="fas fa-shield-halved"></i> ' + (def ? 'Below safety stock' : 'At or above safety stock') + ' (' + bl + ') - ' + L.length + ' UMCs' + (def ? ', ' + fm(N.dM) + ' m, Rs ' + cr(N.dV) + ' Cr short' : ''))}
+                <div class="sbc-tablewrap"><table class="sbc-table stk-table"><thead><tr><th>UMC</th><th>Specification</th><th>Grade</th><th>Safety (m)</th><th>Physical (m)</th><th>On order (m)</th><th>Total (m)</th><th>${bl} - safety (m)</th><th>${def ? 'Deficit' : 'Above safety'} (Rs lakh)</th><th>Due 3M (m)</th><th>Due 6M (m)</th><th>Remarks</th></tr></thead><tbody>
+                ${L.map(x => `<tr class="stk-row" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${fm(x.safety)}</td><td class="${x.belowSafe ? 'sbc-r' : ''}">${fm(x.phys)}</td><td>${d(x.order)}</td><td>${fm(x.total)}</td><td>${sg(st(x) - x.safety)}</td><td>${lk(Math.abs(st(x) - x.safety) * x.rate)}</td><td>${d(x.n3)}</td><td>${d(x.n6)}</td><td style="text-align:left;white-space:normal;min-width:200px">${esc(x.rem || '-')}</td></tr>`).join('')}
+                </tbody><tfoot><tr class="tot"><td>Total</td><td></td><td></td><td>${fm(t(x => x.safety))}</td><td>${fm(t(x => x.phys))}</td><td>${fm(t(x => x.order))}</td><td>${fm(t(x => x.total))}</td><td>${fm(t(x => st(x) - x.safety))}</td><td>${lk(t(x => Math.abs(st(x) - x.safety) * x.rate))}</td><td>${fm(t(x => x.n3))}</td><td>${fm(t(x => x.n6))}</td><td></td></tr></tfoot></table></div></div>`;
+        }
         if (K.ov.indexOf('grade:') === 0) {
             const g = K.ov.slice(6), L = K.stock.filter(x => (x.grade || '-') === g).sort((a, b) => b.vTotal - a.vTotal);
             const t = f => L.reduce((a, x) => a + (x[f] || 0), 0);
@@ -5143,7 +5177,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const [dp, bk] = K.ov.slice(5).split('|'), b = bk === '' || bk == null ? -1 : +bk;
             const BK = ['CBM passed', 'Next 3 months', '3-6 months', '6-8 months'];
             const bOf = x => x.cbm < K.h.t0 ? 0 : (x.cbm <= K.h.h3 ? 1 : (x.cbm <= K.h.h6 ? 2 : 3));
-            const all = K.uf.filter(x => (x.dept || '-') === dp && x.cbm && x.len && x.umc && K.byUmc[x.umc] && x.cbm <= K.h.h8);
+            const all = K.uf.filter(x => (x.dept || '-') === dp && x.cbm && x.len && x.umc && K.byUmc[x.umc] && !x.notEx && x.cbm <= K.h.h8);
             const L = all.filter(x => b < 0 || bOf(x) === b).sort((a, c) => a.cbm - c.cbm);
             const chip = (i, l) => `<button class="sbc-chip ${b === i ? 'on' : ''}" onclick="stkOv('dept:${dp}|${i < 0 ? '' : i}')">${l} (${fm(all.filter(x => i < 0 || bOf(x) === i).reduce((a, x) => a + x.len, 0))} m)</button>`;
             return `<div class="glass-panel sbc-panel" id="stkOvPanel">${head('<i class="fas fa-industry"></i> ' + esc(dp) + ' - belts due in the next 8 months')}
@@ -5165,20 +5199,57 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         return '';
     }
 
+    // ---------------- safety stock: pie + 6-month view ----------------
+    window.stkPb = function (b) { K.pb = b; render(); };
+    function safeNums() {
+        const P = K.pb === 'phys', st = x => P ? x.phys : x.total;
+        const S = K.stock.reduce((a, x) => a + x.safety, 0), SV = K.stock.reduce((a, x) => a + x.safety * x.rate, 0);
+        const ST = K.stock.reduce((a, x) => a + st(x), 0);
+        const def = K.stock.filter(x => st(x) < x.safety), dM = def.reduce((a, x) => a + x.safety - st(x), 0), dV = def.reduce((a, x) => a + (x.safety - st(x)) * x.rate, 0);
+        const N6 = K.stock.reduce((a, x) => a + x.n6, 0), N6V = K.stock.reduce((a, x) => a + x.n6 * x.rate, 0);
+        const left = ST - N6 - S;
+        const STV = K.stock.reduce((a, x) => a + (P ? x.vPhys : x.vPhys + x.vGraph + x.vOrder), 0);   // value as in the cards (Inventory column for store stock)
+        const leftV = STV - N6V - SV;
+        const d6 = K.stock.filter(x => st(x) - x.n6 < x.safety), d6M = d6.reduce((a, x) => a + x.safety - (st(x) - x.n6), 0), d6V = d6.reduce((a, x) => a + (x.safety - (st(x) - x.n6)) * x.rate, 0);
+        return { P, st, S, SV, ST, STV, def, dM, dV, cov: S - dM, covV: SV - dV, N6, N6V, left, leftV, d6, d6M, d6V };
+    }
+    function safetyBox() {
+        const N = safeNums(), lbl = N.P ? 'Physical stock' : 'Total stock (store + on order)';
+        const row = (t, m, v, cls, click) => `<tr${click ? ` class="stk-row" onclick="${click}"` : ''}><td style="text-align:left">${t}</td><td class="${cls || ''}"><b>${m}</b></td><td class="${cls || ''}">${v}</td></tr>`;
+        const sgn = v => (v < 0 ? '-' : '+') + fm(Math.abs(v));
+        return `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1"><i class="fas fa-shield-halved"></i> Safety stock</h3>
+            <button class="sbc-chip ${N.P ? '' : 'on'}" onclick="stkPb('total')">Total stock</button><button class="sbc-chip ${N.P ? 'on' : ''}" onclick="stkPb('phys')">Physical only</button></div>
+            <div class="stk-safe"><div class="stk-pie"><canvas id="stkChSafe"></canvas></div>
+            <div class="sbc-tablewrap" style="flex:1;min-width:250px"><table class="sbc-table stk-table stk-flow" data-tf-skip="1"><thead><tr><th style="text-align:left">Safety stock check</th><th>Metres</th><th>Rs crore</th></tr></thead><tbody>
+            ${row('Safety stock to maintain (@20% or longest belt)', fm(N.S), cr(N.SV))}
+            ${row(lbl, fm(N.ST), cr(N.STV))}
+            ${row(lbl.split(' (')[0] + ' - safety stock', sgn(N.ST - N.S), cr(N.STV - N.SV), N.ST - N.S < 0 ? 'sbc-r' : 'sbc-g')}
+            ${row('Safety deficit today - ' + N.def.length + ' UMCs', fm(N.dM), cr(N.dV), 'sbc-r', "stkOv('safe:def')")}
+            ${row('Belts due in the next 6 months (CBM, up to ' + dstr(K.h.h6) + ')', fm(N.N6), cr(N.N6V))}
+            ${row('Left after 6 months - safety stock', sgn(N.left), cr(N.leftV), N.left < 0 ? 'sbc-r' : 'sbc-g')}
+            ${row('Safety deficit after 6 months - ' + N.d6.length + ' UMCs', fm(N.d6M), cr(N.d6V), 'sbc-r', "stkOv('safe:6m')")}
+            </tbody></table></div></div>
+            <div class="sbc-tap">Tap the pie or a red row to list the UMCs. Plant total can look fine while single UMCs are short - the deficit rows add up only the UMCs that are short.</div>`;
+    }
+
     function overview() {
         const T = totals();
-        const s3 = T.short3.reduce((a, x) => a - x.b3, 0), s8 = T.short8.reduce((a, x) => a - x.b8, 0);
-        const v8 = T.short8.reduce((a, x) => a - x.b8 * x.rate, 0);
+        const sh = (L, f) => L.reduce((a, x) => a - x[f], 0), shv = (L, f) => L.reduce((a, x) => a - x[f] * x.rate, 0);
         let h = `<div class="sbc-kpis">
-            ${kpi('Rs ' + cr(T.vPhys + T.vGraph) + ' Cr', '1. In store now (physical)', fm(T.phys + T.graph) + ' m lying in store' + (T.graph ? ` (incl. ${fm(T.graph)} m graphene)` : '') + ' &middot; tap for list', K.ov === 'store' ? 'stk-on-k' : '', "stkOv('store')")}
+            ${kpi('Rs ' + cr(T.vPhys) + ' Cr', '1. In store now (inventory)', fm(T.phys) + ' m physical stock' + (T.graph ? ` &middot; graphene ${fm(T.graph)} m (Rs ${cr(T.vGraph)} Cr) kept separate` : '') + ' &middot; tap for list', K.ov === 'store' ? 'stk-on-k' : '', "stkOv('store')")}
             ${kpi('Rs ' + cr(T.vOrder) + ' Cr', '2. Coming (on order)', fm(T.order) + ' m in PO/DO, PR, SC, VMI &middot; ' + K.stock.filter(x => x.order > 0).length + ' UMCs &middot; tap for list', K.ov === 'order' ? 'stk-on-k' : '', "stkOv('order')")}
-            ${kpi('Rs ' + cr(T.vTotal) + ' Cr', 'Total stock = 1 + 2', 'Rs ' + cr(T.vPhys + T.vGraph) + ' Cr in store + Rs ' + cr(T.vOrder) + ' Cr coming &middot; ' + fm(T.total) + ' m', '', "stkGo('all')")}
-            ${kpi(T.below.length + ' UMCs', 'Below safety stock', fm(T.belowM) + ' m short &middot; Rs ' + cr(T.belowV) + ' Cr', T.below.length ? 'sbc-r' : 'sbc-g', "stkGo('below')")}
-            ${kpi(fm(T.n3) + ' m', 'Belts due in 3 months', T.short3.length + ' UMCs short of store stock (' + fm(s3) + ' m)', T.short3.length ? 'sbc-y' : '', "stkGo('s3')")}
-            ${kpi(fm(T.n8) + ' m', 'Belts due in 8 months', T.short8.length + ' UMCs short of total stock (' + fm(s8) + ' m, Rs ' + cr(v8) + ' Cr)', T.short8.length ? 'sbc-y' : '', "stkGo('s8')")}
+            ${kpi('Rs ' + cr(T.vPhys + T.vGraph + T.vOrder) + ' Cr', 'Total stock = 1 + 2' + (T.graph ? ' + graphene' : ''), fm(T.total) + ' m &middot; ' + T.n + ' UMCs', '', "stkGo('all')")}
+            ${kpi(T.zero.length + ' UMCs', 'Zero physical stock', 'Nothing in store &middot; ' + T.zero.filter(x => x.order > 0).length + ' of them on order &middot; tap for list', T.zero.length ? 'sbc-r' : 'sbc-g', "stkOv('zero')")}
+            ${kpi(T.below.length + ' UMCs', 'Physical below safety stock', fm(T.belowM) + ' m short &middot; Rs ' + cr(T.belowV) + ' Cr', T.below.length ? 'sbc-r' : 'sbc-g', "stkGo('below')")}
+            ${kpi(fm(T.n3) + ' m', 'Belts due in 3 months', 'Up to ' + dstr(K.h.h3) + ' &middot; ' + T.short3.length + ' UMCs short of store stock (' + fm(sh(T.short3, 'b3')) + ' m)', T.short3.length ? 'sbc-y' : '', "stkGo('s3')")}
+            ${kpi(fm(T.n6) + ' m', 'Belts due in 6 months', 'Up to ' + dstr(K.h.h6) + ' &middot; ' + T.short6.length + ' UMCs short of total stock (' + fm(sh(T.short6, 'b6')) + ' m, Rs ' + cr(shv(T.short6, 'b6')) + ' Cr)', T.short6.length ? 'sbc-y' : '', "stkGo('s6')")}
+            ${kpi(fm(T.n8) + ' m', 'Belts due in 8 months', 'Up to ' + dstr(K.h.h8) + ' &middot; ' + T.short8.length + ' UMCs short of total stock (' + fm(sh(T.short8, 'b8')) + ' m, Rs ' + cr(shv(T.short8, 'b8')) + ' Cr)', T.short8.length ? 'sbc-y' : '', "stkGo('s8')")}
         </div>
-        <div class="sbc-note" style="margin:-4px 0 12px">Belts due = belts whose next CBM (thickness sheet) has already passed or falls in the next 3 / 6 / 8 whole months (3 months = up to ${dstr(K.h.h3)}, 8 months = up to ${dstr(K.h.h8)}); the full belt length is counted against its New UMC (conveyor &rarr; UMC from the UMC finder sheet). Stock value = metres &times; unit rate of the stock sheet. Tap a card, a grade bar or a department bar to see its list at the bottom.</div>
-        <div class="glass-panel sbc-panel"><h3><i class="fas fa-triangle-exclamation"></i> UMCs that run short - ${K.stock.filter(x => x.b8 < 0 || x.b3 < 0).length} UMCs (m)</h3><div class="sbc-note" style="margin:-4px 0 8px">A UMC is shown when its store stock is less than the belts due in 3 months, or its total stock (store + on order) is less than the belts due in 8 months. This is a different list from the ${K.stock.filter(x => x.belowSafe).length} UMCs below safety stock.</div><div style="overflow-x:auto"><div class="sbc-chart" id="stkBoxShort" style="height:380px;min-width:${Math.max(0, K.stock.filter(x => x.b8 < 0 || x.b3 < 0).length * 62)}px"><canvas id="stkChShort"></canvas></div></div><div class="sbc-tap">Tap a bar to open the UMC</div></div>
+        <div class="sbc-note" style="margin:-4px 0 12px">Belts due = belts whose next CBM (thickness sheet) has already passed or falls before the end of the 3rd / 6th / 8th month from now; the full belt length is counted against its New UMC (conveyor &rarr; UMC from the UMC finder sheet). Belts marked "Not Existing" or bucket conveyor (cover grade column of the thickness sheet) are left out. In store value = Inventory (Rs) column of the stock sheet. Tap a card, the pie, a grade bar or a department bar to see its list at the bottom.</div>
+        <div class="sbc-grid2">
+            <div class="glass-panel sbc-panel">${safetyBox()}</div>
+            <div class="glass-panel sbc-panel"><h3><i class="fas fa-triangle-exclamation"></i> UMCs that run short - ${K.stock.filter(x => x.b3 < 0 || x.b6 < 0 || x.b8 < 0).length} UMCs (m)</h3><div class="sbc-note" style="margin:-4px 0 8px">Store stock less than belts due in 3 months, or total stock less than belts due in 6 / 8 months. Scroll inside the chart to see all.</div><div class="stk-scroll" id="stkBoxShortWrap"><div id="stkBoxShort" style="position:relative;height:300px"><canvas id="stkChShort"></canvas></div></div><div class="sbc-tap">Tap a bar to open the UMC</div></div>
+        </div>
         <div class="sbc-grid2">
             <div class="glass-panel sbc-panel"><h3><i class="fas fa-layer-group"></i> Stock value by grade (Rs crore)</h3><div class="sbc-chart"><canvas id="stkChGrade"></canvas></div><div class="sbc-tap">Tap a bar to list the UMCs of that grade</div></div>
             <div class="glass-panel sbc-panel"><h3><i class="fas fa-industry"></i> Belts due by department (m)</h3><div class="sbc-chart"><canvas id="stkChDept"></canvas></div><div class="sbc-tap">Tap a bar to list the belts of that department</div></div>
@@ -5205,14 +5276,28 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (gl.some(k => G[k].g)) ds.push({ label: 'Graphene', data: gl.map(k => +(G[k].g / 1e7).toFixed(2)), backgroundColor: TEAL });
         ds.push({ label: 'On order', data: gl.map(k => +(G[k].o / 1e7).toFixed(2)), backgroundColor: AMB });
         if (el('stkChGrade')) K.charts.g = new Chart(el('stkChGrade'), { type: 'bar', data: { labels: gl, datasets: ds }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOv('grade:' + gl[a[0].index]); }, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { label: x => x.dataset.label + ': Rs ' + x.raw.toFixed(2) + ' Cr' } } }, scales: { x: Object.assign(sc('Rs crore'), { stacked: true, beginAtZero: true }), y: Object.assign(sc(), { stacked: true, ticks: { color: cssv('--text-muted') || '#8592a6', autoSkip: false, font: { size: 10 } } }) } } });
-        // 2. short UMCs
-        const sh = K.stock.filter(x => x.b8 < 0 || x.b3 < 0).sort((a, b) => Math.min(a.b8, a.b3) - Math.min(b.b8, b.b3));
+        // 2. short UMCs - sideways bars like the grade chart, scroll inside the box
+        const sh = K.stock.filter(x => x.b3 < 0 || x.b6 < 0 || x.b8 < 0).sort((a, b) => Math.min(a.b3, a.b6, a.b8) - Math.min(b.b3, b.b6, b.b8));
         if (el('stkChShort')) {
-            if (!sh.length) { el('stkChShort').parentNode.innerHTML = '<div class="sbc-note" style="padding:40px;text-align:center">Good news - stock covers every UMC for the next 3 and 8 months.</div>'; el('stkBoxShort').style.minWidth = '0'; el('stkBoxShort').style.height = 'auto'; }
-            else K.charts.s = new Chart(el('stkChShort'), { type: 'bar', data: { labels: sh.map(x => x.umc), datasets: [{ label: 'In store', data: sh.map(x => x.phys + x.graph), backgroundColor: BLUE }, { label: 'Total stock', data: sh.map(x => x.total), backgroundColor: TEAL }, { label: 'Due 3M', data: sh.map(x => x.n3), backgroundColor: AMB }, { label: 'Due 8M', data: sh.map(x => x.n8), backgroundColor: RED }] }, options: { responsive: true, maintainAspectRatio: false, onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOpen(sh[a[0].index].umc); }, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { title: x => { const s = sh[x[0].dataIndex]; return s.umc + ' - ' + s.spec; }, label: x => x.dataset.label + ': ' + fm(x.raw) + ' m' } } }, scales: { x: sc(), y: Object.assign(sc('metres'), { beginAtZero: true }) } } });
+            if (!sh.length) { el('stkBoxShortWrap').innerHTML = '<div class="sbc-note" style="padding:40px;text-align:center">Good news - stock covers every UMC for the next 3, 6 and 8 months.</div>'; }
+            else {
+                el('stkBoxShort').style.height = Math.max(300, sh.length * 78 + 60) + 'px';
+                K.charts.s = new Chart(el('stkChShort'), { type: 'bar', data: { labels: sh.map(x => x.umc), datasets: [{ label: 'In store', data: sh.map(x => x.phys), backgroundColor: BLUE }, { label: 'Total stock', data: sh.map(x => x.total), backgroundColor: TEAL }, { label: 'Due 3M', data: sh.map(x => x.n3), backgroundColor: AMB }, { label: 'Due 6M', data: sh.map(x => x.n6), backgroundColor: '#e8793b' }, { label: 'Due 8M', data: sh.map(x => x.n8), backgroundColor: RED }] },
+                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOpen(sh[a[0].index].umc); },
+                        plugins: { legend: { position: 'top', labels: { color: c.tick, boxWidth: 12 } }, tooltip: { callbacks: { title: x => { const s = sh[x[0].dataIndex]; return s.umc + ' - ' + s.spec; }, label: x => x.dataset.label + ': ' + fm(x.raw) + ' m', afterBody: x => { const s = sh[x[0].dataIndex]; return ['Short: 3M ' + fm(Math.min(0, s.b3)) + ' / 6M ' + fm(Math.min(0, s.b6)) + ' / 8M ' + fm(Math.min(0, s.b8)) + ' m']; } } } },
+                        scales: { x: Object.assign(sc('metres'), { beginAtZero: true, position: 'top' }), y: Object.assign(sc(), { ticks: { color: cssv('--text-muted') || '#8592a6', autoSkip: false, font: { size: 11, weight: '600' } } }) } } });
+            }
+        }
+        // 4. safety pie (covered vs deficit), total or physical stock
+        if (el('stkChSafe')) {
+            const N = safeNums();
+            K.charts.p = new Chart(el('stkChSafe'), { type: 'doughnut', data: { labels: ['Covered by stock', 'Deficit'], datasets: [{ data: [Math.round(N.cov), Math.round(N.dM)], backgroundColor: ['#22a06b', RED], borderColor: cssv('--glass-base') || '#fff', borderWidth: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '55%', onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOv(a[0].index ? 'safe:def' : 'safe:ok'); },
+                    plugins: { legend: { position: 'bottom', labels: { color: c.tick, boxWidth: 12 } }, tooltip: { callbacks: { label: x => { const v = x.dataIndex ? [N.dM, N.dV, N.def.length] : [N.cov, N.covV, K.stock.length - N.def.length]; return ' ' + x.label + ': ' + fm(v[0]) + ' m, Rs ' + cr(v[1]) + ' Cr (' + v[2] + ' UMCs, ' + (v[0] / N.S * 100).toFixed(1) + '%)'; } } } } },
+                plugins: [{ id: 'stkMid', afterDraw(ch) { const m = ch.getDatasetMeta(0).data[0]; if (!m) return; const g = ch.ctx; g.save(); g.textAlign = 'center'; g.fillStyle = cssv('--text-main') || '#111'; g.font = '700 15px system-ui'; g.fillText(fm(N.S) + ' m', m.x, m.y - 2); g.font = '11px system-ui'; g.fillStyle = c.tick; g.fillText('safety stock', m.x, m.y + 14); g.restore(); } }] });
         }
         // 3. dept
-        const D = {}; K.uf.forEach(b => { if (!b.cbm || !b.len || !b.umc || !K.byUmc[b.umc]) return; const d = b.dept || '-'; const o = D[d] = D[d] || [0, 0, 0, 0]; if (b.cbm < K.h.t0) o[0] += b.len; else if (b.cbm <= K.h.h3) o[1] += b.len; else if (b.cbm <= K.h.h6) o[2] += b.len; else if (b.cbm <= K.h.h8) o[3] += b.len; });
+        const D = {}; K.uf.forEach(b => { if (!b.cbm || !b.len || !b.umc || !K.byUmc[b.umc] || b.notEx) return; const d = b.dept || '-'; const o = D[d] = D[d] || [0, 0, 0, 0]; if (b.cbm < K.h.t0) o[0] += b.len; else if (b.cbm <= K.h.h3) o[1] += b.len; else if (b.cbm <= K.h.h6) o[2] += b.len; else if (b.cbm <= K.h.h8) o[3] += b.len; });
         const dl = Object.keys(D).filter(d => D[d].some(v => v)).sort((a, b) => D[b].reduce((x, y) => x + y) - D[a].reduce((x, y) => x + y));
         const lab = ['CBM passed', 'Next 3 months', '3-6 months', '6-8 months'], col = [RED, AMB, BLUE, GREY];
         if (el('stkChDept')) K.charts.d = new Chart(el('stkChDept'), { type: 'bar', data: { labels: dl, datasets: lab.map((l, i) => ({ label: l, data: dl.map(d => D[d][i]), backgroundColor: col[i] })) }, options: { responsive: true, maintainAspectRatio: false, onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOv('dept:' + dl[a[0].index] + '|' + a[0].datasetIndex); }, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { label: x => x.dataset.label + ': ' + fm(x.raw) + ' m' } } }, scales: { x: Object.assign(sc(), { stacked: true, ticks: { color: cssv('--text-muted') || '#8592a6', autoSkip: false, maxRotation: 60, font: { size: 10 } } }), y: Object.assign(sc('metres'), { stacked: true, beginAtZero: true }) } } });
@@ -5232,6 +5317,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         else if (K.filt === 's3') L = L.filter(x => x.b3 < 0);
         else if (K.filt === 's8') L = L.filter(x => x.b8 < 0);
         else if (K.filt === 'order') L = L.filter(x => x.order > 0);
+        else if (K.filt === 'zero') L = L.filter(x => x.zero);
+        else if (K.filt === 's6') L = L.filter(x => x.b6 < 0);
         if (K.grade) L = L.filter(x => x.grade === K.grade);
         if (K.sortC) { const c = K.sortC, d = K.sortD; L.sort((a, b) => (typeof a[c] === 'string' ? String(a[c]).localeCompare(String(b[c])) : (a[c] || 0) - (b[c] || 0)) * d); }
         else L.sort((a, b) => (a.belowSafe === b.belowSafe ? Math.min(a.b3, a.b8) - Math.min(b.b3, b.b8) : (a.belowSafe ? -1 : 1)));
@@ -5240,7 +5327,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     function stockTab() {
         const L = stockList(), all = K.stock;
         const cnt = f => all.filter(f).length;
-        const chips = [['all', 'All UMCs', all.length], ['below', 'Below safety', cnt(x => x.belowSafe)], ['s3', 'Short for 3M', cnt(x => x.b3 < 0)], ['s8', 'Short for 8M', cnt(x => x.b8 < 0)], ['order', 'On order', cnt(x => x.order > 0)]];
+        const chips = [['all', 'All UMCs', all.length], ['below', 'Below safety', cnt(x => x.belowSafe)], ['zero', 'Zero physical stock', cnt(x => x.zero)], ['s3', 'Short for 3M', cnt(x => x.b3 < 0)], ['s6', 'Short for 6M', cnt(x => x.b6 < 0)], ['s8', 'Short for 8M', cnt(x => x.b8 < 0)], ['order', 'On order', cnt(x => x.order > 0)]];
         const grades = Array.from(new Set(all.map(x => x.grade).filter(Boolean))).sort();
         const s = (f) => L.reduce((a, x) => a + (x[f] || 0), 0);
         let h = K.sel ? `<div class="glass-panel sbc-panel" id="stkDetail"></div>` : '';
@@ -5258,7 +5345,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         if (!x) { box.innerHTML = `<div class="sbc-note">UMC ${esc(K.sel)} is not in the stock sheet.</div>`; return; }
         const t0 = K.h.t0;
         const belts = x.conv.slice().sort((a, b) => (a.cbm ? a.cbm.getTime() : 9e15) - (b.cbm ? b.cbm.getTime() : 9e15));
-        const due = b => { if (!b.cbm) return ['-', '']; const m = Math.round((b.cbm - t0) / 2629800000 * 10) / 10; return [m < 0 ? 'Passed' : m.toFixed(1) + ' mo', b.cbm < t0 ? 'sbc-r' : (b.cbm <= K.h.h3 ? 'sbc-y' : (b.cbm <= K.h.h8 ? '' : 'sbc-g'))]; };
+        const due = b => { if (b.notEx) return ['Not existing / bucket', '']; if (!b.cbm) return ['-', '']; const m = Math.round((b.cbm - t0) / 2629800000 * 10) / 10; return [m < 0 ? 'Passed' : m.toFixed(1) + ' mo', b.cbm < t0 ? 'sbc-r' : (b.cbm <= K.h.h3 ? 'sbc-y' : (b.cbm <= K.h.h8 ? '' : 'sbc-g'))]; };
         const mini = (v, l, cls) => `<div class="stk-mini"><b class="${cls || ''}">${v}</b><span>${l}</span></div>`;
         const info = [['Grade', x.grade], ['Unit rate', x.rate ? 'Rs ' + fm(x.rate) + ' / m' : ''], ['Old UMCs', x.old], ['Old item code', x.oldItem], ['UMC against ARC (Forech)', x.arcF], ['UMC against ARC (Oriental)', x.arcO], ['UMC against Forech VMI', x.vmiF], ['UMC against Oriental VMI', x.vmiO], ['ARC suppliers', x.sup], ['Re-order point / qty (m)', x.rop || x.roq ? fm(x.rop) + ' / ' + fm(x.roq) : ''], ['Consumption in 6 months (m)', x.cons6 ? fm(x.cons6) : ''], ['Required length', x.reqLen], ['Remarks', x.rem]].filter(r => r[1]);
         box.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h3 style="margin:0;flex:1"><i class="fas fa-tag"></i> ${x.umc} <span style="font-weight:500;color:var(--text-muted)">${esc(x.spec)}</span></h3><button class="sbc-chip sbc-png" onclick="stkCloseDetail()"><i class="fas fa-times"></i> Close</button></div>
@@ -5350,6 +5437,91 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const ws3 = X.utils.json_to_sheet(cv); dcol(X, ws3, 'Next CBM'); ws3['!cols'] = [{ wch: 9 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 34 }, { wch: 10 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 12 }, { wch: 9 }, { wch: 10 }, { wch: 12 }, { wch: 14 }]; X.utils.book_append_sheet(wb, ws3, 'Conveyor UMC list');
             const d = K.h.t0; X.writeFile(wb, `Belt_Stock_${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}.xlsx`);
         }).catch(() => alert('Could not load the Excel library. Check the internet connection and try again.'));
+    };
+    // ---------------- Fabric Belt MIS report (Word .docx, built in the browser) ----------------
+    window.stkWord = function () {
+        if (!K.loaded) return;
+        loadXlsx().then(() => {
+            const X = window.XLSX, d0 = K.h.t0;
+            const ds = d => String(d.getDate()).padStart(2, '0') + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getFullYear()).slice(2);
+            const xe = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const km = m => (m / 1000).toFixed(2), crs = v => (v / 1e7).toFixed(2);
+            // --- xml helpers
+            const run = (t, o = {}) => `<w:r><w:rPr>${o.b ? '<w:b/>' : ''}${o.i ? '<w:i/>' : ''}${o.c ? `<w:color w:val="${o.c}"/>` : ''}<w:sz w:val="${o.sz || 19}"/><w:szCs w:val="${o.sz || 19}"/></w:rPr><w:t xml:space="preserve">${xe(t)}</w:t></w:r>`;
+            const para = (runs, o = {}) => `<w:p><w:pPr>${o.keep ? '<w:keepNext/>' : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 60 : o.after}"/>${o.ind ? `<w:ind w:left="${o.ind}" w:hanging="${o.hang || 0}"/>` : ''}<w:jc w:val="${o.jc || 'left'}"/></w:pPr>${runs}</w:p>`;
+            const pageBreak = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+            const W = 15398;  // usable width (twips) on A4 landscape with 0.5" margins
+            const cell = (txt, w, o = {}) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>` : ''}<w:vAlign w:val="center"/></w:tcPr>${para(run(txt, { b: o.b, c: o.c, sz: o.sz }), { jc: o.jc || 'left', after: 0 })}</w:tc>`;
+            function table(cols, rows, o = {}) {   // cols: [{h, w (relative), jc}]
+                const tw = cols.reduce((a, c) => a + c.w, 0), ws = cols.map(c => Math.round(c.w / tw * W));
+                const hdr = `<w:tr><w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>${cols.map((c, i) => cell(c.h, ws[i], { b: 1, fill: o.hfill || 'F6D58E', jc: 'center', sz: 17 })).join('')}</w:tr>`;
+                const body = rows.map(r => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${r.map((v, i) => { const x = (v && typeof v === 'object') ? v : { t: v }; return cell(x.t, ws[i], { jc: x.jc || cols[i].jc || 'left', b: x.b, c: x.c, fill: x.fill, sz: 17 }); }).join('')}</w:tr>`).join('');
+                return `<w:tbl><w:tblPr><w:tblW w:w="${W}" w:type="dxa"/><w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(b => `<w:${b} w:val="single" w:sz="4" w:space="0" w:color="A6A6A6"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="70" w:type="dxa"/><w:right w:w="70" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${ws.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${o.noHead ? '' : hdr}${body}</w:tbl>`;
+            }
+            const banner = t => table([{ h: '', w: 3 }, { h: '', w: 1 }], [[{ t: 'Fabric Belt MIS (' + t + ')', b: 1, fill: 'D9E1F2' }, { t: 'Date: ' + ds(d0), b: 1, fill: 'D9E1F2', jc: 'right' }]], { noHead: 1 }) + para('', { after: 120 });
+            // --- numbers
+            const T = totals(), S = K.stock;
+            const sum = (L, f) => L.reduce((a, x) => a + (typeof f === 'function' ? f(x) : (x[f] || 0)), 0);
+            const due = h => { const L = []; S.forEach(x => (K.need[x.umc] || { belts: [] }).belts.forEach(b => { if (b.cbm <= h) L.push({ b, x }); })); return L; };
+            const d3 = due(K.h.h3), d6 = due(K.h.h6);
+            const physLow = S.filter(x => x.phys < x.safety), totLow = S.filter(x => x.total < x.safety), zero = S.filter(x => x.zero);
+            const defT = sum(totLow, x => x.safety - x.total), defTV = sum(totLow, x => (x.safety - x.total) * x.rate);
+            const r = (lab, nos, m, v) => [{ t: lab, b: 1, fill: 'FCE9C2' }, { t: nos, jc: 'center' }, { t: m, jc: 'center' }, { t: v, jc: 'center' }];
+            const sumRows = [
+                r('UMC', S.length, km(T.inst), ''),
+                r('Zero Physical Stock', zero.length, '', ''),
+                r('Physical Stock less than Safety Stock', physLow.length, '', ''),
+                r('Total Stock (Physical+PR+PO+DO+VMI) less than Safety Stock', totLow.length, '', ''),
+                r('Physical Stock', '', km(T.phys), crs(T.vPhys))];
+            if (T.graph) sumRows.push(r('Graphene Stock', '', km(T.graph), crs(T.vGraph)));
+            sumRows.push(r('PR', '', km(sum(S, 'pr')), crs(sum(S, x => x.pr * x.rate))), r('PO / DO', '', km(sum(S, 'po')), crs(sum(S, x => x.po * x.rate))), r('VMI', '', km(sum(S, 'vmi')), crs(sum(S, x => x.vmi * x.rate))));
+            if (sum(S, 'sc')) sumRows.push(r('SC', '', km(sum(S, 'sc')), crs(sum(S, x => x.sc * x.rate))));
+            sumRows.push(r('Inventory', '', km(T.phys), crs(T.vPhys)),
+                r('Safety Stock (@20% or longest belt)', '', km(T.safety), crs(sum(S, x => x.safety * x.rate))),
+                r('Safety Stock Deficit (Total Stock basis)', totLow.length, km(defT), crs(defTV)),
+                r('Belt replacement Plan in next 3 Months (up to ' + ds(K.h.h3) + ')', d3.length, km(sum(d3, o => o.b.len)), crs(sum(d3, o => o.b.len * o.x.rate))),
+                r('Belt replacement Plan in next 6 Months (up to ' + ds(K.h.h6) + ')', d6.length, km(sum(d6, o => o.b.len)), crs(sum(d6, o => o.b.len * o.x.rate))));
+            let body = banner('Summary') + table([{ h: '', w: 5 }, { h: 'Nos', w: 1.2 }, { h: 'Km', w: 1.2 }, { h: 'Rs Cr', w: 1.2 }], sumRows)
+                + para(run('Note: As UMCs have been clubbed and sanitized, cost may not be accurate as it has been calculated based on the latest UMC rate. Belt replacement plan = belts whose next CBM (thickness sheet) has passed or falls in the period.', { i: 1, sz: 16 }), { before: 120 });
+            // --- major concerns (editable in Word)
+            const n = []; const sh3 = S.filter(x => x.b3 < 0);
+            n.push(`Deficit in Safety stock for ${physLow.length} UMCs (physical stock). With belts under PR / PO / DO / VMI counted, ${totLow.length} UMCs remain below safety stock (${fm(defT)} m, Rs ${crs(defTV)} Cr).`);
+            n.push(`Deficit in Belt stock in ${sh3.length} UMCs for conveyors to be replaced in next 3 months.` + (sh3.filter(x => x.order > 0).length ? ` (Belts are under PO - ${sh3.filter(x => x.order > 0).length} UMCs.)` : ''));
+            const d6L = S.filter(x => x.total - x.n6 < x.safety);
+            n.push(`Belts due for replacement in next 6 months: ${d6.length} belts, ${fm(sum(d6, o => o.b.len))} m. After these replacements ${d6L.length} UMCs will be below safety stock (${fm(sum(d6L, x => x.safety - (x.total - x.n6)))} m, Rs ${crs(sum(d6L, x => (x.safety - (x.total - x.n6)) * x.rate))} Cr).`);
+            zero.forEach(x => n.push(`For UMC ${x.umc} critical stock currently not available.` + (x.order ? ` Belt under PO / DO: ${fm(x.order)} m.` : '') + (x.rem ? ' ' + x.rem : '')));
+            physLow.filter(x => !x.zero && x.rem).forEach(x => n.push(`For UMC ${x.umc} current stock below safety stock (${fm(x.phys)} m against ${fm(x.safety)} m). ${x.rem}`));
+            const hw = Object.values(K.thk).filter(t => !t.notEx && t.wr > 1.2 && K.byUmc[K.convUmc[key(t.name)]]).sort((a, b) => b.wr - a.wr);
+            if (hw.length) n.push(`Belts with higher wear rate ${hw.map(t => t.dept + ' ' + t.name).join(', ')} to be monitored to extend operating life.`);
+            n.push(''); n.push('');
+            body += pageBreak + banner('Major Concerns') + n.map((t, i) => para(run((i + 1) + '. ', { b: 1 }) + run(t), { ind: 360, hang: 360, after: 90 })).join('');
+            // --- UMC wise details
+            const L = S.slice().sort((a, b) => a.phys - b.phys || b.safety - a.safety);
+            const q = v => v ? fm(v) : '0', ce = { jc: 'center' };
+            body += pageBreak + banner('UMC wise Details') + table([{ h: 'UMC', w: 1.25 }, { h: 'Specification', w: 3 }, { h: 'Installed Qty', w: 0.8, jc: 'center' }, { h: 'Installed Length', w: 0.9, jc: 'center' }, { h: 'Safety Stock (@20% or longest belt)', w: 1.2, jc: 'center' }, { h: 'Physical Current Stock', w: 1, jc: 'center' }, { h: 'VMI QTY', w: 0.7, jc: 'center' }, { h: 'PR QTY', w: 0.7, jc: 'center' }, { h: 'PO/DO QTY', w: 0.8, jc: 'center' }, { h: 'Total Stock (Current+PR/PO/DO/VMI)', w: 1.25, jc: 'center' }, { h: 'Belt req in next 3M', w: 0.9, jc: 'center' }, { h: 'Belt req in next 6M', w: 0.9, jc: 'center' }],
+                L.map(x => [{ t: x.umc, b: 1 }, x.spec, q(x.iq), q(x.il), q(x.safety), { t: q(x.phys), c: x.phys < x.safety ? 'C00000' : '00703C', b: 1 }, q(x.vmi), q(x.pr), q(x.po), { t: q(x.total), c: x.total < x.safety ? 'C00000' : '', b: 1 }, x.n3 ? fm(x.n3) : '', x.n6 ? fm(x.n6) : '']))
+                + para(run('Red = below safety stock. Belt requirement = full length of belts whose next CBM falls up to ' + ds(K.h.h3) + ' (3M) / ' + ds(K.h.h6) + ' (6M), including CBM already passed.', { i: 1, sz: 16 }), { before: 100 });
+            // --- PO pending
+            const po = S.filter(x => x.po || x.pr || x.vmi || x.sc).sort((a, b) => a.umc.localeCompare(b.umc));
+            body += pageBreak + banner('PO pending for Delivery') + table([{ h: 'UMC', w: 1.2 }, { h: 'Specification', w: 3 }, { h: 'PR Qty', w: 0.8, jc: 'center' }, { h: 'PO/DO Qty', w: 0.9, jc: 'center' }, { h: 'VMI / SC Qty', w: 0.9, jc: 'center' }, { h: 'PR No', w: 1.3 }, { h: 'PO/DO No.', w: 1.3 }, { h: 'Delivery date', w: 1.1 }],
+                po.map(x => [{ t: x.umc, b: 1 }, x.spec, q(x.pr), q(x.po), q(x.vmi + x.sc), '', '', ''])) + para(run('PR No, PO/DO No and delivery date are not in the stock sheet - fill them in here.', { i: 1, sz: 16 }), { before: 100 });
+            // --- UMC master
+            body += pageBreak + banner('UMC Master Sheet') + table([{ h: 'UMC', w: 1.1 }, { h: 'Specification', w: 2.6 }, { h: 'Installed Location', w: 8 }], S.slice().sort((a, b) => a.umc.localeCompare(b.umc)).map(x => [{ t: x.umc, b: 1 }, x.spec, x.loc || '-']))
+                + para(run('*****End of Report*****', { b: 1 }), { jc: 'center', before: 200 });
+            // --- package
+            const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}<w:sectPr><w:footerReference w:type="default" r:id="rId2"/><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="360" w:footer="360" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+            const footer = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="center"/></w:pPr>${run('Fabric Belt MIS ' + ds(d0) + '  |  Page ', { sz: 16, c: '7F7F7F' })}<w:r><w:rPr><w:sz w:val="16"/><w:color w:val="7F7F7F"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:sz w:val="16"/><w:color w:val="7F7F7F"/></w:rPr><w:t>1</w:t></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>`;
+            const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="19"/><w:szCs w:val="19"/><w:lang w:val="en-IN"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="60" w:line="252" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`;
+            const ct = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`;
+            const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+            const drels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>`;
+            const enc = t => new TextEncoder().encode(t);
+            const z = X.CFB.utils.cfb_new();
+            [['[Content_Types].xml', ct], ['_rels/.rels', rels], ['word/document.xml', doc], ['word/_rels/document.xml.rels', drels], ['word/styles.xml', styles], ['word/footer1.xml', footer]].forEach(([p, t]) => X.CFB.utils.cfb_add(z, p, enc(t)));
+            const out = X.CFB.write(z, { type: 'array', fileType: 'zip' });
+            const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Fabric_Belt_MIS_' + ds(d0).replace(/-/g, '.') + '.docx'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+        }).catch(e => { console.error(e); alert('Could not build the Word report. Check the internet connection and try again.'); });
     };
     window.__stk = K;
     window.stkRender = function () { if (K.loaded) render(); };
