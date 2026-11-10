@@ -5475,6 +5475,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const d3 = due(K.h.h3), d6 = due(K.h.h6);
             const physLow = S.filter(x => x.phys < x.safety), totLow = S.filter(x => x.total < x.safety), zero = S.filter(x => x.zero);
             const defT = sum(totLow, x => x.safety - x.total), defTV = sum(totLow, x => (x.safety - x.total) * x.rate);
+            const pb0 = K.pb; K.pb = 'total'; const SN = safeNums(); K.pb = pb0;   // plant level, total stock
             const d6L = S.filter(x => x.total - x.n6 < x.safety), d6M = sum(d6L, x => x.safety - (x.total - x.n6)), d6V = sum(d6L, x => (x.safety - (x.total - x.n6)) * x.rate);
             // ===== page 1: summary (big, like the PowerPoint/PDF summary)
             const big = 26, lab = t => ({ t, b: 1, fill: LAB, jc: 'center', sz: big }), v = t => ({ t, jc: 'center', sz: big + 2 });
@@ -5483,7 +5484,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             if (T.graph) rows.push(R('Graphene Stock', '', km(T.graph), crs(T.vGraph)));
             rows.push(R('PR', '', km(sum(S, 'pr')), crs(sum(S, x => x.pr * x.rate))), R('PO / DO', '', km(sum(S, 'po')), crs(sum(S, x => x.po * x.rate))), R('VMI', '', km(sum(S, 'vmi')), crs(sum(S, x => x.vmi * x.rate))));
             if (sum(S, 'sc')) rows.push(R('SC', '', km(sum(S, 'sc')), crs(sum(S, x => x.sc * x.rate))));
-            rows.push(R('Inventory', '', km(T.phys), crs(T.vPhys)), R('Safety Stock (@20% or longest belt)', '', km(T.safety), crs(sum(S, x => x.safety * x.rate))), R('Belt replacement Plan in next 3 Months', d3.length, km(sum(d3, o => o.b.len)), crs(sum(d3, o => o.b.len * o.x.rate))), R('Belt replacement Plan in next 6 Months', d6.length, km(sum(d6, o => o.b.len)), crs(sum(d6, o => o.b.len * o.x.rate))));
+            rows.push(R('Inventory', '', km(T.phys), crs(T.vPhys)), R('Safety Stock (@20% or longest belt)', '', km(T.safety), crs(sum(S, x => x.safety * x.rate))), R('Belt replacement Plan in next 3 Months', d3.length, km(sum(d3, o => o.b.len)), crs(sum(d3, o => o.b.len * o.x.rate))), R('Belt replacement Plan in next 6 Months', d6.length, km(sum(d6, o => o.b.len)), crs(sum(d6, o => o.b.len * o.x.rate))), R('Safety Stock Deficit after next 6 Months', '', km(Math.max(0, -SN.left)), SN.left < 0 ? crs(-SN.leftV) : '0.00'));
             const tw = W, w1 = Math.round(tw * 0.55), w2 = Math.round(tw * 0.15);
             const head = `<w:tbl><w:tblPr><w:tblW w:w="${W}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(b => `<w:${b} w:val="single" w:sz="8" w:space="0" w:color="404040"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${w1 + w2}"/><w:gridCol w:w="${tw - w1 - w2}"/></w:tblGrid><w:tr><w:trPr><w:trHeight w:val="760"/></w:trPr>${cell('Fabric Belt  MIS (Summary)', w1 + w2, { b: 1, sz: 36, fill: 'D9E1F2', jc: 'center' })}${cell('Date:  ' + ds(d0), tw - w1 - w2, { b: 1, sz: 32, fill: 'D9E1F2', jc: 'center' })}</w:tr></w:tbl>`;
             let body = head + table([{ h: '', w: 0.55, hf: 'FFFFFF' }, { h: 'Nos', w: 0.15 }, { h: 'Km', w: 0.15 }, { h: '₹ Cr', w: 0.15 }], rows, { sz: big, hsz: 26, rh: 540, hh: 560, bc: '404040', plainHead: 1 })
@@ -5492,7 +5493,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const n = []; const sh3 = S.filter(x => x.b3 < 0);
             n.push(`Deficit in Safety stock for ${physLow.length} UMCs. (Physical stock; with belts under PR / PO / DO / VMI, ${totLow.length} UMCs remain below safety stock - ${fm(defT)} m, ₹ ${crs(defTV)} Cr.)`);
             n.push(`Deficit in Belt stock in ${sh3.length} UMCs for Conveyors to be replaced in next 3 months.` + (sh3.filter(x => x.order > 0).length ? ` (Belts are under PO - ${sh3.filter(x => x.order > 0).length} UMCs.)` : ''));
-            n.push(`Belts due for replacement in next 6 months: ${d6.length} belts, ${fm(sum(d6, o => o.b.len))} m. After these replacements ${d6L.length} UMCs will be below safety stock (${fm(d6M)} m, ₹ ${crs(d6V)} Cr).`);
+            n.push(`Safety stock to maintain ${fm(SN.S)} m. Total stock (Physical+PR+PO+DO+VMI) ${fm(SN.ST)} m, belt replacement plan for next 6 months ${fm(SN.N6)} m (${d6.length} belts). Stock after 6 months ${fm(SN.ST - SN.N6)} m, so safety stock ${SN.left < 0 ? 'deficit' : 'surplus'} after next 6 months = ${fm(Math.abs(SN.left))} m (₹ ${crs(Math.abs(SN.leftV))} Cr). UMC-wise ${d6L.length} UMCs will be below safety stock.`);
             zero.forEach(x => n.push(`For UMC ${x.umc} critical stock currently not available.` + (x.order ? ` Belt under PO / DO: ${fm(x.order)} m.` : '') + (x.rem ? ' ' + x.rem : '')));
             physLow.filter(x => !x.zero && x.rem).forEach(x => n.push(`For UMC ${x.umc} current stock below safety stock (${fm(x.phys)} m against ${fm(x.safety)} m). ${x.rem}`));
             const hw = Object.values(K.thk).filter(t => !t.notEx && t.wr > 1.2 && K.byUmc[K.convUmc[key(t.name)]]).sort((a, b) => b.wr - a.wr);
