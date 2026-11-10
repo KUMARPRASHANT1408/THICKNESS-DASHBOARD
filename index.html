@@ -577,12 +577,24 @@
         .stk-tip i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; } .stk-tip-s { color: #cbd5e1; font-size: .72rem; margin-bottom: 3px; }
         .stk-ni { font-size: .7rem; color: var(--amber, #d97706); margin-left: 3px; }
         .stk-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; margin: 0 0 10px; }
+        .stk-notes > div.stk-nfull { grid-column: 1 / -1; }
+        .stk-ned { margin-top: 6px; min-height: 140px; max-height: 360px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-base); color: var(--text-main); padding: 8px 10px; font-size: .85rem; line-height: 1.5; outline: none; }
+        .stk-ned:focus { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(20,184,166,.2); }
+        .stk-tb { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin-top: 6px; padding: 5px; border-radius: 8px; background: var(--glass-base); border: 1px solid var(--glass-border); }
+        .stk-tb button { min-width: 28px; height: 28px; border: 1px solid transparent; background: transparent; color: var(--text-main); border-radius: 6px; cursor: pointer; font-size: .8rem; }
+        .stk-tb button:hover { background: var(--brand-soft); border-color: var(--glass-border); }
+        .stk-tb select { height: 28px; border-radius: 6px; border: 1px solid var(--glass-border); background: var(--glass-base); color: var(--text-main); font-size: .75rem; padding: 0 4px; }
+        .stk-tb .stk-sw { min-width: 18px; width: 18px; height: 18px; border: 1px solid rgba(0,0,0,.25); border-radius: 4px; padding: 0; }
+        .stk-tbs { width: 1px; height: 20px; background: var(--glass-border); margin: 0 3px; } .stk-tbl { font-size: .75rem; color: var(--text-muted); margin: 0 2px 0 4px; }
+        .stk-nbody { margin: 4px 0 0; font-size: .82rem; line-height: 1.45; max-height: 230px; overflow-y: auto; padding-right: 4px; word-break: break-word; }
+        .stk-nbody s, .stk-ncell s, .stk-nbody strike, .stk-ncell strike { color: var(--text-muted); }
+        .stk-ncell div { margin: 0; } .stk-ncell b { display: block; margin-top: 4px; }
         .stk-notes textarea { width: 100%; margin-top: 6px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-base); color: var(--text-main); padding: 8px; font: inherit; font-size: .85rem; resize: vertical; }
         .stk-nbtns { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; } .stk-nbtns .sbc-chip { margin: 0; }
         .stk-notes small { display: block; font-size: .68rem; color: var(--text-muted); margin-top: 4px; }
         .stk-nedit { margin-top: 6px; border: 1px solid rgba(180,83,9,.4); background: transparent; color: #b45309; border-radius: 6px; padding: 3px 9px; font-size: .74rem; font-weight: 700; cursor: pointer; }
         .stk-notes > div.stk-nempty { background: transparent; border-style: dashed; opacity: .85; }
-        .stk-notes > div { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.35); border-radius: 10px; padding: 8px 10px; } .stk-notes span { font-size: .72rem; font-weight: 700; color: #b45309; } .stk-notes p { margin: 4px 0 0; font-size: .82rem; line-height: 1.45; max-height: 230px; overflow-y: auto; padding-right: 4px; }
+        .stk-notes > div { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.35); border-radius: 10px; padding: 8px 10px; } .stk-notes > div > span { font-size: .72rem; font-weight: 700; color: #b45309; } .stk-notes p { margin: 4px 0 0; font-size: .82rem; line-height: 1.45; max-height: 230px; overflow-y: auto; padding-right: 4px; }
         .stk-scroll { max-height: 340px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
         .stk-safe { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; } .stk-pie { position: relative; width: 240px; height: 270px; margin: 0 auto; }
         .stk-flow td, .stk-flow th { padding: 6px 8px !important; font-size: .8rem; }
@@ -681,7 +693,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-h</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-i</div>
         </div>
     </div>
 
@@ -5099,7 +5111,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     // ---------------- UMC notes (where the stock is, PO / PR / SC details) ----------------
     // Saved in the "Notes" tab of the BELT STOCK UMC DATA Google Sheet through its Apps Script web app.
     // stock_notes.json in GitHub holds the first notes taken from the stock Excel; a note saved in the app replaces it.
-    const NOTES_URL = '';   // <- paste the Apps Script web app URL (ends with /exec) here
+    const NOTES_URL = 'https://script.google.com/macros/s/AKfycbzaUOPoXe6mRUI1rF7vsvLDypNykNSpn_4vD-Tvdf-RIMNB1sfHQCHp5ThrbZJ7vKKPgg/exec';   // Apps Script web app of BELT STOCK UMC DATA
     const NCOLS = [['phys', 'Physical Current Stock'], ['sc', 'SC QTY'], ['pr', 'PR QTY'], ['po', 'PO/DO QTY']];
     K.nt = {};   // { UMC: { phys: {t, by, at}, ... } }
     function loadNotes() {
@@ -5113,20 +5125,76 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             applyNotes();
         });
     }
+    // notes are kept as small HTML (bold, strike, colours ...). Old plain notes use " | " between lines.
+    const NOTE_TAGS = /^(B|STRONG|I|EM|U|S|STRIKE|DEL|DIV|P|BR|SPAN|FONT|UL|OL|LI|MARK|SUB|SUP|BLOCKQUOTE|H3|H4)$/;
+    const NOTE_CSS = /^(color|background-color|font-family|font-size|text-align|text-decoration|text-decoration-line|font-weight|font-style|margin-left|padding-left)$/;
+    function noteHtml(t) {
+        t = String(t || '');
+        if (!/<[a-z][\s\S]*>/i.test(t)) return t.split(' | ').map(l => '<div>' + esc(l) + '</div>').join('');
+        const doc = new DOMParser().parseFromString('<div>' + t + '</div>', 'text/html'), root = doc.body.firstChild;
+        (function walk(n) {
+            Array.from(n.childNodes).forEach(c => {
+                if (c.nodeType === 3) return;
+                if (c.nodeType !== 1 || /^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|LINK|META|IMG|SVG|MATH|FORM|INPUT|BUTTON|TEXTAREA|SELECT)$/.test(c.tagName)) { c.remove(); return; }
+                walk(c);
+                if (!NOTE_TAGS.test(c.tagName)) { while (c.firstChild) n.insertBefore(c.firstChild, c); c.remove(); return; }
+                Array.from(c.attributes).forEach(at => {
+                    const nm = at.name.toLowerCase();
+                    if (nm === 'style') { const keep = String(at.value).split(';').map(x => x.trim()).filter(x => { const k = x.split(':')[0].trim().toLowerCase(), v = x.slice(x.indexOf(':') + 1); return NOTE_CSS.test(k) && !/url|expression|javascript/i.test(v); }); if (keep.length) c.setAttribute('style', keep.join('; ')); else c.removeAttribute('style'); }
+                    else if (!(c.tagName === 'FONT' && /^(color|face|size)$/.test(nm)) && !(/^(DIV|P)$/.test(c.tagName) && nm === 'align')) c.removeAttribute(at.name);
+                });
+            });
+        })(root);
+        return root.innerHTML;
+    }
+    // plain lines, struck-out text left out (used in tooltips and short lists)
+    function noteLines(t, keepStruck) {
+        const doc = new DOMParser().parseFromString('<div>' + noteHtml(t) + '</div>', 'text/html'), root = doc.body.firstChild;
+        if (!keepStruck) root.querySelectorAll('s,strike,del,[style*="line-through"]').forEach(e => e.remove());
+        root.querySelectorAll('br').forEach(e => e.replaceWith('\n'));
+        root.querySelectorAll('div,p,li,h3,h4,blockquote').forEach(e => e.append('\n'));
+        return root.textContent.split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    }
+    // lines of {t, b, i, u, s} runs for the Word report
+    function noteRuns(t) {
+        const doc = new DOMParser().parseFromString('<div>' + noteHtml(t) + '</div>', 'text/html'), lines = [[]];
+        (function walk(n, f) {
+            n.childNodes.forEach(c => {
+                if (c.nodeType === 3) { if (c.textContent) lines[lines.length - 1].push(Object.assign({ t: c.textContent }, f)); return; }
+                if (c.nodeType !== 1) return;
+                if (c.tagName === 'BR') { lines.push([]); return; }
+                const st = (c.getAttribute('style') || '').toLowerCase(), g = Object.assign({}, f);
+                if (/^(B|STRONG|H3|H4)$/.test(c.tagName) || /font-weight:\s*(bold|[6-9]00)/.test(st)) g.b = 1;
+                if (/^(I|EM)$/.test(c.tagName) || /font-style:\s*italic/.test(st)) g.i = 1;
+                if (c.tagName === 'U' || /underline/.test(st)) g.u = 1;
+                if (/^(S|STRIKE|DEL)$/.test(c.tagName) || /line-through/.test(st)) g.s = 1;
+                const block = /^(DIV|P|LI|H3|H4|BLOCKQUOTE)$/.test(c.tagName);
+                if (block && lines[lines.length - 1].length) lines.push([]);
+                walk(c, g);
+                if (block) lines.push([]);
+            });
+        })(doc.body.firstChild, {});
+        return lines.map(l => l.map(r => Object.assign(r, { t: r.t.replace(/\s+/g, ' ') }))).filter(l => l.some(r => r.t.trim()));
+    }
+    window.__stkNote = { noteHtml, noteLines, noteRuns };
     function applyNotes() {
         K.stock.forEach(x => {
             const n = K.nt[x.umc] || {};
-            x.nt = n; x.physNote = (n.phys && n.phys.t) || '';
-            x.orderNote = ['po', 'pr', 'sc'].map(k => n[k] && n[k].t ? NCOLS.find(c => c[0] === k)[1].replace(' QTY', '') + ': ' + n[k].t : '').filter(Boolean).join(' | ');
+            x.nt = n; x.physNote = n.phys && n.phys.t ? noteLines(n.phys.t).join(' | ') : '';
+            x.orderNote = ['po', 'pr', 'sc'].map(k => n[k] && n[k].t && noteLines(n[k].t).length ? NCOLS.find(c => c[0] === k)[1].replace(' QTY', '') + ': ' + noteLines(n[k].t).join(' | ') : '').filter(Boolean).join(' | ');
         });
     }
-    window.stkNoteEdit = function (u, k) { K.nEdit = u + '|' + k; drawDetail(); setTimeout(() => { const t = el('stkNoteTa'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }, 30); };
+    window.stkNoteEdit = function (u, k) { K.nEdit = u + '|' + k; drawDetail(); setTimeout(() => { const t = el('stkNoteEd'); if (t) { t.focus(); try { document.execCommand('styleWithCSS', false, true); } catch (e) { } } }, 30); };
     window.stkNoteCancel = function () { K.nEdit = ''; drawDetail(); };
+    window.stkFmt = function (cmd, val) { const ed = el('stkNoteEd'); if (!ed) return; ed.focus(); try { document.execCommand('styleWithCSS', false, true); } catch (e) { } document.execCommand(cmd, false, val == null ? null : val); };
+    window.stkHilite = function (c) { const ed = el('stkNoteEd'); if (!ed) return; ed.focus(); try { document.execCommand('styleWithCSS', false, true); } catch (e) { } if (!document.execCommand('hiliteColor', false, c)) document.execCommand('backColor', false, c); };
     window.stkNoteSave = function (u, k) {
-        const ta = el('stkNoteTa'), btn = el('stkNoteBtn'), msg = el('stkNoteMsg'); if (!ta) return;
+        const ed = el('stkNoteEd'), btn = el('stkNoteBtn'), msg = el('stkNoteMsg'); if (!ed) return;
         if (!NOTES_URL) { msg.innerHTML = '<span class="sbc-r">Saving is not set up yet - the web app link is missing.</span>'; return; }
+        let note = noteHtml(ed.innerHTML).replace(/<div><br><\/div>$/i, '').trim();
+        if (!noteLines(note, true).length) note = '';
+        if (note.length > 4900) { msg.innerHTML = '<span class="sbc-r">Note is too long (' + note.length + ' characters, max 4,900). Remove some old lines or formatting.</span>'; return; }
         if (!window.adminKey) { const pwd = prompt('Enter the admin password to save notes:'); if (!pwd) return; window.adminKey = pwd; }
-        const note = ta.value.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean).join(' | ');
         btn.disabled = true; msg.innerText = 'Saving...';
         fetch(NOTES_URL, { method: 'POST', body: JSON.stringify({ action: 'saveNote', adminKey: window.adminKey, umc: u, col: k, note, by: 'Admin' }) })
             .then(r => r.json()).then(d => {
@@ -5135,6 +5203,20 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 applyNotes(); K.nEdit = ''; drawDetail();
             }).catch(e => { btn.disabled = false; msg.innerHTML = '<span class="sbc-r">Not saved: ' + esc(e.message || e) + '</span>'; });
     };
+    function noteToolbar() {
+        const b = (cmd, ic, tip, val) => `<button type="button" title="${tip}" onmousedown="event.preventDefault()" onclick="stkFmt('${cmd}'${val ? `,'${val}'` : ''})"><i class="fas ${ic}"></i></button>`;
+        const sw = (c, fn, tip) => `<button type="button" class="stk-sw" title="${tip}" style="background:${c}" onmousedown="event.preventDefault()" onclick="${fn}('${c}')"></button>`;
+        return `<div class="stk-tb">
+            <select title="Font" onmousedown="event.stopPropagation()" onchange="stkFmt('fontName',this.value);this.selectedIndex=0"><option value="">Font</option>${['Calibri', 'Arial', 'Tahoma', 'Verdana', 'Times New Roman', 'Georgia', 'Courier New'].map(f => `<option style="font-family:${f}">${f}</option>`).join('')}</select>
+            <select title="Size" onchange="stkFmt('fontSize',this.value);this.selectedIndex=0"><option value="">Size</option><option value="1">Small</option><option value="3">Normal</option><option value="4">Large</option><option value="5">Larger</option><option value="6">Huge</option></select>
+            <span class="stk-tbs"></span>${b('bold', 'fa-bold', 'Bold')}${b('italic', 'fa-italic', 'Italic')}${b('underline', 'fa-underline', 'Underline')}${b('strikeThrough', 'fa-strikethrough', 'Strikethrough')}
+            <span class="stk-tbs"></span>${b('justifyLeft', 'fa-align-left', 'Align left')}${b('justifyCenter', 'fa-align-center', 'Align centre')}${b('justifyRight', 'fa-align-right', 'Align right')}
+            <span class="stk-tbs"></span>${b('insertUnorderedList', 'fa-list-ul', 'Bullets')}${b('insertOrderedList', 'fa-list-ol', 'Numbering')}
+            <span class="stk-tbs"></span><span class="stk-tbl" title="Highlight"><i class="fas fa-highlighter"></i></span>${['#fff59d', '#c8f7c5', '#ffd6a5', '#cfe8ff', '#ffc9de'].map(c => sw(c, 'stkHilite', 'Highlight')).join('')}${sw('transparent', 'stkHilite', 'No highlight')}
+            <span class="stk-tbs"></span><span class="stk-tbl" title="Text colour"><i class="fas fa-font"></i></span>${['#111827', '#c00000', '#0b62c4', '#178a3b', '#b45309'].map(c => sw(c, "stkFmt.bind(null,'foreColor')", 'Text colour')).join('')}
+            <span class="stk-tbs"></span>${b('undo', 'fa-rotate-left', 'Undo')}${b('redo', 'fa-rotate-right', 'Redo')}${b('removeFormat', 'fa-text-slash', 'Clear formatting')}
+        </div>`;
+    }
     function notesHtml(x) {
         const admin = typeof currentRole !== 'undefined' && currentRole === 'admin';
         const when = a => { const d = a ? new Date(a) : null; return d && !isNaN(d) ? ' &middot; ' + dstr(d) : ''; };
@@ -5142,9 +5224,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const n = (x.nt || {})[k], ed = K.nEdit === x.umc + '|' + k;
             if (!n && !ed && !admin) return '';
             const val = { phys: x.phys, sc: x.sc, pr: x.pr, po: x.po }[k];
-            return `<div${n ? '' : ' class="stk-nempty"'}><span><i class="fas fa-note-sticky"></i> ${lab}: ${fm(val)} m</span>${ed
-                ? `<textarea id="stkNoteTa" rows="8" placeholder="One line per place / PO, e.g. TSM store: 500 m">${esc(n ? n.t.replace(/ \| /g, '\n') : '')}</textarea><div class="stk-nbtns"><button class="sbc-chip on" id="stkNoteBtn" onclick="stkNoteSave('${x.umc}','${k}')"><i class="fas fa-save"></i> Save</button><button class="sbc-chip" onclick="stkNoteCancel()">Cancel</button><small id="stkNoteMsg"></small></div>`
-                : `<p>${n && n.t ? esc(n.t).replace(/ \| /g, '<br>') : '<em>No note</em>'}</p>${n && n.t ? `<small>${esc(n.by || '')}${when(n.at)}</small>` : ''}${admin ? `<button class="stk-nedit" onclick="stkNoteEdit('${x.umc}','${k}')"><i class="fas fa-pen"></i> ${n && n.t ? 'Edit' : 'Add'}</button>` : ''}`}</div>`;
+            return `<div class="${n ? '' : 'stk-nempty'}${ed ? ' stk-nfull' : ''}"><span><i class="fas fa-note-sticky"></i> ${lab}: ${fm(val)} m</span>${ed
+                ? `${noteToolbar()}<div id="stkNoteEd" class="stk-ned" contenteditable="true" spellcheck="false">${n && n.t ? noteHtml(n.t) : '<div><br></div>'}</div><div class="stk-nbtns"><button class="sbc-chip on" id="stkNoteBtn" onclick="stkNoteSave('${x.umc}','${k}')"><i class="fas fa-save"></i> Save</button><button class="sbc-chip" onclick="stkNoteCancel()">Cancel</button><small id="stkNoteMsg"></small></div>`
+                : `<div class="stk-nbody">${n && n.t ? noteHtml(n.t) : '<em>No note</em>'}</div>${n && n.t ? `<small>${esc(n.by || '')}${when(n.at)}</small>` : ''}${admin ? `<button class="stk-nedit" onclick="stkNoteEdit('${x.umc}','${k}')"><i class="fas fa-pen"></i> ${n && n.t ? 'Edit' : 'Add'}</button>` : ''}`}</div>`;
         }).join('')}</div>`;
     }
 
@@ -5201,7 +5283,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             return `<div class="glass-panel sbc-panel" id="stkOvPanel">${head('<i class="fas fa-truck"></i> Coming (on order) - ' + L.length + ' UMCs, ' + fm(t('order')) + ' m, Rs ' + cr(t('vOrder')) + ' Cr')}
                 <div class="sbc-note" style="margin:0 0 6px">Quantities from the stock sheet columns PO/DO, PR, SC and VMI. "Store + coming - safety" shows if the UMC is above safety stock once the order arrives.</div>
                 <div class="sbc-tablewrap"><table class="sbc-table stk-table"><thead><tr><th>UMC</th><th>Specification</th><th>Grade</th><th>PO/DO (m)</th><th>PR (m)</th><th>SC (m)</th><th>VMI (m)</th><th>Total coming (m)</th><th>Value (Rs lakh)</th><th>In store (m)</th><th>Safety (m)</th><th>Store + coming - safety (m)</th><th>Due 3M (m)</th><th>PO / PR / SC notes</th><th>Remarks</th></tr></thead><tbody>
-                ${L.map(x => { const g = x.phys + x.graph + x.order - x.safety; return `<tr class="stk-row" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${d(x.po)}</td><td>${d(x.pr)}</td><td>${d(x.sc)}</td><td>${d(x.vmi)}</td><td><b>${fm(x.order)}</b></td><td>${lk(x.vOrder)}</td><td class="${x.belowSafe ? 'sbc-r' : ''}">${fm(x.phys + x.graph)}</td><td>${fm(x.safety)}</td><td>${sg(g)}</td><td>${d(x.n3)}</td><td style="text-align:left;white-space:normal;min-width:220px">${esc(x.orderNote || '-').replace(/ \| /g, '<br>')}</td><td style="text-align:left;white-space:normal;min-width:220px">${esc(x.rem || '-')}</td></tr>`; }).join('')}
+                ${L.map(x => { const g = x.phys + x.graph + x.order - x.safety; return `<tr class="stk-row" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${d(x.po)}</td><td>${d(x.pr)}</td><td>${d(x.sc)}</td><td>${d(x.vmi)}</td><td><b>${fm(x.order)}</b></td><td>${lk(x.vOrder)}</td><td class="${x.belowSafe ? 'sbc-r' : ''}">${fm(x.phys + x.graph)}</td><td>${fm(x.safety)}</td><td>${sg(g)}</td><td>${d(x.n3)}</td><td style="text-align:left;white-space:normal;min-width:240px" class="stk-ncell">${['po', 'pr', 'sc'].filter(k => x.nt && x.nt[k] && x.nt[k].t).map(k => '<b>' + k.toUpperCase().replace('PO', 'PO/DO') + ':</b>' + noteHtml(x.nt[k].t)).join('') || '-'}</td><td style="text-align:left;white-space:normal;min-width:220px">${esc(x.rem || '-')}</td></tr>`; }).join('')}
                 </tbody><tfoot><tr class="tot"><td>Total</td><td></td><td></td><td>${fm(t('po'))}</td><td>${fm(t('pr'))}</td><td>${fm(t('sc'))}</td><td>${fm(t('vmi'))}</td><td>${fm(t('order'))}</td><td>${lk(t('vOrder'))}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tfoot></table></div></div>`;
         }
         if (K.ov === 'zero') {
@@ -5256,7 +5338,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             return `<div class="glass-panel sbc-panel" id="stkOvPanel">${head('<i class="fas fa-warehouse"></i> In store now - ' + L.length + ' UMCs, ' + fm(t('phys') + t('graph')) + ' m, Rs ' + cr(t('vPhys') + t('vGraph')) + ' Cr')}
                 <div class="sbc-note" style="margin:0 0 6px">Physical stock lying in store today (stock sheet), biggest value first. <span class="sbc-r">Red</span> = below safety stock.</div>
                 <div class="sbc-tablewrap"><table class="sbc-table stk-table"><thead><tr><th>UMC</th><th>Specification</th><th>Grade</th><th>Rate (Rs/m)</th><th>Physical (m)</th><th>Graphene (m)</th><th>Value (Rs lakh)</th><th>Safety (m)</th><th>Physical - safety (m)</th><th>Due 3M (m)</th><th>Where (sheet note)</th></tr></thead><tbody>
-                ${L.map(x => `<tr class="stk-row" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${fm(x.rate)}</td><td class="${x.belowSafe ? 'sbc-r' : 'sbc-g'}"><b>${fm(x.phys)}</b></td><td>${d(x.graph)}</td><td>${lk(x.vPhys + x.vGraph)}</td><td>${fm(x.safety)}</td><td>${sg(x.safeGap)}</td><td>${d(x.n3)}</td><td style="text-align:left;white-space:normal;min-width:220px">${esc(x.physNote || '-').replace(/ \| /g, '<br>')}</td></tr>`).join('')}
+                ${L.map(x => `<tr class="stk-row" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${fm(x.rate)}</td><td class="${x.belowSafe ? 'sbc-r' : 'sbc-g'}"><b>${fm(x.phys)}</b></td><td>${d(x.graph)}</td><td>${lk(x.vPhys + x.vGraph)}</td><td>${fm(x.safety)}</td><td>${sg(x.safeGap)}</td><td>${d(x.n3)}</td><td style="text-align:left;white-space:normal;min-width:240px" class="stk-ncell">${x.nt && x.nt.phys && x.nt.phys.t ? noteHtml(x.nt.phys.t) : '-'}</td></tr>`).join('')}
                 </tbody><tfoot><tr class="tot"><td>Total</td><td></td><td></td><td></td><td>${fm(t('phys'))}</td><td>${fm(t('graph'))}</td><td>${lk(t('vPhys') + t('vGraph'))}</td><td>${fm(t('safety'))}</td><td></td><td>${fm(t('n3'))}</td><td></td></tr></tfoot></table></div></div>`;
         }
         return '';
@@ -5532,12 +5614,13 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const para = (runs, o = {}) => `<w:p><w:pPr>${o.keep ? '<w:keepNext/>' : ''}${o.box ? `<w:pBdr>${['top', 'left', 'bottom', 'right'].map(b => `<w:${b} w:val="single" w:sz="8" w:space="6" w:color="404040"/>`).join('')}</w:pBdr>` : ''}${o.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>` : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 60 : o.after}"/>${o.ind ? `<w:ind w:left="${o.ind}" w:right="${o.indR || 0}" w:hanging="${o.hang || 0}"/>` : ''}<w:jc w:val="${o.jc || 'left'}"/></w:pPr>${runs}</w:p>`;
             const pageBreak = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr><w:r><w:br w:type="page"/></w:r></w:p>';
             const W = 15100;  // usable width (twips), A4 landscape, 0.5" margins + page frame
-            const cell = (txt, w, o = {}) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>` : ''}<w:vAlign w:val="center"/></w:tcPr>${para(run(txt, { b: o.b, i: o.i, c: o.c, sz: o.sz }), { jc: o.jc || 'left', after: 0 })}</w:tc>`;
+            const runX = (r, sz) => `<w:r><w:rPr>${r.b ? '<w:b/>' : ''}${r.i ? '<w:i/>' : ''}${r.u ? '<w:u w:val="single"/>' : ''}${r.s ? '<w:strike/>' : ''}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr><w:t xml:space="preserve">${xe(r.t)}</w:t></w:r>`;
+            const cell = (txt, w, o = {}) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>` : ''}<w:vAlign w:val="center"/></w:tcPr>${o.runs ? (o.runs.length ? o.runs.map(l => para(l.map(r => runX(r, o.sz || 17)).join(''), { jc: o.jc || 'left', after: 0 })).join('') : para('', { after: 0 })) : para(run(txt, { b: o.b, i: o.i, c: o.c, sz: o.sz }), { jc: o.jc || 'left', after: 0 })}</w:tc>`;
             function table(cols, rows, o = {}) {   // cols: [{h, w (relative), jc}]
                 const tw = cols.reduce((a, c) => a + c.w, 0), ws = cols.map(c => Math.round(c.w / tw * W));
                 const fs = o.sz || 17, rh = o.rh ? `<w:trHeight w:val="${o.rh}"/>` : '';
                 const hdr = `<w:tr><w:trPr><w:tblHeader/><w:cantSplit/>${o.hh ? `<w:trHeight w:val="${o.hh}"/>` : ''}</w:trPr>${cols.map((c, i) => cell(c.h, ws[i], { b: 1, i: !o.plainHead, fill: c.hf || HDR, jc: 'center', sz: o.hsz || fs })).join('')}</w:tr>`;
-                const body = rows.map((r, ri) => `<w:tr><w:trPr><w:cantSplit/>${rh}</w:trPr>${r.map((v, i) => { const x = (v && typeof v === 'object') ? v : { t: v }; return cell(x.t, ws[i], { jc: x.jc || cols[i].jc || 'center', b: x.b, c: x.c, fill: x.fill || (o.zebra && ri % 2 ? ALT : ''), sz: x.sz || fs }); }).join('')}</w:tr>`).join('');
+                const body = rows.map((r, ri) => `<w:tr><w:trPr><w:cantSplit/>${rh}</w:trPr>${r.map((v, i) => { const x = (v && typeof v === 'object') ? v : { t: v }; return cell(x.t, ws[i], { jc: x.jc || cols[i].jc || 'center', b: x.b, c: x.c, fill: x.fill || (o.zebra && ri % 2 ? ALT : ''), sz: x.sz || fs, runs: x.runs }); }).join('')}</w:tr>`).join('');
                 const bc = o.bc || BLUE;
                 return `<w:tbl><w:tblPr><w:tblW w:w="${W}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${['top', 'left', 'bottom', 'right'].map(b => `<w:${b} w:val="single" w:sz="8" w:space="0" w:color="${bc}"/>`).join('')}${['insideH', 'insideV'].map(b => `<w:${b} w:val="single" w:sz="4" w:space="0" w:color="${bc}"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="20" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="20" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${ws.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${o.noHead ? '' : hdr}${body}</w:tbl>`;
             }
@@ -5583,7 +5666,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             // ===== PO pending
             const po = S.filter(x => x.po || x.pr || x.vmi || x.sc).sort((a, b) => a.umc.localeCompare(b.umc));
             body += pageBreak + banner('PO pending for Delivery') + table([{ h: 'UMC', w: 1.1 }, { h: 'Specification', w: 2.8 }, { h: 'PR Qty', w: 0.8 }, { h: 'PO/DO Qty', w: 0.9 }, { h: 'VMI / SC Qty', w: 0.9 }, { h: 'PO / PR / SC notes (from dashboard)', w: 2.6 }, { h: 'Delivery date', w: 1.1 }],
-                po.map(x => [x.umc, { t: x.spec, jc: 'left' }, q(x.pr), q(x.po), q(x.vmi + x.sc), { t: x.orderNote || '', jc: 'left', sz: 15 }, '']), { zebra: 1, rh: 360, sz: 19, hsz: 19 }) + para(run('Notes are the PO / PR / SC notes saved in the dashboard. Fill in the delivery date here.', { i: 1, sz: 17 }), { before: 100 });
+                po.map(x => [x.umc, { t: x.spec, jc: 'left' }, q(x.pr), q(x.po), q(x.vmi + x.sc), { runs: ['po', 'pr', 'sc'].filter(k => x.nt && x.nt[k] && x.nt[k].t).flatMap(k => [[{ t: k.toUpperCase().replace('PO', 'PO/DO') + ':', b: 1 }]].concat(noteRuns(x.nt[k].t))), jc: 'left', sz: 15 }, '']), { zebra: 1, rh: 360, sz: 19, hsz: 19 }) + para(run('Notes are the PO / PR / SC notes saved in the dashboard. Fill in the delivery date here.', { i: 1, sz: 17 }), { before: 100 });
             // ===== UMC master: two UMCs per row like the Power BI page
             const M = S.slice().sort((a, b) => a.umc.localeCompare(b.umc)), half = Math.ceil(M.length / 2), mr = [];
             for (let i = 0; i < half; i++) { const a = M[i], b = M[i + half]; mr.push([{ t: a.umc, b: 1 }, { t: a.loc || '-', jc: 'left', sz: 15 }, b ? { t: b.umc, b: 1 } : '', b ? { t: b.loc || '-', jc: 'left', sz: 15 } : '']); }
