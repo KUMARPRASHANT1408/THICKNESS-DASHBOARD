@@ -582,7 +582,7 @@
         .stk-notes small { display: block; font-size: .68rem; color: var(--text-muted); margin-top: 4px; }
         .stk-nedit { margin-top: 6px; border: 1px solid rgba(180,83,9,.4); background: transparent; color: #b45309; border-radius: 6px; padding: 3px 9px; font-size: .74rem; font-weight: 700; cursor: pointer; }
         .stk-notes > div.stk-nempty { background: transparent; border-style: dashed; opacity: .85; }
-        .stk-notes > div { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.35); border-radius: 10px; padding: 8px 10px; } .stk-notes span { font-size: .72rem; font-weight: 700; color: #b45309; } .stk-notes p { margin: 4px 0 0; font-size: .82rem; line-height: 1.45; }
+        .stk-notes > div { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.35); border-radius: 10px; padding: 8px 10px; } .stk-notes span { font-size: .72rem; font-weight: 700; color: #b45309; } .stk-notes p { margin: 4px 0 0; font-size: .82rem; line-height: 1.45; max-height: 230px; overflow-y: auto; padding-right: 4px; }
         .stk-scroll { max-height: 340px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
         .stk-safe { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; } .stk-pie { position: relative; width: 240px; height: 270px; margin: 0 auto; }
         .stk-flow td, .stk-flow th { padding: 6px 8px !important; font-size: .8rem; }
@@ -681,7 +681,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-g</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-h</div>
         </div>
     </div>
 
@@ -5143,7 +5143,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             if (!n && !ed && !admin) return '';
             const val = { phys: x.phys, sc: x.sc, pr: x.pr, po: x.po }[k];
             return `<div${n ? '' : ' class="stk-nempty"'}><span><i class="fas fa-note-sticky"></i> ${lab}: ${fm(val)} m</span>${ed
-                ? `<textarea id="stkNoteTa" rows="4" placeholder="One line per place / PO, e.g. TSM store: 500 m">${esc(n ? n.t.replace(/ \| /g, '\n') : '')}</textarea><div class="stk-nbtns"><button class="sbc-chip on" id="stkNoteBtn" onclick="stkNoteSave('${x.umc}','${k}')"><i class="fas fa-save"></i> Save</button><button class="sbc-chip" onclick="stkNoteCancel()">Cancel</button><small id="stkNoteMsg"></small></div>`
+                ? `<textarea id="stkNoteTa" rows="8" placeholder="One line per place / PO, e.g. TSM store: 500 m">${esc(n ? n.t.replace(/ \| /g, '\n') : '')}</textarea><div class="stk-nbtns"><button class="sbc-chip on" id="stkNoteBtn" onclick="stkNoteSave('${x.umc}','${k}')"><i class="fas fa-save"></i> Save</button><button class="sbc-chip" onclick="stkNoteCancel()">Cancel</button><small id="stkNoteMsg"></small></div>`
                 : `<p>${n && n.t ? esc(n.t).replace(/ \| /g, '<br>') : '<em>No note</em>'}</p>${n && n.t ? `<small>${esc(n.by || '')}${when(n.at)}</small>` : ''}${admin ? `<button class="stk-nedit" onclick="stkNoteEdit('${x.umc}','${k}')"><i class="fas fa-pen"></i> ${n && n.t ? 'Edit' : 'Add'}</button>` : ''}`}</div>`;
         }).join('')}</div>`;
     }

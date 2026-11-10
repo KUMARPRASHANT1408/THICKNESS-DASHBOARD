@@ -1,0 +1,323 @@
+{
+ "5660A0254": {
+  "phys": "600 Mtrs- 5660A0254 ( 400 mtrs stock transferred to TSJ from Dept under returnable basis) | CO1 operation office.Procured through operation | 5660A0254 - 200 mtrs as on 31.05.26 - 20Mtrs used and | Cutpiece - 180mtrs avl as on 30.07.26 | 5660A1149 ((630/4,8/2,HRT4) - 400mtrs rcvd from TSJ on 06.10.26 instead of 630/4,8/3,UHR"
+ },
+ "5660A0296": {
+  "phys": "5660Y0066 - 200M SP2- Consumed in JSC1 on 08.01.26 | 185 mtr consumed in RMHS J5 J50C2 | 5660A0296- 300 mtrs under DO 4414289617 received on 08.08.25- Consumed in SP3 1001 due to throughcut on 27-08-25 | 300 mtrs received on 04.01.26 under DO 4415449974 issued to RMHS J50C2 on 10.07.26 | DO 4417282884 - 300 mtrs rcvd on 12.10.26",
+  "po": "SC 4100015142- 300M | 5660A0296 | 04/04/25 Oriental DO | DO 4415449974 - 300 mtrs rcvd on 04.01.26 | DO 4417282884 - 300 mtrs rcvd on 12.10.26",
+  "sc": "SC 4100052527"
+ },
+ "5660A0849": {
+  "phys": "5660Y0085 - 850M RMBB | 17134434 - 300 RMBB | 400 mtrs rcvd on 19.03.26 ( PO 2100974331 ) | 350 mtrs rcvd on 21.03.26 ( PO 2100974331 )",
+  "po": "2100974331 FORECH - Out of 750 mtrs , 400 mtrs rcvd on 19.03.26, | Balance 350 mtrs rcvd on 21.03.26",
+  "pr": "PR 0921746608 - 750 mtrs"
+ },
+ "5660A0907": {
+  "phys": "5660Y0028 - 250 mtr (1 rolls) at DRI | 5660Y0028 - 250 mtr (1 rolls) at Central Yard (Shifted from DRI) | 5660A0907- 500M (SMS2)- 250 mtrs = 250 mtrs- issued to SMS on 1.8.26 | ( 250 mtrs taken by Lime plant is consumed) | 5660y0048 - | 1 roll at Coal washery belt yard - - Issued for BC3 Iron in Jun'26 | 1 roll at BC17 Coal Washery Hammer mill ( AA 1213) - Issued for BC3 Iron in Jun'26 | 1 roll at Coal washery belt yard issoed to BC10(Consumed in 09..3.2026 | 5660Y0049 - 250M BF1 - used in RFTHC1 in Sep'26 | 5660Y0047- 1x250 = 250 mtrs at Central Yard- issue for RMPP BC22 on 26.10.26 | 5660Y0047- 1x250 = 250 mtrs at DRI | 5660Y0047- 1x300 mtrs (Full Roll) & 1x 250 (Cutpiece) at SP1 | 5660Y0047- 700 mtr VMI Oriental Stock transfer) | 5660Y0028 - 1X350 ( VMI Forech Stock Transfer) - issued to RMPP K9C1 on 24.07.26",
+  "po": "5660A0907- 750 BOF | 2100888903 | Delivered | 5660Y0028 - 1X350 MTRS WILL BE RECEIVED UNDER FORECH VMI 4700133795"
+ },
+ "5660A0908": {
+  "phys": "5660Y0067 - 500M at RMPP 640+250M RMPP & RMHS | 1050 mtr under VMI used in J5C1 consumed on 27.06.25 | VMI stock to TSL stock | 700 mtrs issued for J3C2 | DO 44416285682- 700 mtrs rcvd on 16.06.26 - 350 mtrs issued for RMHS RSC4 on 27.10.26. | DO 44416285682- 350 mtrs as on 27.10.26 | VMI Stock -2x350 mtrs = 700 mtrs regularised to TSL stock | DO 4417094151- 700 mtrs - rcvd on 26.09.26",
+  "po": "VMI requirement given to Forech 2800M 5660Y0067 (mail accepted by forech on 21-03-25 mail sent by Partha) | VMI Request of 2x350 mtrs mail sent to Forech on 17.10.25 | VMI Request of 3x350 mtrs mail sent to Forech on 05.12.25 | DO 44416285682- 700 mtrs | DO 4417094151- 700 mtrs - rcvd on 26.09.26",
+  "sc": "UMC No-5660A0908 | SC No- 4100006145 | PR top sheet under approval raised by RMHS | Rejected by Chief SS"
+ },
+ "5660A0909": {
+  "phys": "5660Y0026-1650M RMPP-500M(cut piece and not calculated). Verified during belt stock verification. | 5660A0909 | BOF - 1200 MTRS- 300 MTRS= 900 MTRS | ( 300 mtrs provided to RMPP BC2) | 5660A0909 - 900 mtr - 300 mtr = 600 mtr | ( 300 mtrs provided to RMPP for BC1) | 5660A0909 - 600 mtr - 300 mtr = 300 mtr at belt yard | ( 300 mtrs provided to SMS2 for BOF-FC1) | 5660Y0105- 300 mtr at RMBB belt yard | 5660Y0105- 1X250 ( at CBBC1 Take up) | 5660Y0105- 1X250 ( at 84C1 Tail) | 5660Y0105- 1X200 mtr at RMBB BF2 Stock house - Used in RMBB J52C2 | 5660Y0086 - 1000M(RMHS) 250 Mtrs transferred to RMPP. | 750 (RMHS)+ 200M(SP1) - 250x2 rolls issued for SP1 F1 & CF1 on 17.10.26 | 5660Y0086 - 250 mtrs as on 19.10.26 | 5660A0906- 300 M (RTG yard) | 5660A0906- 300 M (SMS) | 5660Y0026 - 350 mtr (Stock transfer from VMI)",
+  "po": "5660A0909 - 1500M BOF | PO No- 2100888905 | Make- Forech | Delivered | 5660Y0026 - 1050 MTR will be received under FORECH VMI 4700133795. ( 3x350 MTR)",
+  "pr": "5660A1041(AS) - PR 921692114 | moved to AS Grade UMC 5660A1041",
+  "sc": "5660A1041 SC 4100031774 UNDER APROVAL"
+ },
+ "5660A0910": {
+  "phys": "5660Y0064 - 250M BF2 | 300-50-82-25-25= 118 mtrs in single cutpiece. Physical stock not considered | 5660Y0102- Belt received 26.08.25 . Belt issue to RMHS JCC1 on 28.09.25 | DO 4416215549 - UMC - 5660Y0064 rcvd on 06.04.26 | 1x350 mtrs - VMI stock regularised on 15.06.26 - issued to BF2 Stkhouse on 25.07.26 | DO 4416891545 - 500 mtrs - Forech - UMC 5660Y0064 - rcvd on 24.07.26",
+  "po": "250M | 5660Y0102(5/3) | 04/04/25 Oriental DO 4414289617 Del Date: 01.09.25 | 700 mtrs VMI mail done to Forech on 29.09.25 | DO 4416215549 - UMC - 5660Y0064 rcvd on 06.04.26 | DO 4416891545 - 500 mtrs - Forech - UMC 5660Y0064 - rcvd on 24.07.26"
+ },
+ "5660A0917": {
+  "phys": "5660Y0054 - 275 M CO2(But cut into pieces & shifted to location) | 5660Y0054- 190M (RMBB) | last consumption 450+190-490-30= 120 mtrs | DO 4414891293 - 350 Mtrs recived on 14.10.25. 100 mtrs issued to RMBB IORSC1,JHARC1. Balance Qty - 250 mtrs | 200 mtrs received on 04.1.26 under DO 4415449974 | 5660Y0054 200 Mtrs- 4414891294 rcvd on 05.02.26 | DO 4416215549 350 mtrs -UMC 5660Y0054 - rcvd on 07.04.26",
+  "po": "5660Y0054 200 MTRS - 4414891294 - 15.10.25 | 350 MTRS UNDER DO 4414891293 - Delivery date 15.10.2025 RESPECTIVELY | DO 4415449974 - 200 mtrs | DO 4414891293 - 350 Mtrs recived on 14.10.25 | DO 4416215549 350 mtrs -UMC 5660Y0054 - rcvd on 07.04.26",
+  "sc": "5660Y0054 - 200"
+ },
+ "5660A0918": {
+  "phys": "DO 4416373705 - 350 mtrs (Forech) - rcvd on 14.05.26 | DO 4416285682- 350 mtrs (Forech) - rcvd on 16.06.26 | DO 4416891545 - 350 mtrs (Forech) - rcvd on 25.07.26",
+  "po": "VMI requirement given to Forech. Mail sent by partha on 17th Mar 25 - It is recived at Central Conveyor Yard. | Out of 1050 mtr safety stock 350 mtrs delivered. Balance 700 mtrs pending for delivery | VMI requirement- 350 mtr given to Forech on 22.05.25 | VMI requirement- 350 mtr given to Forech on 02.07.25 | Delivery 10.10.25 | (350+350) mtrs under VMI recieved on 14.10.25 | VMI request - 2x350 mtrs sent to Forech on 17.10.25 - Recieved on 31.12.25 | VMI request - 2x350 mtrs sent to Forech on 03.11.25 rcvd on 01.04.26 | DO 4416285682- 350 mtrs (Forech) | DO 4416373705 - 350 mtrs (Forech) - rcvd on 14.05.26 | DO 4416891545 - 350 mtrs (Forech) - rcvd on 25.07.26",
+  "sc": "UMC No-5660A0918 | SC No- 4100006145 | PR top sheet under approval raised by RMHS | Rejected by Chief SS"
+ },
+ "5660A0919": {
+  "phys": "17105622- 250M at TSM Central Store | (Removed from stock as dept had booked under lazy item) | 5660Y0055-750M (3X 250) shifted to RTG Yard (Indus Make) from BF2 SGP -1 roll issued to RMHS WT on 29.10.25 | 5660Y0055-500M (2X 250 (Indus Make) from BF2 SGP in RTG Yard | 5660Y0055 - Issued to RMHS on 04.11.25 for Boom Conveyor | 5660Y0055-250M (1X 250 (Indus Make) from BF2 SGP in RTG Yard- Issued to RMHS on 02.11.25 for Boom belt SCR1,REC3 | 700M RTG yard under VMI - Issued to BF2 | 5660Y0057 - 500M RMHS | 5660Y0057 - 500M at RTG Yard under FOC was sent to TSK under returnable basis | 5660Y0057 conveyor is returned by TSK- 500 mtrs- 1x250 mtrs issued for BC5(Coal) RMPP | 5660Y0057 - 250 mtrs- as on 27.08.26 - issued to RMHS SCR1 on 22.10.26 | DO 4416215549 - UMC - 5660Y0055 - 500 mtrs rcvd on 06.04.26",
+  "po": "VMI Order- Oriental | UMC No- 5660Y0055 | Belt roll length- 350*2 | UMC 5660Y0055 - 1X350 MTRS WILL BE RECEIVED UNDER FORECH VMI 4700133795 - received on 29.06.25 | VMI request sent to Oriental on 8.12.25 - 350 mtrs(Oriental has not taken into manufacturing due to VMI ARC value reduction. Confirmed on 12.02.26) | DO 4416215549 - UMC - 5660Y0055 - 500 mtrs - rcvd on 06.04.26"
+ },
+ "5660A0922": {
+  "phys": "5660Y0053: 275m LCP | 5660A0488- 500M | 5660Y0063- 270 CO1 | 5660Y0053- 270 CO1 | 5660Y0063 - 300 mtr Forech DO 4414289637 received on 04.08.25 | DO 4416373705 - 700 Mtrs rcvd on 14.05.26 - Issued 350 mtrs on 20.05.26 to RMPP PCSC1 Throughcut. | Balance stock - 350 mtrs (5660Y0063) | DO 44416285682- 1400 mtrs rcvd on 15.06.26 - 700 mtrs issued for J37C4 throughcut. | DO 44416285682- 700 mtrs as on 15.07.26 | DO 4416674759 - 350 mtrs rcvd on 15.06.26. | DO 4416674759 - 5660Y0063 - 350 mtrs rcvd on 16.06.26",
+  "po": "300M 5660Y0063 | 04/04/25 Forech DO | 4414289637 | 200M 5660A0455 under DO 4414891293 | Delivery date- 15.10.2025 | DO 44416285682- 1400 mtrs rcvd on 15.06.26 | DO 4416373705 - 700 Mtrs rcvd on 14.05.26 | DO 4416674759 - 5660Y0063 - 700 mtrs - 350 mtrs rcvd on 15.06.26 & 16.06.26",
+  "sc": "SC 4100012753- 300M 5660Y0063 | 04/04/25 Forech DO"
+ },
+ "5660A0923": {
+  "phys": "5660A0206- 200+200+125M SP2 CONSUMED IN SP3 9001 on 21.04.26(bf2 msd) | 5660Y0093 - 410M(RMBB)+250M(SP2) | 5660A0275- 500 mtrs hifted from RMPP Coal washery to Central yard on 26.07.25 | 5660A0275- 500 mtrs used in SP1 J36C2 | 5660Y0093 - 200 mtrs recieved on | 04/08/25 Forech DO | 4414289637 - Issued to RMPP BC3 Coal washery on 01.10.25 | 5660Y0044 - 450 MTRS UNDER DO 4414891294 -ssued to RMPP TCSC1 on 21.01.26 | DO 4416674807 - 350 mtrs - rcvd on 13.08.26 -5660Y0044 - issued for SP1 SH1C1,J37C2 on 30.10.26 | DO 4416987054 - 350 mtrs - rcvd on 28.09.26 | DO 4417282884 - 350 mtrs - rcvd on 19.10.26 | DO 4417295450 - 350 mtrs - rcvd on 01.11.26",
+  "po": "5660Y0044 - 450 MTRS UNDER DO 4414891294. Del Date-15.10.25 | 200M | 5660Y0093 | 04/04/25 Forech DO | 4414289637 Del date-01.08.25 | DO 4416674807 - 350 mtrs - rcvd on 13.08.26 | DO 4416987054 - 350 mtrs - rcvd on 28.09.26 | DO 4417282884 - 350 mtrs - rcvd on 19.10.26 | DO 4417295450 - 350 mtrs - rcvd on 01.11.26"
+ },
+ "5660A0925": {
+  "phys": "5660Y0090 - 530m SP2 | (265+265 available at sp2&3 bf route yard) | 5660Y0041 - 600 mtr rcvd on 05.02.26 (DO 4415757494) | 5660Y0094 - 350 mtrs returned by RMPP on 02.10.26",
+  "po": "350M | 5660Y0041 | 04/04/25 Oriental DO | 4414289617 | DO 4415757494- 600 mtrs 5660Y0041",
+  "sc": "SC 4100015142- 350M | 5660Y0041 | 04/04/25 Oriental DO"
+ },
+ "5660A0928": {
+  "phys": "700M | 5660Y0051 | 04/04/25 Oriental DO | 4414289617 | Delivery done on 24.10.25 | 350 mtrs issued to SMS2 on 14.04.26 | Balance belt - 350 mtr as on date 14.04.26 | DO 4417282900 - 400 Mtrs - rcvd on 04.11.26",
+  "po": "700M | 5660Y0051 | 04/04/25 Oriental DO | 4414289617 | Delivery date- 01.09.2025 | Belt received on 24.10.25 | DO 4417282900 - 400 Mtrs - rcvd on 04.11.26",
+  "sc": "SC 4100015142- 700M | 5660Y0051 | 04/04/25 Oriental DO"
+ },
+ "5660A0931": {
+  "phys": "5660Y0025 - 900M -300M = 600 M | 300 MTR consumed in JPP3C1 | 600 mtr - 500 mtr = 100 mtr + | 2 rolls ( 250+300) shifted by RMPP for JPP2C2 & JPP6C2. | 250 mtrs consumed in JPP6C2 on 02.08.25. | Current stock - 300 mtrs at JPP2C2 - used in JPP3C1 shortpiece addition on 15.04.26 | 5660Y0025-+300M SP-2/3 Consumed in SP2 1025 | 5660A0328 - 500M (2 rolls at AJ1C1 (C2K2 407/16304) & (C2K2 407/16307) | Oriental Make at AJ1C1) - 250 mtrs shifted to IRMPP ron ckt on 18.10.25 | 5660A0328 - 250M used in AJ8C2 | 5660A0560 - 00M | 5660Y0092 - 300 M at SP1 (Shifted to J35C2 for replacement) | 5660A0931- 500 M at SP1 (500-16 mtrs= 484 mtrs) used in RP2 | 5660A0931 - 484 mtrs provided for SP1 H1. | 5660A0328 - 250M (1 rolls at AJ1C1 (C2K2 407/16304) | Oriental Make at AJ1C1) - Used in JPP3C2 for throughcut shorpiece replacement on 21.11.25 | DO -4415449998 - 500 mtrs rcvd on 20.1.26 - 5660Y0025 issued to SP1 H3 on 07.05.26 | DO 4416674759 - 500 mtrs - 5660Y0025 rcvd on 16.06.26 issued to SP3 1025 on 25.07.26 | DO 4417295450 - 980 mtrs - rcvd on 19.10.26 - issued 360mtrs for SP1 H1 on 26.10.26 | DO 4417295450 - 620 mtrs - as on 26.10.26",
+  "po": "2100906826 | 5660A0931- 500M (SP-1) | DO -4415449998 - 500 mtrs | DO 4416674759 - 500 mtrs - 5660Y0025 | DO 4417295450 - 980 mtrs - rcvd on 19.10.26",
+  "pr": "921557550. | 5660A0931-500. SP1",
+  "sc": "5660Y0025 - 500 mtr"
+ },
+ "5660A0934": {
+  "phys": "310 mtr at RMBB 5660A0905. (single cutpiece) - Replaced in J69C1 | 500M | 5660Y0103 | 04/04/25 Oriental DO | 4414289617 | received on 26.08.25. | 500 mtrs issued for J23C1 on 08.09.25 | 5660A0751 - 350 mtrs issued for J23C1. | DO 4415449998- 5660Y0103- 600 Mtrs rcvd on 26.2.25 | DO - 4416027009- 700 mtrs rcvd on 26.03.26 - isssued 350 mtr on 11.04.26 for RMBB JHAC1 | DO - 4416027009 5660A0751 - 350 MTRS at Central Yard as on 11.04.26",
+  "po": "500M | 5660Y0103 | 04/04/25 Oriental DO | 4414289617 | Delivery date - 20.08.2025 | DO 4415449998 - 600 Mtrs | DO - 4416027009- 700 mtrs rcvd on 26.03.26",
+  "sc": "SC 4100015142- 500M | 5660Y0103 | 04/04/25 Oriental DO | SC 4100051495 - 600 MTRs | SC 4100072651"
+ },
+ "5660A0936": {
+  "phys": "5660Y0121 - 350 (under PO) received on 20.08.25 | 5660Y0121 - 400 mtrs recived on 13.11.25",
+  "po": "SC 4100012753- 350M | 04/04/25 Forech DO 4414289637 | Delivery date- 01.09.2025 | 5660Y0121 - DO 4415354561 - 400 Mtr",
+  "sc": "SC 4100012753- 350M | 04/04/25 Forech DO | SC 4100039989 - 5660Y0121 - 400 mtrs"
+ },
+ "5660A0941": {
+  "phys": "5660Y0115 - 130M CO2 | Consumed in 25BC91B | 5660Y0114- 500M CO-2 | 5660Y0114 - 1X250 mtrs as on 03.07.26 | (Out of 2x250 mtrs, | 1x140 used in 25BC01A) | 130 mtrs cutpiece available & one complete roll available - used in 25BC91B Shortpiece)"
+ },
+ "5660A0942": {
+  "phys": "5660Y0099- 150 MTR UNDER DO 4414891294 | rcvd on 05.02.26",
+  "po": "5660Y0099- 150 MTR UNDER DO 4414891294 | Delivery date- 15.10.2025"
+ },
+ "5660A0943": {
+  "phys": "5660Y0109- 250M BF-2 SGP | Belt Details - 1200MM, EP 630/3, SAR-G, 6/3, | = 250-36 MTRS = 214 MTRS (36 MTRS USED IN SCB3. Cut piece 214 mtr not considred in physical stock | 214 -45-36 mtr = 133 mtr cutpiece at BF2 inba ason 01.08.26 | 5660Y0109 - DO 4416674807 - 250 MTRS - rcvd on 13.09.26",
+  "po": "5660Y0109 - DO 4416674807 - 250 MTRS - rcvd on 13.09.26"
+ },
+ "5660A0948": {
+  "phys": "200M | 5660Y0112 | 04/04/25 Oriental DO | 4414289617 | Delivery date- 20.08.2025 Received on 18.10.25 - Issued to CO2 25BC01A",
+  "po": "SC 4100015142- 200M | 5660Y0112 | 04/04/25 Oriental DO | 4414289617 | Delivery date- 20.08.2025 Received on 18.10.25",
+  "sc": "SC 4100015142- 200M | 5660Y0112 | 04/04/25 Oriental DO"
+ },
+ "5660A0954": {
+  "phys": "5660y0038 -100(sp1)mtr | 5660Y0038 -200 mtr ( RMPP Coal Washery) | 5660Y0043- 1400M mtrs Forech DO | 4414289637 received on 04.08.25. | 5660Y0043- 1400- 350 mtrs= 1050 mtrs ( 350 mtrs issued to SP1 for SP1C2 on 09.08.25) | 5660Y0038 - 700 mtr (VMI stock is taken into TSL Stock)- ISSUED 350 MTRS ON 26.05.26 TO RMPP DUE TO BC17 THROUGHCUT | 5660Y0038 - 350 mtr (AS ON 26.05.26) | 5660Y0043- 1050 - 350 mtrs= 700 mtrs ( 350 mtrs issued to CO1 for M8 on 03.09.25)- 700 mtrs issued to RMPP on 31.01.26 for K10C1 | 400 mtrs recieved under DO 4414891293 on 04.12.25 -issued to RMPP for J14C2 throughcut on 21.12.25 | 5660Y0043- 700 mtrs -DO 4415751807 rcvd on 29.01.26 - issued 350 mtrs on 27.04.26 for K2C1 | BALANCE STOCK - 5660Y0043- 350 mtrs -DO 4415751807 rcvd on 29.01.26 - issued to BF1 FOC3 on 18.05.26 | DO 4416373705 - 700 Mtrs rcvd on 14.05.26 - 350 mtrs issued to RMPP K4C1 on 09.07.26 | DO 4416373705 - 350 Mtrs as on 10.07.26 - ISSUED FOR RMPP K8C1 on 30.10.26 | DO 44416285682 - 700 MTRS rcvd on 16.06.26 - ISSUED FOR RMPP K6C1 on 30.09.26 | DO 44416285682 - 350 MTRS BALANCE QTY AS on 30.09.26 - issue for SP1 C3 on 20.10.26 | DO 4417094151 -1050 mtrs - rcvd on 23.06.26 & 26.09.26 - issued to BF1 FSC1 on 22.10.26 | DO 4417094151 -700 mtrs - Balance stock as on 22.10.26 | DO 4417282900 - 700 Mtrs- rcvd on 04.11.26",
+  "po": "UMC -5660Y0043-1400M | 04/04/25 Forech DO | 4414289637 | UMC 5660Y0043 - 400 MTR under DO 4414891293 | Delivery date- 15.10.2025 | 5660Y0043- 700 mtrs -DO 4415751807 | DO 44416285682 - 700 MTRS | DO 4416373705 - 700 Mtrs rcvd on 14.05.26 | DO 4417094151 -1050 mtrs - rcvd on 23.06.26 & 26.09.26 | DO 4417282900 - 700 Mtrs- rcvd on 04.11.26"
+ },
+ "5660A0956": {
+  "phys": "5660Y0097 - 195M LCP | 5660A0956-310M SP-2 | 5660A0956- 130 mtrs (single cutpiece) | 375-180+555-245-180-195= 130 mtrs | 5660Y0097- 200 MTRS UNDER DO 4414891293 | received on 4.12.25 | 5660Y0097- 460 Mtrs - DO 4415354561 rcvd on 28.01.26 issued to SP2&3 | DO 4416285682- 350 mtrs rcvd on 28.07.26",
+  "po": "PO 2100909441 Oriental - 555 mtr | UMC - 5660A0956 | 5660Y0097- 200 MTRS UNDER DO 4414891293 | Delivery date- 15.10.2025 | 5660Y0097- 460 Mtrs - DO 4415354561 | DO 4416285682- 350 mtrs rcvd on 28.07.26 | DO 4417282900 - 350 Mtrs | PR 2200063861 200 mtr (UMC 5660A1198) - WUXI Boton",
+  "pr": "5660A0956- 555m. | Sp-23 | 4415354561 - UMC-5660Y0097- 460 MTRS | PR 921873348- 200 mtr (UMC 5660A1198)",
+  "sc": "5660Y0097 - 460 mtrs SC 4100039989"
+ },
+ "5660A0957": {
+  "phys": "5660Y0117 - 500M CO2 | 5660A0957 880 M CO2 - 220 mtrs used by dept as Shortpiece in 25BC91B | 5660A0957- 660 Mtr CO2 as on 07.07.26",
+  "po": "PO No. 2100918040 | 5660A0957 880m | Delivery - 29.06.2025"
+ },
+ "5660A0962": {
+  "phys": "5660Y0074 - 200M RMBB | 5660A0777 - 300M RMHS consumed in 33c1 | 240 mtrs recieved on 2.6.25 and consumed in J6C2 on 03.06.25 | 5660Y0074 - DO 4415354561 - 250 Mtr | Received on 22.10.25 - issued for RMHS J6C2 ON 02.07.26 | 5660Y0107 - 200M CO2 (Cutpiece 175 mtrs) | 5660Y0107 - 200M RMPP(Cutpiece 150 mtrs) | DO 4417282884 - 250 mtrs - rcvd on 12.10.26",
+  "po": "PO 4413983179 | 5660Y0074 - DO 4415354561 - 250 Mtr | Received on 22.10.25 | DO 4417282884 - 250 mtrs - rcvd on 12.10.26",
+  "sc": "5660Y0074 - 250 mtrs SC 4100039989"
+ },
+ "5660A0963": {
+  "phys": "5660Y0087 - 700M(LCP) + 450(SP1)+250M RMHS | 5660Y0087 - 250X1 Roll at LCP & 110 Cutpiece at LCP - Consumedin LCP 4A.on 04.11.26 | 5660Y0087 - 250 X1 roll at SP1 consumedin SP1 HV2 on 04.11.26 | 5660Y0087 - DO -4416674807 - 350 MTRS rcvd on 13.09.26 - issued to LCP 4A on 12.10.26 | DO 4417282884 - 500 mtrs rcvd on 01.11.26 | DO 4417295450 - 350 mtrs rcvd on 02.11.26- issued for SP1 CHE1 on 05.11.26",
+  "po": "5660Y0087 - DO -4416674807 - 350 MTRS rcvd on 13.09.26 | DO 4417282884 - 500 mtrs rcvd on 01.11.26 | DO 4417295450 - 350 mtrs rcvd on 02.11.26"
+ },
+ "5660A0966": {
+  "phys": "5660Y0030 - 150mtr +497M CO1+500M RMBB | 5660A0400 - 750mtr | 5660Y0030- 250 mtrs at Central stores | 5660A0400 - 500 mtrs at RMPP Conveyor Yard Coal Washery | This belt was identified 500/4 instead of 630/4 | VMI stock to TSL STOCK- 1400 mtrs- 1050 Mtrs shifted to D6 as spare | Balance stock in Yard as on 30.08.26- 350 mtrs",
+  "po": "5660A0400-3000m | 5660Y0030- VMI mailed to Oriental on 22.05.25 | Delivery date- 22.11.25"
+ },
+ "5660A0968": {
+  "phys": "5660Y0075 - 250M RMPP | 4414891294 - 200 mtrs rcvd on 26.11.25 issued to RMHS J37C1 on 09.04.26 | 200 mtrs received on 04.1.26 under DO 4415449974 issued to BF1 S1 on 18.05.26 | DO 4417282884 - 250 mtrs - rcvd on 12.10.26 | DO 4417295450 - 200 mtrs- rcvd on 20.10.26",
+  "po": "5660Y0075 - 200 MTRS UNDER DO 4414891294 | Delivery Date- 15.10.2025 rcvd on 26.11.25 | DO 4415449974 200 mtrs rcvd on 04.1.26 | DO 4417282884 - 250 mtrs - rcvd on 12.10.26 | DO 4417295450 - 200 mtrs- rcvd on 20.10.26",
+  "sc": "SC 4100039262 - UMC 5660Y0075 - 200 mtrs"
+ },
+ "5660A0973": {
+  "phys": "5660y0045 - 100(rmbb)+ 180(sp2) | 17066709- 250 mtrs at SMS1 C.stores | 5660Y0045 - 350 mtrs under Oriental DO | 4414289617 rcvd on 10.09.25 | 5660Y0045- 2x250 = 500 mtrs shifted from RMPP | 5660Y0089 - 2x175 = 350 mtrs;1x200 = 200 mtrs at CO2",
+  "po": "350M | 5660Y0045 | 04/04/25 Oriental DO | 4414289617 | Delivery date- 01.08.2025",
+  "sc": "SC 4100015142- 350M | 5660Y0045 | 04/04/25 Oriental DO | SC 4100039262 | 5660Y0045- 200 MTRS deleted after discussion"
+ },
+ "5660A0976": {
+  "phys": "5660Y0082 - 170+130 SP2 | Cutpieces 2 nos. avaialble of 340 mtrs 282 mtrs but not counted as only full rolls to be updated in physical stock.Cutpieces is updated in roll sheet | 2100990184 - 250 mtrs (Oriental) - rcvd on 11.08.26",
+  "po": "2100990184 - 250 mtrs (Oriental) - rcvd on 11.08.26",
+  "pr": "PR 921783940 - 250 mtrs"
+ },
+ "5660A0998": {
+  "phys": "LCP 5660Y0095- 500M - 250 M = 250 M | ( 250 mtrs issued to SP2 7004) | LCP 250- 40 mtrs = 210 mtr cutpiece at LCP Yard( 1626965) - Issued to BF2 for SCA1 | SP1 -300M ( Graphene Belt , 4 ply) - consumed in SP1 S1 on 01.06.26 | 5660Y0096 -DO 4416674807 - 700 MTRS - rcvd on 13.08.26",
+  "po": "5660Y0096 -DO 4416674807 - 700 MTRS - rcvd on 13.08.26"
+ },
+ "5660A1041": {
+  "phys": "4X300 rcvd on 16.01.26 | 1400 mtr rcvd on 27.01.26- | 250 mtrs isued to RMPP | 250 MTRS issued to BC15(Iron) in Feb'26RMPP J11C1- 30.09.26 | Balance stock as on 30.09.26- 2100 MTRS | 300 x2mtrs issued for RMPP BC2 & BC13 on 13.10.26 | Balance stock as on 13.10.26-1500 MTRS",
+  "po": "PO 2100947990 - Forech | Delivery date- 03.12.2025 | PO No-2100956757 | Oriental | Delivery date-21-01-26",
+  "pr": "5660A1041(AS) - PR 921692114"
+ },
+ "5660A1045": {
+  "phys": "5660A0779- 200 M issued to BF1 for S0.Replaced on 03.04.25 | PO 2100946094 - Forech | received on 14.11.2025 | 2101015276 - 250 mtrs - Forech- rcvd on 04.11.26",
+  "po": "PO 2100946094 - Forech | Delivery - 20.11.2025 | 2101015276 - 250 mtrs - Forech- rcvd on 04.11.26",
+  "pr": "PR 0921686632 | PR 921828890 - 250 mtrs"
+ },
+ "5660A1047": {
+  "phys": "5660Y0068 - 300M RMPP&RMHS | 5660A0776 -490M RMHS | 5660A0333-450-180 = 270-90 = 180 Mtrs RMHS/RMPP | 5660A0914- 250 mtrs at RMHS | 5660A0333- 250 Mtrs shifted to RTG yard I SSUED TO RMHS ON 26.03.26 for REC3 | Belt received on 24.10.25 under DO 4414891294 | UMC - 5660Y0068- 250 mtrs issued to RMHS on 13.06.26 for SCR1,SCR2 | DO -4415449974- 5660Y0068- 250 mtrs rcvd on 10.10.26 - Issued for REC4 on 15.07.26 | DO -4415449974- 5660Y0068- 360 mtrs rcvd on 23.01.26 | PO 2100964440- 5660A1047- 500 mtrs (Oriental) rcvd on 23.01.26",
+  "po": "Under PO 4414891294 | UMC - 5660Y0068 | Delivery date- 15.10.2025 | DO -4415449974- Total 610 mtrs - | (250+360 mtrs) - 360 mtrs rcvd. | DO -4415449974- 250 mtrs rcvd on 10.10.26 | Belt received on 24.10.25 under PO 4414891294 | UMC - 5660Y0068 | PO 2100964440- 500 mtrs (Oriental)",
+  "pr": "PR 921725535",
+  "sc": "SC 4100039262 - 5660Y0068 - 250+360 = 610 mtrs converted to DO | SC 4100039262 - 5660A0333 - 360 mtrs | 5660A1047 - 500 Mtr for BF1 C1 & C2"
+ },
+ "5660A1050": {
+  "phys": "5660Y0080 - DRI-180M | 200M | 5660Y0080 | 04/04/25 Oriental DO | 4414289617 - Delivery date- 20.08.2025 received on 18.10.25- Issued to DRI 05.03.26 | 5660Y0080 - 250 MTRS DO 4414891294 | received on 26.11.25 - issued on 27.11.25 | PO 2100990193 - 400 mtrs Forech rcvd on 28.07.26 - issued to DRI for K6 BC37 burned on 11.09.26 | PO 2101008209 - 450 mtr (Forech) - rcvd on 23.05.26 & 26.09.26",
+  "po": "200M | 5660Y0080 | 04/04/25 Oriental DO | 4414289617 - Delivery date- 20.08.2025 - Belt received on 18.10.25 | 5660Y0080 - 250 MTRS DO 4414891294 | Delivery date- 15.10.2025 | PO 2100990193 - 400 mtrs Forech rcvd on 28.07.26 | PO 2101008209 - 450 mtr (Forech) - rcvd on 23.05.26 & 26.09.26",
+  "pr": "PR 921783940 - 400 mtrs | PR 921810634 - 450 mtrs",
+  "sc": "SC 4100015142- 200M | 5660Y0080 | 04/04/25 Oriental DO | SC 4100043454 | UMC -5660A1050 - deleted after discussion"
+ },
+ "5660A1051": {
+  "phys": "Belt received on 21.12.25 | PO 2200060600 - WUXI BRILLIANT BOTON CONVEYOR SERVI",
+  "po": "PO 2200060600 - WUXI BRILLIANT BOTON CONVEYOR SERVI | Delivery date -08.10.2025 | PO 2200062975 - 100 mtrs (Wuxi)",
+  "pr": "PR 0921686632 | PR 921810634 - 100 MTRS"
+ },
+ "5660A1058": {
+  "phys": "CMM yard- 350 Mtr for J26C2(MR booked but belt not lifted) | RMHS J30C2- 470 Mtrs | 5660A0455 - 200M received on 13.11.25 | PO-2200060601 | 5660A1058- 1100m | Shandong Phoebus Rubber Co., Ltd rcvd on 28.01.26- 350 mtrs issued to RMHS for SP1C1 on 30.05.26 | 5660A1058- 750 Mtrs as on date 31.05.26 - issued 500 mtrs on 07.10.26 for J26C1 | 5660A1058- 250 Mtrs balance as on date 07.10.26",
+  "po": "AKK: 04/08/25 | PO-2200060601 | 5660A1058- 1100m. Del Date-15.11.25 | Shandong Phoebus Rubber Co., Ltd",
+  "pr": "PR 0921686632.. | Converted to PO 2200060601"
+ },
+ "5660A1059": {
+  "phys": "Consumed in JOAC! | PO 2200060601 - Shandong Phoebus Rubber Co., Ltd | 5660Y1059 - 300Mtr - rcvd on 28.01.26 - Issued to RMHS J50C1 on 04.04.26 | 2200061490 - - Shandong Phoebus Rubber Co., Ltd - 300 mtrs | Delivery Date -30.01.2026 -rcvd on 22.04.26 - issued to RMBB J64C1 on 31.08.26 due to throughcut | 2101015276 - 300MTRS FORECH - rcvd on 04.11.26",
+  "po": "VMI safety stock to be supplied by Forech | PO 2200060601 - Shandong Phoebus Rubber Co., Ltd | 5660Y1059 - 300Mtr | Delivery date- 03.10.2025 | 2200061490 - - Shandong Phoebus Rubber Co., Ltd - 300 mtrs | Delivery Date -30.01.2026 - RCVD ON 22.04.26 | 2101015276 - 300MTRS FORECH - rcvd on 04.11.26",
+  "pr": "PR 0921686632 | PR 921725536 -300 Mtrs | PR 921828890 - 300 mtrs",
+  "sc": "5660A1059- 300 mtrs"
+ },
+ "5660A1066": {
+  "phys": "PO 2100958073 - 250 MTrs rcvd on 10.01.26 issued to RMBB on 26-02-2026 | PO 2101008218 - 400 Mtrs(Oriental) - rcvd on 13.09.26",
+  "po": "PO 2100958073 - 250 MTrs | PO 2101008218 - 400 Mtrs(Oriental) - rcvd on 13.09.26",
+  "pr": "PR 921718834 -250 mtr | PR 921810634 - 400 Mtrs",
+  "sc": "SC 4100043454"
+ },
+ "5660A1067": {
+  "phys": "5660Y0065-400M RMBB | 5660Y0065- 200 mtrs received on 13.11.25 - issued to SP1 on 07.02.26 | PO 2100974331 Foech 200 mtrs rcvd on 19.03.26 - isssued to RMBB on 04.08.26",
+  "po": "UMC 5660Y0065 - 200 MTRS UNDER DO 4414891293 | Delivery date- 15.10.2025 | PO 2100974331 Foech 200 mtrs",
+  "pr": "PR 921746608 | PR 921884108 -200 mtr- PR not processed as ARC was placed in same UMC after PR approval. Same is included in shopping cart Oct'26",
+  "sc": "UMC No-5660A0911 | SC No- 4100006145 | PR top sheet under approval raised by RMHS | Rejected by Chief SS | SC 4100043454 - deleted 350 mtrs after discussion"
+ },
+ "5660A1068": {
+  "phys": "2100974331 FORECH rcvd on 19.03.26",
+  "po": "2100974331 FORECH rcvd on 19.03.26 | PO 2101024764 - Forech - 300 mtrs - Dlv date -09.11.2026",
+  "pr": "PR 921746608 - 350 mtrs | PR 921853587 - 350 mtrs"
+ },
+ "5660A1069": {
+  "phys": "5660Y0060 - 300M CO2 (FR) | Full Roll - 1x 225 mtrs ( 5660Y0060) | 2200061490 - - Shandong Phoebus Rubber Co., Ltd - 180 mtrs | Delivery Date -30.01.2026 - rcvd on 22.04.26",
+  "po": "2200061490 - - Shandong Phoebus Rubber Co., Ltd - 180 mtrs | Delivery Date -30.01.2026 - rcvd on 22.04.26 | PO 2101021241 -Oriental - 100mtrs Dlv date 03.11.26",
+  "pr": "921725536 - 180 Mtr | PR 921840008 - 100 mtrs",
+  "sc": "5660A1069- 180 mtrs"
+ },
+ "5660A1072": {
+  "phys": "PO 2100971417- Forech rcvd on 02.04.26 - issued to RMPP JPPC1 on 08.09.26 | PO 2100994774 - 400 mtrs Krishna Belts -rcvd on 02.07.26 | 2101015282 - 350 mtrs - Krishna Belt - rcvd on 12.09.26 issued to CO1 M11 on 05.11.26",
+  "po": "PO 2100971417- Forech rcvd on 02.04.26 | PO 2100994774 - 400 mtrs Krishna Belts -rcvd on 02.07.26 | 2101015282 - 350 mtrs - Krishna Belt - rcvd on 12.09.26 | PO 2101024764 - Forech - 600 mtrs - Dlv date -09.11.2026",
+  "pr": "921725536 - 400 Mtr | 921790155 - 400 mtrs | PR 921828890 - 350 mtrs | 5660A1072- 600 mtrs -PR 921853587",
+  "sc": "5660A1072- 400 mtrs"
+ },
+ "5660A1075": {
+  "phys": "5660Y0111 - 700M CO2 | 2100989480 - 350 mtrs - Forech rcvd on 16.06.26 - isuued to RMHS WT TT6C1, J4C3 on 24.07.26",
+  "po": "VMI REQUIREMENT SENT TO ORIENTAL ON 13.03.25 FOR 350 MTRS - Delivery date - 13.06.25 | 5660Y0111- 1X350 MTRS WILL BE RECEIVED UNDER FORECH VMI 4700133795 | 2100989480 - 350 mtrs - Forech | PO 2101024764 - Forech - 300 mtrs - Dlv date -09.11.2026",
+  "pr": "PR 0921762881 | PR 921853587 - 300 mtrs"
+ },
+ "5660A1084": {
+  "phys": "5660Y0104 - 850M RMBB | Shifted to J23C1 | 850 MTRS ISSUD TO RMBB J69AC1 ON 18.04.26 | 2100990184 - rcvd 600 mtrs on 01.06.26. | Balance 250 mtrs to be delivered - rcvd on 01.08.26",
+  "po": "PO No-2100950806 (Oriental) | Delivery date-20-12-25 | 2100990184 - 850 mtr (Oriental) - rcvd 600 mtrs on 01.06.26. | Balance 250 mtrs to be delivered - rcvd on 01.08.26",
+  "pr": "PR 921701190 | PO No-2100950806 (Oriental) | Delivery date-20-12-25 | PR 921783940 - 850 mtrs"
+ },
+ "5660A1085": {
+  "phys": "5660Y0108 - 200M RMPM RMHS_Mechanical | 5660A0915- 1100M RMHS at Central Yard - 275 mtr issued to RMHS Coke on 07.02.26 | PO 2100958796 -5660A1085- 400 mtrs rcvd on 28.01.26- issued for SCSC1 on 8.2.26 | 5660A0915- 825 mtr (3x275) at Central Yard - 1X275 Mtr issued to RMHS (J36C5) on 02.04.26 | 5660A0915- 550 mtr (2x275) at Central Yard",
+  "po": "PO 2100958796 -5660A1085- 400 mtrs",
+  "pr": "PR 921716914 | PR 921892663 - 350 mtrs - PR shortclosed due to ARC placed.Mail communicated on 27.10.26",
+  "sc": "SC 4100043457"
+ },
+ "5660A1086": {
+  "phys": "PO 2100958796 -200 mtrs rcvd on 29.01.26 - issued to RMPP for AJ4C1 on 23.03.26 | 2100990193- 350 mtrs rcvd on 31.05.26 - issued to RMPP for JPP2C2 on 25.06.26 | 2100989480 - 200 mtr rcvdon 16.06.26 - issued for BC6(Coal) | 2100994774 (Krishna Belt)- 700 mtr - rcvd on 02.07.26 - issued 350 mtrs for BC6(Coal) | 2101015282 - Krishna Belt - partial received 700 mtrs on 12.09.26 . - 2x350 mtrs issued for AJ4C1 on 19.10.26. | 2100994774 (Krishna Belt)- 350 mtr - as on 27.08.26 - issued to RMPP on 13.10.26 for FTH13C1,BC15,FCSBRSC2 | 2101015282 - Balance 700 mtrs (Krishna) - rcvd on 20.09.26 | 2101016663 - 900 mtrs - Krishna - rcvd on 20.09.26 | 2101015221 - 1400 mtrs - Forech - rcvd on 23.09.26 & 26.09.26",
+  "po": "PO 2100958796 -200 mtrs | 2100990193- 350 mtrs rcvd on 31.05.26 | 2100989480 - 200 mtr | 2100994774 (Krishna Belt)- 700 mtr - rcvd on 02.07.26 | 2101015282 - 1400 mtrs -Krishna Belt - partial received 700 mtrs on 12.09.26 . Balance 700 mtrs to deliver - rcvd on 20.09.26 | 2101016663 - 900 mtrs - Krishna - rcvd on 20.09.26 | 2101015221 - 1400 mtrs - Forech - rcvd on 23.09.26 & 26.09.26",
+  "pr": "PR 0921716914 | PR 0921762881 - 200 mtr | PR 921783940 - 350 Mtrs | PR 921790155 - 700 Mtrs | PR 921828890 - 1400 mtrs | PR 921840007 - 2300 mtrs | PR 921892663-600mtr- shortclosed due ARC Placed- mail communicated on 27.10.26",
+  "sc": "SC 4100043457"
+ },
+ "5660A1087": {
+  "phys": "PO 2100958073 - 400 Mtrs rcvd on 10.01.26 | 200 mtrs issued to SP2&3 on 21.04.26 | Balance stock - 200 mtrs Issued to SP1 H1,B1 on 21.10.26",
+  "po": "PO 2100958073 - 400 Mtrs",
+  "pr": "PR 921718834",
+  "sc": "SC 4100043454"
+ },
+ "5660A1098": {
+  "phys": "5660Y0062 - 250M CO2 | 250-55 mtrs = 195 mtr at CO2. Full length is ony counted. | VMI Stock to TSL Stock - 1050 mtrs",
+  "po": "5660Y0062 - 3 X350 MTRS WILL BE RECEIVED UNDER FORECH VMI 4700133795"
+ },
+ "5660A1135": {
+  "phys": "PO 2100975020 - 400 Krishna Belt rcvd on 10.04.26 | PO 2100994774 - 350 mtrs Krishna Belt- rcvd on 02.07.26",
+  "po": "PO 2100975020 - 400 mtrs Krishna Belt rcvd on 10.04.26 | PO 2100994774 - 350 mtrs Krishna Belt- rcvd on 02.07.26 | PO 2101035723- 350 mtr- Forech",
+  "pr": "0921747088 - 400 mtrs | 921790155 - 350 mtrs | PR 921873348- 350 mtr"
+ },
+ "5660A1136": {
+  "phys": "BW-600- 200M available at CO1 for S1, S2 Conv. This is non standard as BW is 600 mm"
+ },
+ "5660A1137": {
+  "phys": "PO 2100975020 - 300 Krishna Belt rcvd on 10.04.26 | PO 2101008214 - 350 mtrs (Krishna) - rcvd on 12.09.26",
+  "po": "PO 2100975020 - 300 Krishna Belt rcvd on 10.04.26 | PO 2101008214 - 350 mtrs (Krishna) - rcvd on 12.09.26 | PO 2101024764 - Forech - 700 mtrs - Dlv date -09.11.2026",
+  "pr": "0921747088- 300 mtr | PR 921810634 - 350 MTRS | PR 921853587 - 700 mtrs"
+ },
+ "5660A1139": {
+  "phys": "PO 2100990193 - 700 mtr - Forech - Rcvd on 31.05.26- issued 350 mtrs to RMPP | PO 2100990193 - 350 mtr - Forech - as on 05.08.26 | PO 2100994774 - 200x3 mtrs - Krishna Belt rcvd on 03.07.26 | 200 mtrs isssued to RMPP on 29.07.26. | PO 2100994774 - 200x2 mtrs - Krishna Belt as on 30.07.26 - 200 mtrs issued for AJ2C1 on 02.10.26 | PO 2100994774 - Balance 200x1 mtrs - Krishna",
+  "po": "PO 2100990193 - 700 mtr - Forech - Rcvd on 31.05.26 | PO 2100994774 - 600 mtrs - Krishna Belt rcvd on 03.07.26 | PO 2101035723- 350 mtr- Forech",
+  "pr": "PR 0921783940 - 700 mtrs | 921790155 - 600 mtrs | PR 921873348- 350 mtr"
+ },
+ "5660A1140": {
+  "phys": "5660Y0116 - 250M RMHS | 5660Y0116 - 300M RMPP issued to RMHS WT CJ2C1 piece addition on 07.04.26 | 5660Y0116 under Forech DO | 4414289637 recieved on 14.10.25 - 200 mtrs- Issued to RMHS SCR7 on 07.05.26 | 300 mtrs rcvd under PO 2100975025 on 5.3.26 - Issued to RMHS on 31.03.26 for TT4C3. | 5660A1140 - 300 mtrs rcvd on 01.04.26 under 4415449974 - issued to SCR6,CJ1C1 on 07.10.26 | Balance delivery - 500 mtrs PO 2100975025 rcvd on 07.04.26 - 250 mtrs issued for RMHS TT4C4 on 24.07.26 | PO 2100975025 250 mtr as on 24.07.26 -ssued to BC5(Coal) | PO 2100990184 - 700 Mtr (Oriental) rcvd on 09.06.26 | New PO 2101027336 - Oriental - Del- 27.11.26 - rcvd on 01.11.26",
+  "po": "PO 2100975025 - 1100 Mtr ( Orienta)- | umc 5660A1140 - 300 mtrs rcvd on 5.3.26 | umc 5660A1140 - 300 mtrs rcvd on 1.4.26. | Balance delivery - 500 mtrs PO 2100975025 rcvd on 07.04.26 | PO 2100990184 - 700 Mtr (Oriental) rcvd on 09.06.26 | PO 2200062976 - 350 mtr ( Phoebus) is cancelled on 20.07.26 andnew PO awaiting. | New PO 2101027336 - Oriental - Del- 27.11.26 - rcvd on 01.11.26",
+  "pr": "0921747088 -1100 mtrs | PR 921783940 - 700 mtrs | PR 921810634 - 350 mtrs"
+ },
+ "5660A1151": {
+  "phys": "5660Y0024- 315M(RMPP) | 5660A0916- 750 mtr -250 mtr = 500 mtrs in RTG belt yard | 5660A0916 = 500 mtrs - 250 mtrs = 250 mtrs at RTG belt Yard | 5660Y0024 - 250x2 rolls at RTG Yard and 1x200 roll at BOF = 700 mtrs -Issued for T38C1 throughcut.",
+  "po": "2100904841. | 5660A0916-750. SMS-2. Del-10-04-25 | Recived on 18.04.25 | PO 2101035718 - 1400 mtr (5660A1151) - Oriental",
+  "pr": "PR 921873348- 1400 mtr"
+ },
+ "5660A1153": {
+  "phys": "5660A0699-700+250+200-900 = 250 MTRS | 250 MTRS- 90 MTRS = 160 MTRS (Used in SH1RSC3) | 700+250+200-900-90= 160. | 160 mtrs Cutpiece not considred in physical stock | PO 2100954566 - 200 mtrs - UMC 5660A1078 rcvd on 10.01.26 - BF2 rcvd from Yard on 17.04.26 | 5660A1078- PO 2100974331 - 180 mtrs - Forech rcvd on 21.03.26 | 5660A1078- PO 2100975025 - 500 Mtr ( orienta) rcvd on 01.04.26 - Issued to RMHS for CPBC1 on 02.07.26 | 2101015286 - 500 mtrs - Oriental rcvd on 12.10.26",
+  "po": "PO 2100954566 - 200 mtrs - UMC 5660A1078 | 5660A1078- PO 2100974331 - 180 mtrs - Forech rcvd on 21.03.26 | 5660A1078- PO 2100975025 - 500 Mtr ( orienta) rcvd on 01.04.26 | 2101015286 - 500 mtrs - Oriental rcvd on 12.10.26",
+  "pr": "PR 0921716914 | PR 921746608 - 180 mtrs | 0921747088 - 500 mtrs | PR 921828890 - 500 mtrs",
+  "sc": "SC 4100043457"
+ },
+ "5660A1156": {
+  "phys": "5660Y0027- 250M SP-1 | 5660Y0027 - 200 mtrs under Oriental DO 4414289617 | rcvd on 10.09.25 | 5660Y0031 ( Under DO) 500 mtrs reccieved on 20.08.25 - issued to DRI K7 BC33 on 15.04.26 | 5660Y0031 - 250 mtrs issued to DRI for K9 BC33 on 30.05.26 | 5660Y0031 DO 4415449998 - 500 mtrs rcvd on 20.01.26- issued 250mtrs for K10 BC33 ON 16.09.26 | 5660Y0031 DO 4415449998 - 250 mtrs as on 18.09.26 - issued for K1 BC33 on 6.10.26",
+  "po": "500M | 04/04/25 Forech DO | 4414289637 Delivery date - 01.08.2025 | DO 4415449998 - 500 mtrs",
+  "sc": "SC 4100015142- 200M | 5660Y0027 | 04/04/25 Oriental DO"
+ },
+ "5660A1157": {
+  "phys": "5660Y0098 - 200M DRI | 5660Y0015 - 1000M DRI - 250 mtrs issued for PSB5 BC15 | 5660Y0015 - 750 M (RTG Yard)- 250 mtrs issued to DRI K1 on 23.06.26 | 5660Y0015 - 500 M (RTG Yard as on 23.06.26 | 5660Y0098 - 200 mtrs DO 4416027018 - rcvd on 21.03.26",
+  "po": "5660Y0098 - 200 mtrs DO 4416027018 - rcvd on 21.03.26",
+  "sc": "5660Y0098 - SC 4100075383"
+ },
+ "5660A1158": {
+  "phys": "Belt under DO 4414289617 recived on 18.10.25 - 5660Y0050- 600 mtr - ISSUED 350 MTRS TO RMPP J15C2 . | Balance stock DO 4414289617 as on 30.09.26- 300 mtrs | 5660Y0029 - 210mtr BF2 ( 2 cutpieces available but not considered in full roll stock | 5660Y0001-250M(BF1) at belt yard | 5660Y0040 - 150 MTR UNDER DO 4414891293 received on 4.12.25",
+  "po": "600M | 5660Y0050 | 04/04/25 Oriental DO | 4414289617 Del. Date -20.08.2025 | recived on 18.10.25 | 5660Y0040 - 150 MTR UNDER DO 4414891293 | Delivery date -15.10.2025",
+  "sc": "SC 4100015142- 600M | 5660Y0050 | 04/04/25 Oriental DO"
+ },
+ "5660A1164": {
+  "phys": "5660Y0110- 250M CO1 | 300M | 5660Y0110 | 04/04/25 Forech DO 4414289637 | received on 22.10.23 and issued on 22.10.25 for J1 | 5660Y0110 - 350 mtrs - DO 4415751807 rcvd on 19.03.26 issued to CO1 J7 on 1.6.26 | 5660Y0110 - 350 mtrs DO 4416027018 - rcvd on 21.03.26",
+  "po": "SC 4100012753- 300M | 5660Y0110 | 04/04/25 Forech DO 4414289637 | Delivery date- 01.08.2025 | Recived on 22.10.25. Issue for J1 replacement. | 5660Y0110 - 350 mtrs - DO 4415751807 rcvd on 19.03.26 | 5660Y0110 - 350 mtrs DO 4416027018 - rcvd on 21.03.26 | PO 2101024768 - 300 mtrs - Oriental - Dlv- 17.11.26",
+  "pr": "PR 921853587 - 300 mtrs",
+  "sc": "SC 4100012753- 300M | 5660Y0110 | 04/04/25 Forech DO | SC 4100075383"
+ },
+ "5660A1165": {
+  "phys": "5660Y0042 | 500M- DRI (250X2) | DRI- (250 (Full Roll)+(250-84-140=26 mtr . | BF2 - 2x250 (Full Roll) + 2X100 (Cutpiece)- 1 ROLL usedin CFC3 & inclined belt | BF2 - 1X250 ason 06.09.26"
+ },
+ "5660A1169": {
+  "phys": "5660Y0100- 325M BF1 | VMI Stock - 350 mtrs - is regularised to TSL in Apr'26 - issued to J27C1 on 7.10.26 | DO 4416373724 - 700 mtrs rcvd on 13.08.26 - issued 350 mtrs to J27C1 on 7.10.26 | DO 4416373724 balance - 350 mtrs as 07.10.26 | DO 4416987054 - 350 mtrs rcvd on 12.10.26 | DO 4416987054 - 350 mtrs .- rcvd on 20.10.26",
+  "po": "VMI order- Oriental | UMC No- 5660Y0077 | Belt roll length- 350*3 RECIEVED | 5660Y0077 - 1X350 MTRS WILL BE RECEIVED UNDER FORECH VMI 4700133795- Recieved on 29.06.25 | VMI order- Oriental | UMC No- 5660Y0077 | Belt roll length- 350*2 = 700 mtrs on 07.08.25, Delivery date - 07.11.25 - Recieved on 11.11.25 | VMI order- Oriental | UMC No- 5660Y0077 | Belt roll length- 350*3= 1050 mtrs request mailed on 11.09.25 | DO 4416373724 - 700 mtrs rcvd on 13.08.26 | DO 4416987054 - 700 mtrs - rcvd 350 mtrs on 12.10.26 | DO 4416987054 - 350 mtrs .- rcvd on 20.10.26 | PO 2101044960- 350 mtr- UMC 5660A1169",
+  "pr": "PR 921884108 - 350 mtr- UMC 5660A1169",
+  "sc": "UMC No-5660A0921 | SC No- 4100006145 | PR top sheet under approval raised by RMHS | Rejected by Chief SS"
+ },
+ "5660A1188": {
+  "phys": "5660Y0094 - VMI 1050Mtr (1250/5-8/3 FR) | 1X350 MTRS ISSED TO RMPP ON 11.04.26 | Balance qty - 700 mtr as on 11.04.26 - issued to SP2&3 on 16.05.26 for J70C2 replacement due to cracks.",
+  "po": "PO 2101021241 - 700 mtrs Oriental - Dlv Date - 03.11.26",
+  "pr": "PR 921840008 - 700 mtr"
+ },
+ "5660A1189": {
+  "phys": "5660Y0118 - 55M RMHS | - 300 mtrs unloaded at RMHS WT used 30 mtrs | balance - 270 mtrs | 270- 70 = 200 mtrs avaialble in single cutpiece | PO 2100975024 - 300 mtr - 5660A1076 ( Forech) rcvd on 08.05.26",
+  "po": "2100911357 PO Oriental - 300 mtrs | UMC- 5660A0945 | PO 2100975024 - 300 mtr - 5660A1076 ( Forech) rcvd on 08.05.26",
+  "pr": "PR- 921590291, RMHS/AMPP. UMC-5660A0945- 300m | PR 0921747088 - 300 mtrs -5660A1076"
+ },
+ "5660A1199": {
+  "phys": "PO 2101035718 - 550 mtr (5660A1199) - Oriental- rcvd on 02.11.26 and unloaded at J34C1.",
+  "po": "PO 2101035718 - 550 mtr (5660A1199) - Oriental- rcvd on 02.11.26 and unloaded at J34C1.",
+  "pr": "PR 921873348 - 550 mtr (5660A1199)"
+ }
+}
