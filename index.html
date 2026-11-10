@@ -573,6 +573,8 @@
         .stk-lg { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .75rem; color: var(--text-2); }
         .stk-lg span { display: inline-flex; align-items: center; gap: 5px; } .stk-lg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
         .stk-chart { position: relative; height: 300px; }
+        .stk-tip { position: absolute; z-index: 99999; pointer-events: none; opacity: 0; transition: opacity .12s; background: rgba(15,23,42,.95); color: #fff; border-radius: 8px; padding: 8px 10px; font-size: .78rem; line-height: 1.45; box-shadow: 0 6px 18px rgba(0,0,0,.25); max-width: 300px; }
+        .stk-tip i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; } .stk-tip-s { color: #cbd5e1; font-size: .72rem; margin-bottom: 3px; }
         .stk-scroll { max-height: 340px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
         .stk-safe { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; } .stk-pie { position: relative; width: 240px; height: 270px; margin: 0 auto; }
         .stk-flow td, .stk-flow th { padding: 6px 8px !important; font-size: .8rem; }
@@ -671,7 +673,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-c</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-d</div>
         </div>
     </div>
 
@@ -5102,7 +5104,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
 
     // ---------------- render ----------------
     function render() {
-        Object.values(K.charts).forEach(c => { try { c.destroy(); } catch (e) { } }); K.charts = {};
+        Object.values(K.charts).forEach(c => { try { c.destroy(); } catch (e) { } }); K.charts = {}; const _tt = document.getElementById('stkPieTip'); if (_tt) _tt.style.opacity = 0;
         const tabs = [['ov', 'fa-gauge-high', 'Overview'], ['st', 'fa-boxes-stacked', 'UMC Stock'], ['fd', 'fa-magnifying-glass', 'UMC Finder']];
         el('stkTabs').innerHTML = tabs.map(t => `<button class="sbc-chip ${K.tab === t[0] ? 'on' : ''}" onclick="stkTab('${t[0]}')"><i class="fas ${t[1]}"></i> ${t[2]}</button>`).join('');
         const R = el('stkReport');
@@ -5299,7 +5301,19 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 { label: 'After 6 months', data: r2, backgroundColor: [GRN, RD, XTR], borderColor: cssv('--glass-base') || '#fff', borderWidth: 2 }] },
                 options: { responsive: true, maintainAspectRatio: false, cutout: '38%', onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOv(a[0].datasetIndex ? 'safe:6m' : 'safe:def'); },
                     plugins: { legend: { position: 'bottom', labels: { color: c.tick, boxWidth: 12, filter: (it, d) => it.index !== 2 || r1[2] > 0 || r2[2] > 0 } },
-                        tooltip: { callbacks: { title: x => x[0].dataset.label + (x[0].datasetIndex ? ' (stock ' + fm(N.ST) + ' - due ' + fm(N.N6) + ' = ' + fm(N.ST - N.N6) + ' m)' : ' (stock ' + fm(N.ST) + ' m)'), label: x => { const v = x.datasetIndex ? after : today; return ' ' + x.label + ': ' + fm(x.raw) + ' m, Rs ' + vRs(x.dataIndex, v) + ' Cr (' + (x.raw / N.S * 100).toFixed(1) + '% of safety stock)'; } }, filter: x => x.raw > 0 } } },
+                        tooltip: { enabled: false, filter: x => x.raw > 0, external: ctx => {   // HTML tooltip so it is never cut by the small pie box
+                            let tt = document.getElementById('stkPieTip');
+                            if (!tt) { tt = document.createElement('div'); tt.id = 'stkPieTip'; tt.className = 'stk-tip'; document.body.appendChild(tt); }
+                            const m = ctx.tooltip; if (!m || m.opacity === 0 || !m.dataPoints || !m.dataPoints.length) { tt.style.opacity = 0; return; }
+                            const x = m.dataPoints[0], six = x.datasetIndex === 1, v = six ? after : today;
+                            const col = ['#22a06b', RD, XTR][x.dataIndex];
+                            tt.innerHTML = `<b>${six ? 'After 6 months' : 'Today'}</b><div class="stk-tip-s">${six ? 'Stock ' + fm(N.ST) + ' - due ' + fm(N.N6) + ' = ' + fm(N.ST - N.N6) + ' m' : 'Stock ' + fm(N.ST) + ' m'}</div><div><i style="background:${col}"></i>${x.label}: <b>${fm(x.raw)} m</b></div><div>Rs ${vRs(x.dataIndex, v)} Cr &middot; ${(x.raw / N.S * 100).toFixed(1)}% of safety stock</div>`;
+                            const r = ctx.chart.canvas.getBoundingClientRect();
+                            let L = r.left + window.scrollX + m.caretX + 14, Tp = r.top + window.scrollY + m.caretY - 10;
+                            tt.style.opacity = 1; const w = tt.offsetWidth;
+                            if (L + w > window.scrollX + document.documentElement.clientWidth - 8) L = Math.max(8, r.left + window.scrollX + m.caretX - w - 14);
+                            tt.style.left = L + 'px'; tt.style.top = Tp + 'px';
+                        } } } },
                 plugins: [{ id: 'stkMid', afterDraw(ch) { const m = ch.getDatasetMeta(0).data[0]; if (!m) return; const g = ch.ctx; g.save(); g.textAlign = 'center'; g.fillStyle = after < 0 ? (cssv('--red') || '#d33') : (cssv('--green') || '#22a06b'); g.font = '800 13px system-ui'; g.fillText((after < 0 ? '-' : '+') + fm(Math.abs(after)), m.x, m.y - 1); g.font = '10px system-ui'; g.fillStyle = c.tick; g.fillText('after 6M', m.x, m.y + 12); g.restore(); } }] });
         }
         // 3. dept
