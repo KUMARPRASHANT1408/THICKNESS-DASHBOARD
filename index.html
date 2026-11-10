@@ -575,6 +575,9 @@
         .stk-chart { position: relative; height: 300px; }
         .stk-tip { position: absolute; z-index: 99999; pointer-events: none; opacity: 0; transition: opacity .12s; background: rgba(15,23,42,.95); color: #fff; border-radius: 8px; padding: 8px 10px; font-size: .78rem; line-height: 1.45; box-shadow: 0 6px 18px rgba(0,0,0,.25); max-width: 300px; }
         .stk-tip i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; } .stk-tip-s { color: #cbd5e1; font-size: .72rem; margin-bottom: 3px; }
+        .stk-ni { font-size: .7rem; color: var(--amber, #d97706); margin-left: 3px; }
+        .stk-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; margin: 0 0 10px; }
+        .stk-notes div { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.35); border-radius: 10px; padding: 8px 10px; } .stk-notes span { font-size: .72rem; font-weight: 700; color: #b45309; } .stk-notes p { margin: 4px 0 0; font-size: .82rem; line-height: 1.45; }
         .stk-scroll { max-height: 340px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
         .stk-safe { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; } .stk-pie { position: relative; width: 240px; height: 270px; margin: 0 auto; }
         .stk-flow td, .stk-flow th { padding: 6px 8px !important; font-size: .8rem; }
@@ -673,7 +676,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-e</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-f</div>
         </div>
     </div>
 
@@ -5011,6 +5014,8 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         };
         const deptCols = H.filter(h => /nos$/.test(nh(h))).map(h => { const base = nh(h).replace(/nos$/, ''); return { label: String(h).split(/[\s �(]/)[0], n: h, l: H.find(x => nh(x) === base + 'length') }; });
         const g = (r, c) => c ? r[c] : '';
+        // cell notes (added by the Apps Script as '<column> NOTE' columns when the stock file is Excel)
+        const noteCols = H.filter(h => /note$/.test(nh(h)) && h !== C.rem).map(h => ({ h, base: String(h).replace(/\s*note\s*$/i, '').replace(/_x002e_/gi, '.').replace(/[\u00a0\ufffd]/g, ' ').trim(), phys: /^physicalcurrentstocknote$/.test(nh(h)) }));
         K.stock = []; K.byUmc = {};
         stock.forEach(r => {
             const u = key(g(r, C.umc)); if (!u || u === '0') return;
@@ -5020,8 +5025,10 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 sup: blank(g(r, C.sup)), loc: blank(g(r, C.loc)), iq: num(g(r, C.iq)), il: num(g(r, C.il)), longest: num(g(r, C.longest)),
                 phys: num(g(r, C.phys)), graph: num(g(r, C.graph)), vmi: num(g(r, C.vmi)), sc: num(g(r, C.sc)), pr: num(g(r, C.pr)), po: num(g(r, C.po)),
                 safety: num(g(r, C.safety)), cons6: num(g(r, C.cons6)), rop: num(g(r, C.rop)), roq: num(g(r, C.roq)), rem: blank(g(r, C.rem)), reqLen: blank(g(r, C.reqLen)),
+                notes: noteCols.map(n => ({ col: n.base, t: clean(r[n.h]), phys: n.phys })).filter(n => n.t && n.t !== '0'),
                 depts: deptCols.map(d => ({ d: d.label, n: num(r[d.n]), l: d.l ? num(r[d.l]) : 0 })).filter(d => d.n || d.l)
             };
+            o.physNote = (o.notes.find(n => n.phys) || {}).t || '';
             o.total = num(g(r, C.total)) || (o.phys + o.graph + o.vmi + o.sc + o.pr + o.po);
             o.order = o.vmi + o.sc + o.pr + o.po;   // not yet in store
             o.inv = C.inv ? num(g(r, C.inv)) : o.phys * o.rate;
@@ -5194,9 +5201,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             const t = f => L.reduce((a, x) => a + (x[f] || 0), 0);
             return `<div class="glass-panel sbc-panel" id="stkOvPanel">${head('<i class="fas fa-warehouse"></i> In store now - ' + L.length + ' UMCs, ' + fm(t('phys') + t('graph')) + ' m, Rs ' + cr(t('vPhys') + t('vGraph')) + ' Cr')}
                 <div class="sbc-note" style="margin:0 0 6px">Physical stock lying in store today (stock sheet), biggest value first. <span class="sbc-r">Red</span> = below safety stock.</div>
-                <div class="sbc-tablewrap"><table class="sbc-table stk-table"><thead><tr><th>UMC</th><th>Specification</th><th>Grade</th><th>Rate (Rs/m)</th><th>Physical (m)</th><th>Graphene (m)</th><th>Value (Rs lakh)</th><th>Safety (m)</th><th>Physical - safety (m)</th><th>Due 3M (m)</th></tr></thead><tbody>
-                ${L.map(x => `<tr class="stk-row" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${fm(x.rate)}</td><td class="${x.belowSafe ? 'sbc-r' : 'sbc-g'}"><b>${fm(x.phys)}</b></td><td>${d(x.graph)}</td><td>${lk(x.vPhys + x.vGraph)}</td><td>${fm(x.safety)}</td><td>${sg(x.safeGap)}</td><td>${d(x.n3)}</td></tr>`).join('')}
-                </tbody><tfoot><tr class="tot"><td>Total</td><td></td><td></td><td></td><td>${fm(t('phys'))}</td><td>${fm(t('graph'))}</td><td>${lk(t('vPhys') + t('vGraph'))}</td><td>${fm(t('safety'))}</td><td></td><td>${fm(t('n3'))}</td></tr></tfoot></table></div></div>`;
+                <div class="sbc-tablewrap"><table class="sbc-table stk-table"><thead><tr><th>UMC</th><th>Specification</th><th>Grade</th><th>Rate (Rs/m)</th><th>Physical (m)</th><th>Graphene (m)</th><th>Value (Rs lakh)</th><th>Safety (m)</th><th>Physical - safety (m)</th><th>Due 3M (m)</th><th>Where (sheet note)</th></tr></thead><tbody>
+                ${L.map(x => `<tr class="stk-row" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${fm(x.rate)}</td><td class="${x.belowSafe ? 'sbc-r' : 'sbc-g'}"><b>${fm(x.phys)}</b></td><td>${d(x.graph)}</td><td>${lk(x.vPhys + x.vGraph)}</td><td>${fm(x.safety)}</td><td>${sg(x.safeGap)}</td><td>${d(x.n3)}</td><td style="text-align:left;white-space:normal;min-width:220px">${esc(x.physNote || '-').replace(/ \| /g, '<br>')}</td></tr>`).join('')}
+                </tbody><tfoot><tr class="tot"><td>Total</td><td></td><td></td><td></td><td>${fm(t('phys'))}</td><td>${fm(t('graph'))}</td><td>${lk(t('vPhys') + t('vGraph'))}</td><td>${fm(t('safety'))}</td><td></td><td>${fm(t('n3'))}</td><td></td></tr></tfoot></table></div></div>`;
         }
         return '';
     }
@@ -5354,7 +5361,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             <select class="sbc-sel stk-sel" onchange="stkGrade(this.value)"><option value="">All grades</option>${grades.map(g => `<option ${K.grade === g ? 'selected' : ''}>${esc(g)}</option>`).join('')}</select></div>
             <div class="sbc-note" style="margin:4px 0 6px"><span class="sbc-r">Red</span> physical = below safety stock. Last three columns = stock left after the belts due (negative = short). Tap a column name to sort, tap a row for the belts of that UMC.</div>
             <div class="sbc-tablewrap"><table class="sbc-table stk-table" id="stkTable"><thead><tr>${COLS.map(c => `<th onclick="stkSort('${c[0]}')" class="stk-th">${c[1]}${K.sortC === c[0] ? (K.sortD > 0 ? ' &#9650;' : ' &#9660;') : ''}</th>`).join('')}</tr></thead><tbody>
-            ${L.map(x => `<tr class="stk-row${K.sel === x.umc ? ' stk-on' : ''}" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${fm(x.rate)}</td><td>${fm(x.il)}</td><td>${fm(x.longest)}</td><td>${fm(x.safety)}</td><td class="${x.belowSafe ? 'sbc-r' : 'sbc-g'}"><b>${fm(x.phys)}</b></td><td>${x.graph ? fm(x.graph) : '-'}</td><td>${x.order ? fm(x.order) : '-'}</td><td class="${x.total >= x.safety ? 'sbc-g' : 'sbc-y'}"><b>${fm(x.total)}</b></td><td>${lk(x.vTotal)}</td><td>${x.n3 ? fm(x.n3) : '-'}</td><td>${x.n6 ? fm(x.n6) : '-'}</td><td>${x.n8 ? fm(x.n8) : '-'}</td><td>${sg(x.b3)}</td><td>${sg(x.b6)}</td><td>${sg(x.b8)}</td></tr>`).join('')}
+            ${L.map(x => `<tr class="stk-row${K.sel === x.umc ? ' stk-on' : ''}" onclick="stkOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td style="text-align:left">${esc(x.grade)}</td><td>${fm(x.rate)}</td><td>${fm(x.il)}</td><td>${fm(x.longest)}</td><td>${fm(x.safety)}</td><td class="${x.belowSafe ? 'sbc-r' : 'sbc-g'}"${x.physNote ? ` title="${esc(x.physNote)}"` : ''}><b>${fm(x.phys)}</b>${x.physNote ? ' <i class="fas fa-note-sticky stk-ni"></i>' : ''}</td><td>${x.graph ? fm(x.graph) : '-'}</td><td>${x.order ? fm(x.order) : '-'}</td><td class="${x.total >= x.safety ? 'sbc-g' : 'sbc-y'}"><b>${fm(x.total)}</b></td><td>${lk(x.vTotal)}</td><td>${x.n3 ? fm(x.n3) : '-'}</td><td>${x.n6 ? fm(x.n6) : '-'}</td><td>${x.n8 ? fm(x.n8) : '-'}</td><td>${sg(x.b3)}</td><td>${sg(x.b6)}</td><td>${sg(x.b8)}</td></tr>`).join('')}
             </tbody><tfoot><tr class="tot"><td>Total (${L.length})</td><td></td><td></td><td></td><td>${fm(s('il'))}</td><td></td><td>${fm(s('safety'))}</td><td>${fm(s('phys'))}</td><td>${fm(s('graph'))}</td><td>${fm(s('order'))}</td><td>${fm(s('total'))}</td><td>${lk(s('vTotal'))}</td><td>${fm(s('n3'))}</td><td>${fm(s('n6'))}</td><td>${fm(s('n8'))}</td><td></td><td></td><td></td></tr></tfoot></table></div></div>`;
         return h;
     }
@@ -5368,6 +5375,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const info = [['Grade', x.grade], ['Unit rate', x.rate ? 'Rs ' + fm(x.rate) + ' / m' : ''], ['Old UMCs', x.old], ['Old item code', x.oldItem], ['UMC against ARC (Forech)', x.arcF], ['UMC against ARC (Oriental)', x.arcO], ['UMC against Forech VMI', x.vmiF], ['UMC against Oriental VMI', x.vmiO], ['ARC suppliers', x.sup], ['Re-order point / qty (m)', x.rop || x.roq ? fm(x.rop) + ' / ' + fm(x.roq) : ''], ['Consumption in 6 months (m)', x.cons6 ? fm(x.cons6) : ''], ['Required length', x.reqLen], ['Remarks', x.rem]].filter(r => r[1]);
         box.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h3 style="margin:0;flex:1"><i class="fas fa-tag"></i> ${x.umc} <span style="font-weight:500;color:var(--text-muted)">${esc(x.spec)}</span></h3><button class="sbc-chip sbc-png" onclick="stkCloseDetail()"><i class="fas fa-times"></i> Close</button></div>
             <div class="stk-minis">${mini(fm(x.phys) + ' m', 'Physical', x.belowSafe ? 'sbc-r' : 'sbc-g')}${x.graph ? mini(fm(x.graph) + ' m', 'Graphene') : ''}${mini(fm(x.order) + ' m', 'On order')}${mini(fm(x.total) + ' m', 'Total stock')}${mini(fm(x.safety) + ' m', 'Safety stock')}${mini(fm(x.longest) + ' m', 'Longest belt')}${mini('Rs ' + lk(x.vTotal) + ' L', 'Total value')}${mini(fm(x.n3) + ' m', 'Due 3M', x.b3 < 0 ? 'sbc-r' : '')}${mini(fm(x.n6) + ' m', 'Due 6M', x.b6 < 0 ? 'sbc-r' : '')}${mini(fm(x.n8) + ' m', 'Due 8M', x.b8 < 0 ? 'sbc-r' : '')}</div>
+            ${x.notes.length ? `<div class="stk-notes">${x.notes.map(n => `<div><span><i class="fas fa-note-sticky"></i> ${esc(n.col)} - note</span><p>${esc(n.t).replace(/ \| /g, '<br>')}</p></div>`).join('')}</div>` : ''}
             <div class="stk-info">${info.map(r => `<div><span>${r[0]}</span><b>${esc(r[1])}</b></div>`).join('')}</div>
             ${x.depts.length ? `<div class="sbc-note" style="margin:6px 0">Installed (stock sheet): ${x.depts.map(d => `<b>${esc(d.d)}</b> ${d.n} nos / ${fm(d.l)} m`).join(' &middot; ')}</div>` : ''}
             <h3 style="margin:12px 0 6px;font-size:.95rem">Belts on this UMC - ${belts.length} conveyors, ${fm(belts.reduce((a, b) => a + (b.len || 0), 0))} m</h3>
