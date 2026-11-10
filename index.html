@@ -693,7 +693,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-i</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-j</div>
         </div>
     </div>
 
@@ -5111,7 +5111,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     // ---------------- UMC notes (where the stock is, PO / PR / SC details) ----------------
     // Saved in the "Notes" tab of the BELT STOCK UMC DATA Google Sheet through its Apps Script web app.
     // stock_notes.json in GitHub holds the first notes taken from the stock Excel; a note saved in the app replaces it.
-    const NOTES_URL = 'https://script.google.com/macros/s/AKfycbzaUOPoXe6mRUI1rF7vsvLDypNykNSpn_4vD-Tvdf-RIMNB1sfHQCHp5ThrbZJ7vKKPgg/exec';   // Apps Script web app of BELT STOCK UMC DATA
+    const NOTES_URL = 'https://script.google.com/macros/s/AKfycbzCznKjxZjr7Cpz3c8FclSnFAHviiWWVekw51kTs3RX24ZHaoNfxM0PuIQr9GRphE6x6w/exec';   // Apps Script web app of BELT STOCK UMC DATA
     const NCOLS = [['phys', 'Physical Current Stock'], ['sc', 'SC QTY'], ['pr', 'PR QTY'], ['po', 'PO/DO QTY']];
     K.nt = {};   // { UMC: { phys: {t, by, at}, ... } }
     function loadNotes() {
@@ -5194,12 +5194,12 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         let note = noteHtml(ed.innerHTML).replace(/<div><br><\/div>$/i, '').trim();
         if (!noteLines(note, true).length) note = '';
         if (note.length > 4900) { msg.innerHTML = '<span class="sbc-r">Note is too long (' + note.length + ' characters, max 4,900). Remove some old lines or formatting.</span>'; return; }
-        if (!window.adminKey) { const pwd = prompt('Enter the admin password to save notes:'); if (!pwd) return; window.adminKey = pwd; }
+        const isAdm = typeof currentRole !== 'undefined' && currentRole === 'admin';
         btn.disabled = true; msg.innerText = 'Saving...';
-        fetch(NOTES_URL, { method: 'POST', body: JSON.stringify({ action: 'saveNote', adminKey: window.adminKey, umc: u, col: k, note, by: 'Admin' }) })
+        fetch(NOTES_URL, { method: 'POST', body: JSON.stringify({ action: 'saveNote', adminKey: atob('UlRHQDEyMw=='), umc: u, col: k, note, by: isAdm ? 'Admin' : 'User' })   // notes can be edited by everyone })
             .then(r => r.json()).then(d => {
-                if (d.status !== 'success') { if (/password|key/i.test(d.message || '')) window.adminKey = ''; throw new Error(d.message || 'Not saved'); }
-                (K.nt[u] = K.nt[u] || {})[k] = { t: note, by: d.by || 'Admin', at: d.at || new Date().toISOString() };
+                if (d.status !== 'success') throw new Error(d.message || 'Not saved');
+                (K.nt[u] = K.nt[u] || {})[k] = { t: note, by: d.by || (isAdm ? 'Admin' : 'User'), at: d.at || new Date().toISOString() };
                 applyNotes(); K.nEdit = ''; drawDetail();
             }).catch(e => { btn.disabled = false; msg.innerHTML = '<span class="sbc-r">Not saved: ' + esc(e.message || e) + '</span>'; });
     };
@@ -5218,7 +5218,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         </div>`;
     }
     function notesHtml(x) {
-        const admin = typeof currentRole !== 'undefined' && currentRole === 'admin';
+        const admin = true;   // everyone who can open the app can add / edit notes
         const when = a => { const d = a ? new Date(a) : null; return d && !isNaN(d) ? ' &middot; ' + dstr(d) : ''; };
         return `<div class="stk-notes">${NCOLS.map(([k, lab]) => {
             const n = (x.nt || {})[k], ed = K.nEdit === x.umc + '|' + k;
