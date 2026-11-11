@@ -693,7 +693,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 10-Nov-l</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 11-Nov-a</div>
         </div>
     </div>
 
@@ -5073,6 +5073,15 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             };
             if (K.convUmc[c]) return; K.convUmc[c] = o.umc; K.uf.push(o);
         });
+        // conveyors listed in the stock sheet "Installed Location" but missing (or without UMC) in the UMC finder sheet
+        K.stock.forEach(st => String(st.loc || '').split(/[,;\/]/).forEach(x => {
+            const c = key(x); if (!c || c === '0' || K.convUmc[c]) return;
+            const t = K.thk[c]; if (!t) return;
+            const ex = K.uf.find(b => b.conv === c);
+            if (ex) { ex.umc = st.umc; ex.fromStock = true; K.convUmc[c] = st.umc; return; }
+            K.uf.push({ conv: c, name: t.name || c, dept: t.dept || '-', sec: '', mat: '', width: '', spec: st.spec, old: '', umc: st.umc, carcass: '', rating: '', top: '', bot: '', thick: '', grade: st.grade, len: t.len, ga: '', rem: 'From stock sheet Installed Location (not in UMC finder sheet)', cbm: t.cbm || null, lastRep: t.lastRep || null, lastThk: t.lastThk || null, minThk: t.minThk || '', inThk: true, notEx: !!t.notEx, fromStock: true });
+            K.convUmc[c] = st.umc;
+        }));
         // belts needed: next CBM already passed or inside the next 3 / 6 / 8 months -> full belt length
         // whole months: 3M = up to the last day of (this month + 3), e.g. on 10-Nov -> 28-Feb; 6M -> 31-May; 8M -> 31-Jul
         const t0 = today(), mEnd = m => new Date(t0.getFullYear(), t0.getMonth() + m + 1, 0, 23, 59, 59), h3 = mEnd(3), h6 = mEnd(6), h8 = mEnd(8);
