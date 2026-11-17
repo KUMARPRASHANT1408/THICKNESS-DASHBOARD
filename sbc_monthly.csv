@@ -862,6 +862,7 @@ fy,dept,conv,mi,month,metres,source
 27,RMPP,BC19(WASHERY),5,September,70,daily report log
 27,RMPP,BC2(IRON),7,November,310,daily report log
 27,BRIQUETTING,BC2070,6,October,22,daily report log
+27,RMPP,BC22(WASHERY),7,November,200,daily report log
 27,RMPP,BC3(COAL),2,June,25,daily report log
 27,RMPP,BC3(IRON),2,June,350,daily report log
 27,RMPP,BC4(IRON),2,June,52,pivot copy 27-Oct-2026
@@ -1083,6 +1084,7 @@ fy,dept,conv,mi,month,metres,source
 27,DRI,PSB1-BC11,6,October,35,daily report log
 27,DRI,PSB1-BC21,1,May,16,daily report log
 27,DRI,PSB1-BC23B,1,May,50,daily report log
+27,DRI,PSB1-BC30,7,November,140,daily report log
 27,DRI,PSB3-BC11,7,November,18,daily report log
 27,DRI,PSB3-REVERSIBLE,1,May,22,daily report log
 27,DRI,PSB4-BC21,2,June,16,daily report log
