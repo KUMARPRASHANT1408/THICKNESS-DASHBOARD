@@ -610,6 +610,10 @@
         .stk-sfbig.r { background: rgba(229,72,77,.08); border-color: rgba(229,72,77,.35); } .stk-sfbig.r b { color: #e5484d; }
         .stk-sfbig.g { background: rgba(34,160,107,.08); border-color: rgba(34,160,107,.35); } .stk-sfbig.g b { color: #22a06b; }
         .stk-sfbig.z b { font-size: 1.1rem; }
+        .stk-sfbig.stk-click:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.08); } .stk-sfbig.on { outline: 2px solid currentColor; } .stk-sfbig.r.on { outline-color: #e5484d; } .stk-sfbig.g.on { outline-color: #22a06b; } .stk-sfbig.z.on { outline-color: #64748b; }
+        .stk-sfbig span i { float: right; opacity: .6; }
+        .stk-sffil { display: inline-flex; gap: 6px; align-items: center; font-size: .78rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+        .stk-sffil.def { background: rgba(229,72,77,.12); color: #e5484d; } .stk-sffil.ovr { background: rgba(34,160,107,.12); color: #22a06b; } .stk-sffil.zero { background: rgba(100,116,139,.15); color: #64748b; } .stk-sffil a { color: inherit; }
         .stk-quadk { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 6px; font-size: .85rem; } .stk-quadk .g b { color: #22a06b; } .stk-quadk .r b { color: #e5484d; } .stk-quadk .z b { color: #64748b; }
         .stk-scroll { max-height: 340px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
         .stk-safe { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; } .stk-pie { position: relative; width: 240px; height: 270px; margin: 0 auto; }
@@ -709,7 +713,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Nov-a</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Nov-c</div>
         </div>
     </div>
 
@@ -5426,6 +5430,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         };
     }
     window.stkSfH = function (h) { K.sfH = h; render(); };
+    window.stkSfF = function (f) { K.sfF = K.sfF === f ? '' : f; K.sfOpen = true; render(); setTimeout(() => { const t = el('stkSfTable'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30); };
     window.stkSfToggle = function () { K.sfOpen = K.sfOpen === false; render(); };
     window.stkSfOpen = function (u) { K.sel = u; K.tab = 'sf'; render(); setTimeout(() => { const d = el('stkDetail'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30); };
     const sfChip = () => SFH.map(([k, l]) => `<button class="sbc-chip ${(K.sfH || '6') === k ? 'on' : ''}" onclick="stkSfH('${k}')">${l}</button>`).join('');
@@ -5461,37 +5466,39 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     }
     function safetyTab() {
         const h = K.sfH || '6', T = sfTot(h), open = K.sfOpen !== false;
-        const L = K.stock.slice().sort((a, b) => sfBal(a, h) - sfBal(b, h) || a.umc.localeCompare(b.umc));
+        const F = K.sfF || '', fOk = x => { const b = sfBal(x, h); return F === 'def' ? b < -0.5 : F === 'ovr' ? b > 0.5 : F === 'zero' ? Math.abs(b) <= 0.5 : true; };
+        const L = K.stock.filter(fOk).sort((a, b) => F === 'ovr' ? sfBal(b, h) - sfBal(a, h) : (sfBal(a, h) - sfBal(b, h) || a.umc.localeCompare(b.umc)));
         const hs = ['3', '6', '8'], on = k => k === h ? ' stk-hcol' : '';
         const d0 = v => v ? fm(v) : '-';
         const ordTip = x => `PO/DO: ${fm(x.po)} m | PR: ${fm(x.pr)} m | SC: ${fm(x.sc)} m${x.vmi ? ' | VMI: ' + fm(x.vmi) + ' m' : ''}`;
-        const rows = L.map(x => `<tr class="stk-row${K.sel === x.umc ? ' stk-on' : ''}" onclick="stkSfOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td>${fm(x.safety)}</td>
+        const rows = L.map(x => `<tr class="stk-row${K.sel === x.umc ? ' stk-on' : ''}" onclick="stkSfOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td>${(b => `<td class="stk-hcol ${b < -0.5 ? 'sbc-r' : b > 0.5 ? 'sbc-g' : ''}"><b>${b < -0.5 ? '-' + fm(-b) : b > 0.5 ? '+' + fm(b) : '0'}</b></td>`)(sfBal(x, h))}<td>${fm(x.safety)}</td>
             ${hs.map(k => `<td class="${on(k)}">${d0(x['n' + k])}</td>`).join('')}${hs.map(k => `<td class="${on(k)}"><b>${fm(x.safety + x['n' + k])}</b></td>`).join('')}
             <td class="${x.phys < x.safety ? 'sbc-r' : ''}">${fm(x.phys)}</td><td title="${ordTip(x)}">${x.order ? fm(x.order) + ' <i class="fas fa-circle-info stk-ni"></i>' : '-'}</td>
             ${hs.map(k => { const b = sfBal(x, k); return `<td class="${on(k)}${b < -0.5 ? ' sbc-r' : ''}">${b < -0.5 ? '<b>' + fm(-b) + '</b>' : '-'}</td>`; }).join('')}
             ${hs.map(k => { const b = sfBal(x, k); return `<td class="${on(k)}${b > 0.5 ? ' sbc-g' : ''}">${b > 0.5 ? fm(b) : '-'}</td>`; }).join('')}</tr>`).join('');
-        const tot = f => fm(K.stock.reduce((a, x) => a + f(x), 0));
-        const foot = `<tr class="tot"><td>Total (${L.length})</td><td></td><td>${tot(x => x.safety)}</td>${hs.map(k => `<td class="${on(k)}">${tot(x => x['n' + k])}</td>`).join('')}${hs.map(k => `<td class="${on(k)}">${tot(x => x.safety + x['n' + k])}</td>`).join('')}<td>${tot(x => x.phys)}</td><td>${tot(x => x.order)}</td>${hs.map(k => `<td class="${on(k)}">${tot(x => Math.max(0, -sfBal(x, k)))}</td>`).join('')}${hs.map(k => `<td class="${on(k)}">${tot(x => Math.max(0, sfBal(x, k)))}</td>`).join('')}</tr>`;
+        const tot = f => fm(L.reduce((a, x) => a + f(x), 0));
+        const foot = `<tr class="tot"><td>Total (${L.length})</td><td></td><td class="stk-hcol">${(v => (v < 0 ? '-' : '+') + fm(Math.abs(v)))(L.reduce((a, x) => a + sfBal(x, h), 0))}</td><td>${tot(x => x.safety)}</td>${hs.map(k => `<td class="${on(k)}">${tot(x => x['n' + k])}</td>`).join('')}${hs.map(k => `<td class="${on(k)}">${tot(x => x.safety + x['n' + k])}</td>`).join('')}<td>${tot(x => x.phys)}</td><td>${tot(x => x.order)}</td>${hs.map(k => `<td class="${on(k)}">${tot(x => Math.max(0, -sfBal(x, k)))}</td>`).join('')}${hs.map(k => `<td class="${on(k)}">${tot(x => Math.max(0, sfBal(x, k)))}</td>`).join('')}</tr>`;
         const hl = h === '0' ? 'As on date' : 'Next ' + h + ' months (' + sfEnd(h) + ')';
         const src = K.availCol ? `<div class="sbc-note" style="margin:0 0 10px">In store = stock sheet column "Belt stock available (Not posted &amp; central stock)"${K.availCostCol ? ', cost = "Inventory cost of belt available (Not posted &amp; central stock)"' : ''}.</div>` : `<div class="sbc-note" style="margin:0 0 10px;color:var(--amber,#b45309)"><i class="fas fa-circle-info"></i> The stock sheet does not have the column "Belt stock available (Not posted &amp; central stock)" yet, so "Physical Current Stock" is used for In store. It switches by itself once the column comes in the sheet.</div>`;
         return src + sfChartsHtml('stkChSfQ', 'stkChSfC') + `
         <div class="stk-sfrow">
-            <div class="glass-panel sbc-panel stk-sftab">
-                <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1"><i class="fas fa-table"></i> UMC-wise safety stock check</h3>
+            <div class="glass-panel sbc-panel stk-sftab" id="stkSfTable">
+                <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1"><i class="fas fa-table"></i> UMC-wise safety stock check${F ? ` <span class="stk-sffil ${F}">${F === 'def' ? 'Deficit' : F === 'ovr' ? 'Overshoot' : 'Zero'} - ${hl}: ${L.length} UMCs <a href="javascript:void(0)" onclick="stkSfF('${F}')" title="Show all UMCs"><i class="fas fa-times"></i></a></span>` : ''}</h3>
                     <button class="sbc-chip" onclick="stkSfExcel()"><i class="fas fa-file-excel"></i> Download</button>
                     <button class="sbc-chip" onclick="stkSfToggle()"><i class="fas fa-chevron-${open ? 'up' : 'down'}"></i> ${open ? 'Hide table' : 'Show table'}</button></div>
                 ${open ? `<div class="sbc-note" style="margin:0 0 6px">Required in TSM = safety stock + planned consumption (belts due as per CBM). Deficit / overshoot = in store + on order - required. Highlighted columns = ${hl}. Hover "On order" for PO / PR / SC split; tap a UMC to see its belts.</div>
                 <div class="sbc-tablewrap stk-sfwrap"><table class="sbc-table stk-table stk-sft"><thead>
-                    <tr><th rowspan="2">UMC</th><th rowspan="2">Specification</th><th rowspan="2">Safety stock (m)</th><th colspan="3">Planned consumption (m)</th><th colspan="3">Required in TSM (m)<br><small>safety + planned</small></th><th rowspan="2">In store (available) (m)</th><th rowspan="2">On order (m)<br><small>PO/DO + PR + SC</small></th><th colspan="3">Deficit (m)</th><th colspan="3">Overshoot (m)</th></tr>
+                    <tr><th rowspan="2">UMC</th><th rowspan="2">Specification</th><th rowspan="2" class="stk-hcol">Deficit (-) / overshoot (+)<br><small>${h === '0' ? 'as on date' : h + 'M'} (m)</small></th><th rowspan="2">Safety stock (m)</th><th colspan="3">Planned consumption (m)</th><th colspan="3">Required in TSM (m)<br><small>safety + planned</small></th><th rowspan="2">In store (available) (m)</th><th rowspan="2">On order (m)<br><small>PO/DO + PR + SC</small></th><th colspan="3">Deficit (m)</th><th colspan="3">Overshoot (m)</th></tr>
                     <tr>${[0, 1, 2, 3].map(() => hs.map(k => `<th class="${on(k)}">${k}M</th>`).join('')).join('')}</tr></thead>
-                    <tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>` : `<div class="sbc-note">Table hidden - ${L.length} UMCs. Tap "Show table" to open it.</div>`}
+                    <tbody>${rows || '<tr><td colspan="20">No UMC in this list.</td></tr>'}</tbody><tfoot>${foot}</tfoot></table></div>` : `<div class="sbc-note">Table hidden - ${L.length} UMCs. Tap "Show table" to open it.</div>`}
             </div>
             <div class="glass-panel sbc-panel stk-sfside">
                 <h3><i class="fas fa-calculator"></i> Totals</h3>
                 <div class="stk-sfchips">${sfChip()}</div>
-                <div class="stk-sfbig r"><span>Total safety deficit</span><b>${(T.defM / 1000).toFixed(2)} km</b><em>Rs ${cr(T.defV)} Cr &middot; ${T.def.length} UMCs</em></div>
-                <div class="stk-sfbig g"><span>Total overshoot</span><b>${(T.ovrM / 1000).toFixed(2)} km</b><em>Rs ${cr(T.ovrV)} Cr &middot; ${T.ovr.length} UMCs</em></div>
-                <div class="stk-sfbig z"><span>Exactly at requirement</span><b>${T.zero.length} UMCs</b><em>${hl}</em></div>
+                <div class="sbc-note" style="margin:0 0 6px">Tap a box to list those UMCs in the table.</div>
+                <div class="stk-sfbig r stk-click${K.sfF === 'def' ? ' on' : ''}" onclick="stkSfF('def')"><span>Total safety deficit <i class="fas fa-list"></i></span><b>${(T.defM / 1000).toFixed(2)} km</b><em>Rs ${cr(T.defV)} Cr &middot; ${T.def.length} UMCs</em></div>
+                <div class="stk-sfbig g stk-click${K.sfF === 'ovr' ? ' on' : ''}" onclick="stkSfF('ovr')"><span>Total overshoot <i class="fas fa-list"></i></span><b>${(T.ovrM / 1000).toFixed(2)} km</b><em>Rs ${cr(T.ovrV)} Cr &middot; ${T.ovr.length} UMCs</em></div>
+                <div class="stk-sfbig z stk-click${K.sfF === 'zero' ? ' on' : ''}" onclick="stkSfF('zero')"><span>Exactly at requirement <i class="fas fa-list"></i></span><b>${T.zero.length} UMCs</b><em>${hl}</em></div>
                 <table class="sbc-table stk-table stk-flow" data-tf-skip="1"><tbody>
                     <tr><td style="text-align:left">Safety stock</td><td>${fm(T.safety)} m</td></tr>
                     <tr><td style="text-align:left">+ Planned consumption</td><td>${fm(T.plan)} m</td></tr>
@@ -5506,7 +5513,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         ${K.sel ? '<div class="glass-panel sbc-panel" id="stkDetail"></div>' : ''}
         <div class="glass-panel sbc-panel"><h3><i class="fas fa-crosshairs"></i> Where each UMC stands - ${hl}</h3>
             <div class="stk-sfchips">${sfChip()}</div>
-            <div class="stk-quadk"><span class="g">Positive (overshoot): <b>${T.ovr.length}</b></span><span class="r">Negative (deficit): <b>${T.def.length}</b></span><span class="z">Zero: <b>${T.zero.length}</b></span><span>of ${K.stock.length} UMCs</span></div>
+            <div class="stk-quadk"><span class="g stk-click" onclick="stkSfF('ovr')">Positive (overshoot): <b>${T.ovr.length}</b></span><span class="r stk-click" onclick="stkSfF('def')">Negative (deficit): <b>${T.def.length}</b></span><span class="z stk-click" onclick="stkSfF('zero')">Zero: <b>${T.zero.length}</b></span><span>of ${K.stock.length} UMCs</span></div>
             <div class="sbc-note" style="margin:0 0 6px">X axis = stock against safety stock today (available - safety). Y axis = stock against the requirement at the chosen horizon (available - safety - planned consumption). Above the line = enough stock; below = deficit. Tap a dot to see the UMC.</div>
             <div class="sbc-chart" style="height:420px"><canvas id="stkChQuad"></canvas></div></div>`;
     }
