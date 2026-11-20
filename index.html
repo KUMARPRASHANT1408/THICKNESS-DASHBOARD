@@ -595,6 +595,22 @@
         .stk-nedit { margin-top: 6px; border: 1px solid rgba(180,83,9,.4); background: transparent; color: #b45309; border-radius: 6px; padding: 3px 9px; font-size: .74rem; font-weight: 700; cursor: pointer; }
         .stk-notes > div.stk-nempty { background: transparent; border-style: dashed; opacity: .85; }
         .stk-notes > div { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.35); border-radius: 10px; padding: 8px 10px; } .stk-notes > div > span { font-size: .72rem; font-weight: 700; color: #b45309; } .stk-notes p { margin: 4px 0 0; font-size: .82rem; line-height: 1.45; max-height: 230px; overflow-y: auto; padding-right: 4px; }
+        .stk-sfrow { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 14px; align-items: start; }
+        @media (max-width: 1000px) { .stk-sfrow { grid-template-columns: 1fr; } }
+        .stk-sfwrap { max-height: 560px; overflow: auto; }
+        .stk-sft th { position: sticky; top: 0; z-index: 2; } .stk-sft thead tr:nth-child(2) th { top: 34px; }
+        .stk-sft th small { font-weight: 500; opacity: .75; }
+        .stk-sft td:nth-child(2) { max-width: 210px; overflow: hidden; text-overflow: ellipsis; font-size: .78rem; }
+        .stk-sft tbody td:first-child, .stk-sft tfoot td:first-child, .stk-sft thead tr:first-child th:first-child { position: sticky; left: 0; z-index: 3; background: var(--surface-2, #fff); }
+        .stk-sft td.stk-hcol, .stk-sft th.stk-hcol { background: rgba(109,91,208,.10) !important; }
+        .stk-sfchips { margin: 0 0 8px; } .stk-sfchips .sbc-chip { margin: 0 4px 4px 0; }
+        .stk-sfbig { border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--glass-border); }
+        .stk-sfbig span { display: block; font-size: .74rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+        .stk-sfbig b { display: block; font-size: 1.45rem; font-variant-numeric: tabular-nums; } .stk-sfbig em { font-style: normal; font-size: .78rem; color: var(--text-muted); }
+        .stk-sfbig.r { background: rgba(229,72,77,.08); border-color: rgba(229,72,77,.35); } .stk-sfbig.r b { color: #e5484d; }
+        .stk-sfbig.g { background: rgba(34,160,107,.08); border-color: rgba(34,160,107,.35); } .stk-sfbig.g b { color: #22a06b; }
+        .stk-sfbig.z b { font-size: 1.1rem; }
+        .stk-quadk { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 6px; font-size: .85rem; } .stk-quadk .g b { color: #22a06b; } .stk-quadk .r b { color: #e5484d; } .stk-quadk .z b { color: #64748b; }
         .stk-scroll { max-height: 340px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
         .stk-safe { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; } .stk-pie { position: relative; width: 240px; height: 270px; margin: 0 auto; }
         .stk-flow td, .stk-flow th { padding: 6px 8px !important; font-size: .8rem; }
@@ -693,7 +709,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 11-Nov-a</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Nov-a</div>
         </div>
     </div>
 
@@ -5027,10 +5043,11 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             arcF: find(/arc\d*forech/), arcO: find(/arc\d*oriental/), vmiF: find(/forechvmi/), vmiO: find(/orientalvmi/),
             rate: find(/^unitrate/), sup: find(/^arcsupplier/), loc: find(/^installedlocation/), iq: find(/^installedqty/), il: find(/^installedlength/), longest: find(/^longestbelt/),
             phys: find(/^physicalcurrentstock$/), graph: find(/^physicalcurrentstockgraphene/), vmi: find(/^vmiqty/), sc: find(/^scqty/), pr: find(/^prqty/), po: find(/^podoqty/),
-            total: find(/^totalstock(current|$)/), inv: find(/^inventory/), safety: find(/^safetystock/), cons6: find(/^consumptionin6/), rop: find(/^reorderpoint/), roq: find(/^reorderqty/), rem: find(/^remarks/), reqLen: find(/^requiredlength/)
+            total: find(/^totalstock(current|$)/), inv: find(/^inventory\b|^inventory$/), avail: H.find(h => /notposted/.test(nh(h)) && !/cost|inventory/.test(nh(h))) || null, availCost: H.find(h => /notposted/.test(nh(h)) && /cost|inventory/.test(nh(h))) || null, safety: find(/^safetystock/), cons6: find(/^consumptionin6/), rop: find(/^reorderpoint/), roq: find(/^reorderqty/), rem: find(/^remarks/), reqLen: find(/^requiredlength/)
         };
         const deptCols = H.filter(h => /nos$/.test(nh(h))).map(h => { const base = nh(h).replace(/nos$/, ''); return { label: String(h).split(/[\s �(]/)[0], n: h, l: H.find(x => nh(x) === base + 'length') }; });
         const g = (r, c) => c ? r[c] : '';
+        K.availCol = !!C.avail; K.availCostCol = !!C.availCost;
         K.stock = []; K.byUmc = {};
         stock.forEach(r => {
             const u = key(g(r, C.umc)); if (!u || u === '0') return;
@@ -5045,7 +5062,11 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             o.total = num(g(r, C.total)) || (o.phys + o.graph + o.vmi + o.sc + o.pr + o.po);
             o.order = o.vmi + o.sc + o.pr + o.po;   // not yet in store
             o.inv = C.inv ? num(g(r, C.inv)) : o.phys * o.rate;
-            o.vPhys = C.inv ? o.inv : o.phys * o.rate; o.vGraph = o.graph * o.rate; o.vOrder = o.order * o.rate; o.vTotal = o.total * o.rate;
+            if (C.avail) {   // 'Belt stock available (Not posted & central stock)' is the physical stock; its own cost column is the inventory
+                o.sheetPhys = o.phys; o.phys = num(g(r, C.avail)); o.graph = 0; o.total = o.phys + o.order;
+                o.inv = C.availCost ? num(g(r, C.availCost)) : o.phys * o.rate;
+            }
+            o.vPhys = (C.inv || C.availCost) ? o.inv : o.phys * o.rate; o.vGraph = o.graph * o.rate; o.vOrder = o.order * o.rate; o.vTotal = o.total * o.rate;
             if (K.byUmc[u]) { ['phys', 'graph', 'vmi', 'sc', 'pr', 'po', 'total', 'order', 'vPhys', 'vGraph', 'vOrder', 'vTotal'].forEach(f => K.byUmc[u][f] += o[f]); return; }
             K.byUmc[u] = o; K.stock.push(o);
         });
@@ -5257,13 +5278,15 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
     // ---------------- render ----------------
     function render() {
         Object.values(K.charts).forEach(c => { try { c.destroy(); } catch (e) { } }); K.charts = {}; const _tt = document.getElementById('stkPieTip'); if (_tt) _tt.style.opacity = 0;
-        const tabs = [['ov', 'fa-gauge-high', 'Overview'], ['st', 'fa-boxes-stacked', 'UMC Stock'], ['fd', 'fa-magnifying-glass', 'UMC Finder']];
+        const tabs = [['ov', 'fa-gauge-high', 'Overview'], ['sf', 'fa-shield-halved', 'Safety Stock'], ['st', 'fa-boxes-stacked', 'UMC Stock'], ['fd', 'fa-magnifying-glass', 'UMC Finder']];
         el('stkTabs').innerHTML = tabs.map(t => `<button class="sbc-chip ${K.tab === t[0] ? 'on' : ''}" onclick="stkTab('${t[0]}')"><i class="fas ${t[1]}"></i> ${t[2]}</button>`).join('');
         const R = el('stkReport');
         if (K.tab === 'ov') R.innerHTML = overview();
         else if (K.tab === 'st') R.innerHTML = stockTab();
+        else if (K.tab === 'sf') R.innerHTML = safetyTab();
         else R.innerHTML = finderTab();
-        if (K.tab === 'ov') drawCharts();
+        if (K.tab === 'ov') { drawCharts(); drawSfCharts('stkChSfQo', 'stkChSfCo'); }
+        if (K.tab === 'sf') { drawSfCharts('stkChSfQ', 'stkChSfC'); drawQuad(); if (K.sel) drawDetail(); }
         if (K.tab === 'st' && K.sel) drawDetail();
         if (K.tab === 'fd') finderRun();
     }
@@ -5385,6 +5408,148 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             <div class="sbc-tap">Outer ring = today, inner ring = after the next 6 months of replacements. Hover for metres and Rs, tap a ring or a red row to list the UMCs.</div><div class="sbc-note" style="margin-top:4px">Deficit is added UMC by UMC: extra stock of one UMC cannot be used for another UMC's conveyor, so only the short UMCs are counted.</div></div>`;
     }
 
+    // ---------------- SAFETY STOCK VIEW (20-Nov-2026) ----------------
+    // Required in TSM (h) = safety stock + planned consumption (belts due up to h); Have = in store (available) + on order (PO/DO, PR, SC, VMI)
+    const SFH = [['0', 'As on date'], ['3', 'Next 3 months'], ['6', 'Next 6 months'], ['8', 'Next 8 months']];
+    const sfPlan = (x, h) => h === '0' ? 0 : x['n' + h];
+    const sfHave = x => x.phys + x.order;
+    const sfBal = (x, h) => sfHave(x) - (x.safety + sfPlan(x, h));
+    const sfEnd = h => h === '0' ? 'today' : 'up to ' + dstr(K.h['h' + h]);
+    function sfTot(h) {
+        const S = K.stock, sum = f => S.reduce((a, x) => a + f(x), 0);
+        const def = S.filter(x => sfBal(x, h) < -0.5), ovr = S.filter(x => sfBal(x, h) > 0.5), zero = S.filter(x => Math.abs(sfBal(x, h)) <= 0.5);
+        return {
+            safety: sum(x => x.safety), plan: sum(x => sfPlan(x, h)), store: sum(x => x.phys), order: sum(x => x.order),
+            vSafety: sum(x => x.safety * x.rate), vPlan: sum(x => sfPlan(x, h) * x.rate), vStore: sum(x => x.vPhys), vOrder: sum(x => x.vOrder),
+            def, ovr, zero, defM: def.reduce((a, x) => a - sfBal(x, h), 0), defV: def.reduce((a, x) => a - sfBal(x, h) * x.rate, 0),
+            ovrM: ovr.reduce((a, x) => a + sfBal(x, h), 0), ovrV: ovr.reduce((a, x) => a + sfBal(x, h) * x.rate, 0)
+        };
+    }
+    window.stkSfH = function (h) { K.sfH = h; render(); };
+    window.stkSfToggle = function () { K.sfOpen = K.sfOpen === false; render(); };
+    window.stkSfOpen = function (u) { K.sel = u; K.tab = 'sf'; render(); setTimeout(() => { const d = el('stkDetail'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30); };
+    const sfChip = () => SFH.map(([k, l]) => `<button class="sbc-chip ${(K.sfH || '6') === k ? 'on' : ''}" onclick="stkSfH('${k}')">${l}</button>`).join('');
+    function sfChartsHtml(qId, cId) {
+        return `<div class="sbc-grid2">
+            <div class="glass-panel sbc-panel"><h3><i class="fas fa-shield-halved"></i> Planned safety stock - metres</h3><div class="sbc-note" style="margin:-4px 0 6px">Left bar = required in TSM (safety stock + planned consumption). Right bar = available (in store + on order).</div><div class="sbc-chart" style="height:320px"><canvas id="${qId}"></canvas></div></div>
+            <div class="glass-panel sbc-panel"><h3><i class="fas fa-indian-rupee-sign"></i> Planned safety stock - cost (Rs crore)</h3><div class="sbc-note" style="margin:-4px 0 6px">Same bars in cost (metres &times; unit rate; in store = inventory cost of available belts).</div><div class="sbc-chart" style="height:320px"><canvas id="${cId}"></canvas></div></div>
+        </div>`;
+    }
+    function drawSfCharts(qId, cId) {
+        if (typeof Chart === 'undefined') return;
+        const tick = cssv('--text-muted') || '#8592a6', grid = cssv('--glass-border') || 'rgba(148,163,184,.15)', ink = cssv('--text-main') || '#111';
+        const T = SFH.map(([k]) => sfTot(k)), labels = SFH.map(([k, l]) => k === '0' ? [l, 'today'] : [l, 'to ' + dstr(K.h['h' + k])]);
+        const mk = (id, cost) => {
+            if (!el(id)) return;
+            const v = (t, f) => cost ? +(t['v' + f] / 1e7).toFixed(2) : Math.round(t[f.toLowerCase()]);
+            const ds = [
+                { label: 'Safety stock', data: T.map(t => v(t, 'Safety')), backgroundColor: '#6d5bd0', stack: 'req' },
+                { label: 'Planned consumption', data: T.map(t => v(t, 'Plan')), backgroundColor: '#b3a7f0', stack: 'req' },
+                { label: 'In store (available)', data: T.map(t => v(t, 'Store')), backgroundColor: '#22a06b', stack: 'have' },
+                { label: 'On order (PO/DO, PR, SC, VMI)', data: T.map(t => v(t, 'Order')), backgroundColor: '#8fd9b6', stack: 'have' }];
+            const f = n => cost ? 'Rs ' + n.toFixed(2) + ' Cr' : fm(n) + ' m';
+            K.charts[id] = new Chart(el(id), { type: 'bar', data: { labels, datasets: ds },
+                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } },
+                    plugins: { legend: { position: 'bottom', labels: { color: tick, boxWidth: 12 } },
+                        tooltip: { callbacks: { label: x => ' ' + x.dataset.label + ': ' + f(x.raw), footer: x => { const t = T[x[0].dataIndex], req = cost ? (t.vSafety + t.vPlan) / 1e7 : t.safety + t.plan, have = cost ? (t.vStore + t.vOrder) / 1e7 : t.store + t.order; return ['Required: ' + f(req), 'Available: ' + f(have), 'UMC-wise deficit: ' + (cost ? 'Rs ' + (t.defV / 1e7).toFixed(2) + ' Cr' : fm(t.defM) + ' m') + ' (' + t.def.length + ' UMCs)']; } } } },
+                    scales: { x: { stacked: true, ticks: { color: tick }, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { color: tick }, grid: { color: grid }, title: { display: true, text: cost ? 'Rs crore' : 'metres', color: tick } } } },
+                plugins: [{ id: 'sfTop', afterDatasetsDraw(ch) { const g = ch.ctx; g.save(); g.font = '700 11px system-ui'; g.fillStyle = ink; g.textAlign = 'center';
+                    ['req', 'have'].forEach((stk, si) => { const a = si * 2; ch.getDatasetMeta(a + 1).data.forEach((bar, i) => { const tot = ds[a].data[i] + ds[a + 1].data[i]; const top = Math.min(bar.y, ch.getDatasetMeta(a).data[i].y); g.fillText(cost ? tot.toFixed(1) : fm(tot), bar.x, top - 5); }); });
+                    g.restore(); } }] });
+        };
+        mk(qId, false); mk(cId, true);
+    }
+    function safetyTab() {
+        const h = K.sfH || '6', T = sfTot(h), open = K.sfOpen !== false;
+        const L = K.stock.slice().sort((a, b) => sfBal(a, h) - sfBal(b, h) || a.umc.localeCompare(b.umc));
+        const hs = ['3', '6', '8'], on = k => k === h ? ' stk-hcol' : '';
+        const d0 = v => v ? fm(v) : '-';
+        const ordTip = x => `PO/DO: ${fm(x.po)} m | PR: ${fm(x.pr)} m | SC: ${fm(x.sc)} m${x.vmi ? ' | VMI: ' + fm(x.vmi) + ' m' : ''}`;
+        const rows = L.map(x => `<tr class="stk-row${K.sel === x.umc ? ' stk-on' : ''}" onclick="stkSfOpen('${x.umc}')"><td><b>${x.umc}</b></td><td style="text-align:left">${esc(x.spec)}</td><td>${fm(x.safety)}</td>
+            ${hs.map(k => `<td class="${on(k)}">${d0(x['n' + k])}</td>`).join('')}${hs.map(k => `<td class="${on(k)}"><b>${fm(x.safety + x['n' + k])}</b></td>`).join('')}
+            <td class="${x.phys < x.safety ? 'sbc-r' : ''}">${fm(x.phys)}</td><td title="${ordTip(x)}">${x.order ? fm(x.order) + ' <i class="fas fa-circle-info stk-ni"></i>' : '-'}</td>
+            ${hs.map(k => { const b = sfBal(x, k); return `<td class="${on(k)}${b < -0.5 ? ' sbc-r' : ''}">${b < -0.5 ? '<b>' + fm(-b) + '</b>' : '-'}</td>`; }).join('')}
+            ${hs.map(k => { const b = sfBal(x, k); return `<td class="${on(k)}${b > 0.5 ? ' sbc-g' : ''}">${b > 0.5 ? fm(b) : '-'}</td>`; }).join('')}</tr>`).join('');
+        const tot = f => fm(K.stock.reduce((a, x) => a + f(x), 0));
+        const foot = `<tr class="tot"><td>Total (${L.length})</td><td></td><td>${tot(x => x.safety)}</td>${hs.map(k => `<td class="${on(k)}">${tot(x => x['n' + k])}</td>`).join('')}${hs.map(k => `<td class="${on(k)}">${tot(x => x.safety + x['n' + k])}</td>`).join('')}<td>${tot(x => x.phys)}</td><td>${tot(x => x.order)}</td>${hs.map(k => `<td class="${on(k)}">${tot(x => Math.max(0, -sfBal(x, k)))}</td>`).join('')}${hs.map(k => `<td class="${on(k)}">${tot(x => Math.max(0, sfBal(x, k)))}</td>`).join('')}</tr>`;
+        const hl = h === '0' ? 'As on date' : 'Next ' + h + ' months (' + sfEnd(h) + ')';
+        const src = K.availCol ? `<div class="sbc-note" style="margin:0 0 10px">In store = stock sheet column "Belt stock available (Not posted &amp; central stock)"${K.availCostCol ? ', cost = "Inventory cost of belt available (Not posted &amp; central stock)"' : ''}.</div>` : `<div class="sbc-note" style="margin:0 0 10px;color:var(--amber,#b45309)"><i class="fas fa-circle-info"></i> The stock sheet does not have the column "Belt stock available (Not posted &amp; central stock)" yet, so "Physical Current Stock" is used for In store. It switches by itself once the column comes in the sheet.</div>`;
+        return src + sfChartsHtml('stkChSfQ', 'stkChSfC') + `
+        <div class="stk-sfrow">
+            <div class="glass-panel sbc-panel stk-sftab">
+                <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1"><i class="fas fa-table"></i> UMC-wise safety stock check</h3>
+                    <button class="sbc-chip" onclick="stkSfExcel()"><i class="fas fa-file-excel"></i> Download</button>
+                    <button class="sbc-chip" onclick="stkSfToggle()"><i class="fas fa-chevron-${open ? 'up' : 'down'}"></i> ${open ? 'Hide table' : 'Show table'}</button></div>
+                ${open ? `<div class="sbc-note" style="margin:0 0 6px">Required in TSM = safety stock + planned consumption (belts due as per CBM). Deficit / overshoot = in store + on order - required. Highlighted columns = ${hl}. Hover "On order" for PO / PR / SC split; tap a UMC to see its belts.</div>
+                <div class="sbc-tablewrap stk-sfwrap"><table class="sbc-table stk-table stk-sft"><thead>
+                    <tr><th rowspan="2">UMC</th><th rowspan="2">Specification</th><th rowspan="2">Safety stock (m)</th><th colspan="3">Planned consumption (m)</th><th colspan="3">Required in TSM (m)<br><small>safety + planned</small></th><th rowspan="2">In store (available) (m)</th><th rowspan="2">On order (m)<br><small>PO/DO + PR + SC</small></th><th colspan="3">Deficit (m)</th><th colspan="3">Overshoot (m)</th></tr>
+                    <tr>${[0, 1, 2, 3].map(() => hs.map(k => `<th class="${on(k)}">${k}M</th>`).join('')).join('')}</tr></thead>
+                    <tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>` : `<div class="sbc-note">Table hidden - ${L.length} UMCs. Tap "Show table" to open it.</div>`}
+            </div>
+            <div class="glass-panel sbc-panel stk-sfside">
+                <h3><i class="fas fa-calculator"></i> Totals</h3>
+                <div class="stk-sfchips">${sfChip()}</div>
+                <div class="stk-sfbig r"><span>Total safety deficit</span><b>${(T.defM / 1000).toFixed(2)} km</b><em>Rs ${cr(T.defV)} Cr &middot; ${T.def.length} UMCs</em></div>
+                <div class="stk-sfbig g"><span>Total overshoot</span><b>${(T.ovrM / 1000).toFixed(2)} km</b><em>Rs ${cr(T.ovrV)} Cr &middot; ${T.ovr.length} UMCs</em></div>
+                <div class="stk-sfbig z"><span>Exactly at requirement</span><b>${T.zero.length} UMCs</b><em>${hl}</em></div>
+                <table class="sbc-table stk-table stk-flow" data-tf-skip="1"><tbody>
+                    <tr><td style="text-align:left">Safety stock</td><td>${fm(T.safety)} m</td></tr>
+                    <tr><td style="text-align:left">+ Planned consumption</td><td>${fm(T.plan)} m</td></tr>
+                    <tr><td style="text-align:left"><b>= Required in TSM</b></td><td><b>${fm(T.safety + T.plan)} m</b></td></tr>
+                    <tr><td style="text-align:left">In store (available)</td><td>${fm(T.store)} m</td></tr>
+                    <tr><td style="text-align:left">+ On order</td><td>${fm(T.order)} m</td></tr>
+                    <tr><td style="text-align:left"><b>= Available</b></td><td><b>${fm(T.store + T.order)} m</b></td></tr>
+                </tbody></table>
+                <div class="sbc-note" style="margin-top:6px">Deficit and overshoot are added UMC by UMC (one UMC's extra stock cannot cover another UMC).</div>
+            </div>
+        </div>
+        ${K.sel ? '<div class="glass-panel sbc-panel" id="stkDetail"></div>' : ''}
+        <div class="glass-panel sbc-panel"><h3><i class="fas fa-crosshairs"></i> Where each UMC stands - ${hl}</h3>
+            <div class="stk-sfchips">${sfChip()}</div>
+            <div class="stk-quadk"><span class="g">Positive (overshoot): <b>${T.ovr.length}</b></span><span class="r">Negative (deficit): <b>${T.def.length}</b></span><span class="z">Zero: <b>${T.zero.length}</b></span><span>of ${K.stock.length} UMCs</span></div>
+            <div class="sbc-note" style="margin:0 0 6px">X axis = stock against safety stock today (available - safety). Y axis = stock against the requirement at the chosen horizon (available - safety - planned consumption). Above the line = enough stock; below = deficit. Tap a dot to see the UMC.</div>
+            <div class="sbc-chart" style="height:420px"><canvas id="stkChQuad"></canvas></div></div>`;
+    }
+    function drawQuad() {
+        if (typeof Chart === 'undefined' || !el('stkChQuad')) return;
+        const h = K.sfH || '6', tick = cssv('--text-muted') || '#8592a6', grid = cssv('--glass-border') || 'rgba(148,163,184,.15)', ink = cssv('--text-main') || '#111';
+        const pts = K.stock.map(x => ({ x: Math.round(sfBal(x, '0')), y: Math.round(sfBal(x, h)), u: x }));
+        const col = p => p.y < -0.5 ? '#e5484d' : (p.y > 0.5 ? '#22a06b' : '#94a3b8');
+        const lim = (a) => { const m = Math.max(100, ...pts.map(p => Math.abs(p[a]))); return Math.ceil(m * 1.1 / 100) * 100; };
+        const LX = lim('x'), LY = lim('y');
+        K.charts.q = new Chart(el('stkChQuad'), { type: 'scatter', data: { datasets: [{ data: pts, pointBackgroundColor: pts.map(col), pointBorderColor: 'rgba(0,0,0,.25)', pointRadius: 6, pointHoverRadius: 9 }] },
+            options: { responsive: true, maintainAspectRatio: false, onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkSfOpen(pts[a[0].index].u.umc); },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { title: x => { const u = x[0].raw.u; return u.umc + ' - ' + u.spec; }, label: x => { const u = x.raw.u; return [' Today vs safety: ' + (x.raw.x >= 0 ? '+' : '') + fm(x.raw.x) + ' m', ' At horizon: ' + (x.raw.y >= 0 ? '+' : '') + fm(x.raw.y) + ' m', ' Safety ' + fm(u.safety) + ', planned ' + fm(sfPlan(u, h)) + ', available ' + fm(sfHave(u)) + ' m']; } } } },
+                scales: { x: { min: -LX, max: LX, ticks: { color: tick }, grid: { color: c2 => c2.tick.value === 0 ? ink : grid, lineWidth: c2 => c2.tick.value === 0 ? 2 : 1 }, title: { display: true, text: 'Today: available - safety stock (m)', color: tick } },
+                    y: { min: -LY, max: LY, ticks: { color: tick }, grid: { color: c2 => c2.tick.value === 0 ? ink : grid, lineWidth: c2 => c2.tick.value === 0 ? 2 : 1 }, title: { display: true, text: 'At horizon: available - required (m)', color: tick } } } },
+            plugins: [{ id: 'quadLab', afterDraw(ch) { const a = ch.chartArea, g = ch.ctx, q = (fx, fy) => pts.filter(p => fx(p.x) && fy(p.y)).length; g.save(); g.font = '700 12px system-ui'; g.globalAlpha = .75;
+                const P = v => v > 0.5, N = v => v < -0.5;
+                [[a.right - 8, a.top + 16, 'right', '#22a06b', 'Safe now & later: ' + q(P, P)], [a.left + 8, a.top + 16, 'left', '#b45309', 'Short now, covered later: ' + q(N, P)], [a.left + 8, a.bottom - 8, 'left', '#e5484d', 'Short now & later: ' + q(N, N)], [a.right - 8, a.bottom - 8, 'right', '#e5484d', 'Safe now, short later: ' + q(P, N)]]
+                    .forEach(([x, y, al, c, t]) => { g.textAlign = al; g.fillStyle = c; g.fillText(t, x, y); }); g.restore(); } }] });
+    }
+    window.stkSfExcel = function () {
+        loadXlsx().then(() => {
+            const X = window.XLSX, hs = ['3', '6', '8'];
+            const rows = K.stock.slice().sort((a, b) => a.umc.localeCompare(b.umc)).map(x => {
+                const o = { 'UMC (New QAP)': x.umc, 'Specification': x.spec, 'Rate (Rs/m)': x.rate, 'Safety stock (m)': x.safety };
+                hs.forEach(k => o['Planned consumption ' + k + 'M (m)'] = x['n' + k]);
+                hs.forEach(k => o['Required in TSM ' + k + 'M (m)'] = x.safety + x['n' + k]);
+                o['In store - available (m)'] = x.phys; o['PO/DO (m)'] = x.po; o['PR (m)'] = x.pr; o['SC (m)'] = x.sc; o['VMI (m)'] = x.vmi; o['On order total (m)'] = x.order;
+                hs.forEach(k => { const b = sfBal(x, k); o['Deficit ' + k + 'M (m)'] = Math.max(0, -b); o['Deficit ' + k + 'M (Rs)'] = Math.round(Math.max(0, -b) * x.rate); });
+                hs.forEach(k => { const b = sfBal(x, k); o['Overshoot ' + k + 'M (m)'] = Math.max(0, b); o['Overshoot ' + k + 'M (Rs)'] = Math.round(Math.max(0, b) * x.rate); });
+                return o;
+            });
+            const wb = X.utils.book_new(), ws = X.utils.json_to_sheet(rows);
+            ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: k === 'Specification' ? 34 : Math.max(11, Math.min(26, k.length + 2)) }));
+            ws['!autofilter'] = { ref: ws['!ref'] }; ws['!freeze'] = { xSplit: 1, ySplit: 1 };
+            X.utils.book_append_sheet(wb, ws, 'Safety stock check');
+            const s = [['Safety stock check', ''], ['Date', dstr(K.h.t0)], [], ['Horizon', 'Up to', 'Safety stock (m)', 'Planned consumption (m)', 'Required in TSM (m)', 'In store (m)', 'On order (m)', 'Deficit (m)', 'Deficit (Rs crore)', 'Deficit UMCs', 'Overshoot (m)', 'Overshoot (Rs crore)', 'Overshoot UMCs']];
+            SFH.forEach(([k, l]) => { const t = sfTot(k); s.push([l, k === '0' ? dstr(K.h.t0) : dstr(K.h['h' + k]), Math.round(t.safety), Math.round(t.plan), Math.round(t.safety + t.plan), Math.round(t.store), Math.round(t.order), Math.round(t.defM), +cr(t.defV), t.def.length, Math.round(t.ovrM), +cr(t.ovrV), t.ovr.length]); });
+            const ws2 = X.utils.aoa_to_sheet(s); ws2['!cols'] = s[3].map(() => ({ wch: 16 })); X.utils.book_append_sheet(wb, ws2, 'Summary');
+            const d = K.h.t0; X.writeFile(wb, `Safety_Stock_Check_${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}.xlsx`);
+        }).catch(() => alert('Could not load the Excel library. Check the internet connection and try again.'));
+    };
+
     function overview() {
         const T = totals();
         const sh = (L, f) => L.reduce((a, x) => a - x[f], 0), shv = (L, f) => L.reduce((a, x) => a - x[f] * x.rate, 0);
@@ -5398,9 +5563,9 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             ${kpi(fm(T.n6) + ' m', 'Belts due in 6 months', 'Up to ' + dstr(K.h.h6) + ' &middot; ' + T.short6.length + ' UMCs short of total stock (' + fm(sh(T.short6, 'b6')) + ' m, Rs ' + cr(shv(T.short6, 'b6')) + ' Cr)', T.short6.length ? 'sbc-y' : '', "stkGo('s6')")}
             ${kpi(fm(T.n8) + ' m', 'Belts due in 8 months', 'Up to ' + dstr(K.h.h8) + ' &middot; ' + T.short8.length + ' UMCs short of total stock (' + fm(sh(T.short8, 'b8')) + ' m, Rs ' + cr(shv(T.short8, 'b8')) + ' Cr)', T.short8.length ? 'sbc-y' : '', "stkGo('s8')")}
         </div>
-        <div class="sbc-note" style="margin:-4px 0 12px">Belts due = belts whose next CBM (thickness sheet) has already passed or falls before the end of the 3rd / 6th / 8th month from now; the full belt length is counted against its New UMC (conveyor &rarr; UMC from the UMC finder sheet). Belts marked "Not Existing" or bucket conveyor (cover grade column of the thickness sheet) are left out. In store value = Inventory (Rs) column of the stock sheet. Tap a card, the pie, a grade bar or a department bar to see its list at the bottom.</div>
+        <div class="sbc-note" style="margin:-4px 0 12px">Belts due = belts whose next CBM (thickness sheet) has already passed or falls before the end of the 3rd / 6th / 8th month from now; the full belt length is counted against its New UMC (conveyor &rarr; UMC from the UMC finder sheet). Belts marked "Not Existing" or bucket conveyor (cover grade column of the thickness sheet) are left out. In store = ${K.availCol ? '"Belt stock available (Not posted &amp; central stock)" and its inventory cost column' : 'Physical Current Stock and the Inventory (Rs) column'} of the stock sheet. Tap a card, a grade bar or a department bar to see its list at the bottom; the Safety Stock tab has the full safety stock check.</div>
         <div class="sbc-grid2">
-            <div class="glass-panel sbc-panel">${safetyBox()}</div>
+            <div class="glass-panel sbc-panel"><div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><h3 style="margin:0;flex:1"><i class="fas fa-shield-halved"></i> Planned safety stock (m)</h3><button class="sbc-chip on" onclick="stkTab('sf')">Open Safety Stock view <i class="fas fa-arrow-right"></i></button></div><div class="sbc-note" style="margin:0 0 6px">Left bar = required (safety + planned consumption), right bar = available (in store + on order).</div><div class="sbc-chart" style="height:300px"><canvas id="stkChSfQo"></canvas></div></div>
             <div class="glass-panel sbc-panel"><h3><i class="fas fa-triangle-exclamation"></i> UMCs that run short - ${K.stock.filter(x => x.b3 < 0 || x.b6 < 0 || x.b8 < 0).length} UMCs (m)</h3><div class="sbc-note" style="margin:-4px 0 8px">Store stock less than belts due in 3 months, or total stock less than belts due in 6 / 8 months. Scroll inside the chart to see all.</div><div class="stk-scroll" id="stkBoxShortWrap"><div id="stkBoxShort" style="position:relative;height:300px"><canvas id="stkChShort"></canvas></div></div><div class="sbc-tap">Tap a bar to open the UMC</div></div>
         </div>
         <div class="sbc-grid2">
