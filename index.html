@@ -713,7 +713,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Nov-c</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Nov-d</div>
         </div>
     </div>
 
@@ -5565,7 +5565,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
             ${kpi('Rs ' + cr(T.vOrder) + ' Cr', '2. Coming (on order)', fm(T.order) + ' m in PO/DO, PR, SC, VMI &middot; ' + K.stock.filter(x => x.order > 0).length + ' UMCs &middot; tap for list', K.ov === 'order' ? 'stk-on-k' : '', "stkOv('order')")}
             ${kpi('Rs ' + cr(T.vPhys + T.vGraph + T.vOrder) + ' Cr', 'Total stock = 1 + 2' + (T.graph ? ' + graphene' : ''), fm(T.total) + ' m &middot; ' + T.n + ' UMCs', '', "stkGo('all')")}
             ${kpi(T.zero.length + ' UMCs', 'Zero physical stock', 'Nothing in store &middot; ' + T.zero.filter(x => x.order > 0).length + ' of them on order &middot; tap for list', T.zero.length ? 'sbc-r' : 'sbc-g', "stkOv('zero')")}
-            ${kpi(T.below.length + ' UMCs', 'Physical below safety stock', fm(T.belowM) + ' m short &middot; Rs ' + cr(T.belowV) + ' Cr', T.below.length ? 'sbc-r' : 'sbc-g', "stkGo('below')")}
+            ${kpi(T.below.length + ' UMCs', 'Physical below safety stock (in store only)', fm(T.belowM) + ' m short &middot; Rs ' + cr(T.belowV) + ' Cr &middot; counting on-order stock too: ' + K.stock.filter(x => sfBal(x, '0') < -0.5).length + ' UMCs (Safety Stock tab)', T.below.length ? 'sbc-r' : 'sbc-g', "stkGo('below')")}
             ${kpi(fm(T.n3) + ' m', 'Belts due in 3 months', 'Up to ' + dstr(K.h.h3) + ' &middot; ' + T.short3.length + ' UMCs short of store stock (' + fm(sh(T.short3, 'b3')) + ' m)', T.short3.length ? 'sbc-y' : '', "stkGo('s3')")}
             ${kpi(fm(T.n6) + ' m', 'Belts due in 6 months', 'Up to ' + dstr(K.h.h6) + ' &middot; ' + T.short6.length + ' UMCs short of total stock (' + fm(sh(T.short6, 'b6')) + ' m, Rs ' + cr(shv(T.short6, 'b6')) + ' Cr)', T.short6.length ? 'sbc-y' : '', "stkGo('s6')")}
             ${kpi(fm(T.n8) + ' m', 'Belts due in 8 months', 'Up to ' + dstr(K.h.h8) + ' &middot; ' + T.short8.length + ' UMCs short of total stock (' + fm(sh(T.short8, 'b8')) + ' m, Rs ' + cr(shv(T.short8, 'b8')) + ' Cr)', T.short8.length ? 'sbc-y' : '', "stkGo('s8')")}
