@@ -925,6 +925,7 @@ fy,dept,conv,mi,month,metres,source
 27,RMHS,DC1,3,July,10,daily report log
 27,RMHS,DC2,3,July,10,daily report log
 27,SMS#2,EAF-BC1D,4,August,10,daily report log
+27,SMS#2,EAF-BC2.2D,7,November,17,daily report log
 27,SMS#2,EAF-BC2D,3,July,17,daily report log
 27,SMS#2,EAF-BC3F,1,May,25,daily report log
 27,RMPP,EJ001,0,April,28,pivot copy 27-Oct-2026
@@ -1004,6 +1005,7 @@ fy,dept,conv,mi,month,metres,source
 27,RMHS,J37C1,0,April,209,daily report log
 27,RMHS,J37C4,3,July,700,daily report log
 27,RMHS,J3C1,0,April,580,daily report log
+27,RMHS,J3RBF1,7,November,27,daily report log
 27,CO#1,J4,7,November,270,daily report log
 27,RMHS,J40ARC1,2,June,30,daily report log
 27,RMHS,J4C1,6,October,165,daily report log
