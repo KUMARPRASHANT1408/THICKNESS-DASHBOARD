@@ -713,7 +713,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 20-Nov-e</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 24-Nov-a</div>
         </div>
     </div>
 
@@ -5070,7 +5070,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
                 o.sheetPhys = o.phys; o.phys = num(g(r, C.avail)); o.graph = 0; o.total = o.phys + o.order;
                 o.inv = C.availCost ? num(g(r, C.availCost)) : o.phys * o.rate;
             }
-            o.vPhys = (C.inv || C.availCost) ? o.inv : o.phys * o.rate; o.vGraph = o.graph * o.rate; o.vOrder = o.order * o.rate; o.vTotal = o.total * o.rate;
+            o.vPhys = (C.inv || C.availCost) ? o.inv : o.phys * o.rate; o.vGraph = o.graph * o.rate; o.vOrder = o.order * o.rate; o.vTotal = o.vPhys + o.vGraph + o.vOrder;
             if (K.byUmc[u]) { ['phys', 'graph', 'vmi', 'sc', 'pr', 'po', 'total', 'order', 'vPhys', 'vGraph', 'vOrder', 'vTotal'].forEach(f => K.byUmc[u][f] += o[f]); return; }
             K.byUmc[u] = o; K.stock.push(o);
         });
