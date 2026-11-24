@@ -713,7 +713,7 @@
         </div>
         <div style="text-align:center; margin-top:25px;">
             <button class="btn-slate" onclick="switchRole()"><i class="fas fa-user-shield"></i> Switch Role (Admin / User)</button>
-            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 24-Nov-b</div>
+            <div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">Build 24-Nov-c</div>
         </div>
     </div>
 
@@ -5557,6 +5557,51 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         }).catch(() => alert('Could not load the Excel library. Check the internet connection and try again.'));
     };
 
+    // ---------------- department-wise deficit from planned replacement (24-Nov-2026) ----------------
+    // Per UMC: stock free after keeping safety = max(0, total - safety). Planned belts beyond that = replacement deficit,
+    // shared between departments in proportion to their planned metres of that UMC. Safety gap today is shown on its own row,
+    // so: safety gap today + department deficits = the Safety Stock tab deficit for 3 / 6 / 8 months.
+    window.stkDdU = function (u) { K.ddU = u; render(); };
+    function deptDef() {
+        const H = [['3', K.h.h3], ['6', K.h.h6], ['8', K.h.h8]], D = {}, gap = { m: 0, v: 0, u: 0 };
+        const row = d => D[d] = D[d] || { dept: d, p: {}, m: {}, v: {}, u: {} };
+        K.stock.forEach(x => {
+            const free = Math.max(0, x.total - x.safety), g = Math.max(0, x.safety - x.total);
+            if (g > 0.5) { gap.m += g; gap.v += g * x.rate; gap.u++; }
+            const belts = (K.need[x.umc] || { belts: [] }).belts;
+            H.forEach(([h, end]) => {
+                const by = {}; let plan = 0;
+                belts.forEach(b => { if (b.cbm <= end) { const d = b.dept || '-'; by[d] = (by[d] || 0) + b.len; plan += b.len; } });
+                const short = Math.max(0, plan - free);
+                Object.keys(by).forEach(d => {
+                    const r = row(d), m = plan ? short * by[d] / plan : 0;
+                    r.p[h] = (r.p[h] || 0) + by[d]; r.m[h] = (r.m[h] || 0) + m; r.v[h] = (r.v[h] || 0) + m * x.rate;
+                    if (m > 0.5) { r.u[h] = r.u[h] || new Set(); r.u[h].add(x.umc); }
+                });
+            });
+        });
+        const L = Object.values(D).sort((a, b) => (b.m['8'] || 0) - (a.m['8'] || 0) || (b.p['8'] || 0) - (a.p['8'] || 0));
+        return { L, gap };
+    }
+    function deptDefPanel() {
+        const { L, gap } = deptDef(), hs = ['3', '6', '8'], g = (o, h) => o[h] || 0, n = (r, h) => r.u[h] ? r.u[h].size : 0;
+        const tot = h => K.stock.reduce((a, x) => a + Math.max(0, -x['b' + h]), 0), totV = h => K.stock.reduce((a, x) => a + Math.max(0, -x['b' + h]) * x.rate, 0),   // same as the cards
+            totP = h => L.reduce((a, r) => a + g(r.p, h), 0);
+        const U = K.ddU === 'rs';
+        const cell = (m, v, cls) => m > 0.5 ? `<td class="${cls || 'sbc-r'}"><b>${fm(m)}</b></td><td class="${cls || 'sbc-r'}">${cr(v)}</td>` : '<td>-</td><td>-</td>';
+        return `<div class="glass-panel sbc-panel"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:4px"><h3 style="margin:0;flex:1"><i class="fas fa-industry"></i> Department-wise deficit from planned replacement</h3>
+            <button class="sbc-chip ${U ? '' : 'on'}" onclick="stkDdU('m')">Metres</button><button class="sbc-chip ${U ? 'on' : ''}" onclick="stkDdU('rs')">Rs crore</button></div>
+            <div class="sbc-note" style="margin:0 0 8px">For each UMC the stock left after keeping safety stock is used for the planned belts first; the planned metres it cannot cover are the deficit, shared between departments by their planned metres of that UMC. The safety stock gap that already exists today is shown on its own row, so the total matches the Safety Stock tab.</div>
+            <div class="sbc-chart" style="height:320px"><canvas id="stkChDeptDef"></canvas></div><div class="sbc-tap">Tap a bar to list the belts of that department</div>
+            <div class="sbc-tablewrap" style="margin-top:10px"><table class="sbc-table stk-table"><thead>
+                <tr><th rowspan="2">Department</th>${hs.map(h => `<th colspan="4">Next ${h} months (to ${dstr(K.h['h' + h])})</th>`).join('')}</tr>
+                <tr>${hs.map(() => '<th>Planned (m)</th><th>Deficit (m)</th><th>Deficit (Rs Cr)</th><th>UMCs</th>').join('')}</tr></thead><tbody>
+                ${L.map(r => `<tr class="stk-row" onclick="stkOv('dept:${esc(r.dept)}')"><td style="text-align:left"><b>${esc(r.dept)}</b></td>${hs.map(h => `<td>${g(r.p, h) ? fm(g(r.p, h)) : '-'}</td>${cell(g(r.m, h), g(r.v, h))}<td>${n(r, h) || '-'}</td>`).join('')}</tr>`).join('')}
+                <tr><td style="text-align:left"><i>Safety stock gap today</i><br><small class="stk-sub">total stock already below safety, before any replacement</small></td>${hs.map(() => `<td>-</td>${cell(gap.m, gap.v)}<td>${gap.u}</td>`).join('')}</tr>
+                </tbody><tfoot><tr class="tot"><td>Total</td>${hs.map(h => `<td>${fm(totP(h))}</td><td>${fm(tot(h))}</td><td>${cr(totV(h))}</td><td>${K.stock.filter(x => x['b' + h] < 0).length}</td>`).join('')}</tr></tfoot></table></div>
+            <div class="sbc-note" style="margin:6px 0 0">UMCs in the Total row = UMCs in safety deficit (same as the cards above). One UMC can appear under more than one department.</div></div>`;
+    }
+
     function overview() {
         const T = totals();
         const sh = (L, f) => L.reduce((a, x) => a - x[f], 0), shv = (L, f) => L.reduce((a, x) => a - x[f] * x.rate, 0);
@@ -5578,7 +5623,7 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         <div class="sbc-grid2">
             <div class="glass-panel sbc-panel"><h3><i class="fas fa-layer-group"></i> Stock value by grade (Rs crore)</h3><div class="sbc-chart"><canvas id="stkChGrade"></canvas></div><div class="sbc-tap">Tap a bar to list the UMCs of that grade</div></div>
             <div class="glass-panel sbc-panel"><h3><i class="fas fa-industry"></i> Belts due by department (m)</h3><div class="sbc-chart"><canvas id="stkChDept"></canvas></div><div class="sbc-tap">Tap a bar to list the belts of that department</div></div>
-        </div>`;
+        </div>` + deptDefPanel();
         if (K.ov) { h += ovPanel(); return h; }
         // below-safety list (default bottom table)
         const rows = T.below.slice().sort((a, b) => a.safeGap * a.rate - b.safeGap * b.rate);
@@ -5643,6 +5688,16 @@ LIVE DATA SAMPLE: ${JSON.stringify(contextData)}`;
         const dl = Object.keys(D).filter(d => D[d].some(v => v)).sort((a, b) => D[b].reduce((x, y) => x + y) - D[a].reduce((x, y) => x + y));
         const lab = ['CBM passed', 'Next 3 months', '3-6 months', '6-8 months'], col = [RED, AMB, BLUE, GREY];
         if (el('stkChDept')) K.charts.d = new Chart(el('stkChDept'), { type: 'bar', data: { labels: dl, datasets: lab.map((l, i) => ({ label: l, data: dl.map(d => D[d][i]), backgroundColor: col[i] })) }, options: { responsive: true, maintainAspectRatio: false, onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOv('dept:' + dl[a[0].index] + '|' + a[0].datasetIndex); }, plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { label: x => x.dataset.label + ': ' + fm(x.raw) + ' m' } } }, scales: { x: Object.assign(sc(), { stacked: true, ticks: { color: cssv('--text-muted') || '#8592a6', autoSkip: false, maxRotation: 60, font: { size: 10 } } }), y: Object.assign(sc('metres'), { stacked: true, beginAtZero: true }) } } });
+        // 4. department-wise deficit from planned replacement
+        if (el('stkChDeptDef')) {
+            const { L } = deptDef(), U = K.ddU === 'rs', dd = L.filter(r => ['3', '6', '8'].some(h => (r.m[h] || 0) > 0.5));
+            const val = (r, h) => U ? +((r.v[h] || 0) / 1e7).toFixed(2) : Math.round(r.m[h] || 0);
+            if (!dd.length) el('stkChDeptDef').parentNode.innerHTML = '<div class="sbc-note" style="padding:40px;text-align:center">No department has a deficit from planned replacement in the next 8 months.</div>';
+            else K.charts.dd = new Chart(el('stkChDeptDef'), { type: 'bar', data: { labels: dd.map(r => r.dept), datasets: [['3', '3 months', AMB], ['6', '6 months', '#e8793b'], ['8', '8 months', RED]].map(([h, l, cl]) => ({ label: l, data: dd.map(r => val(r, h)), backgroundColor: cl })) },
+                options: { responsive: true, maintainAspectRatio: false, onHover: (e, a) => { e.native.target.style.cursor = a.length ? 'pointer' : 'default'; }, onClick: (e, a) => { if (a.length) stkOv('dept:' + dd[a[0].index].dept); },
+                    plugins: { legend: { labels: { color: c.tick } }, tooltip: { callbacks: { label: x => { const r = dd[x.dataIndex], h = ['3', '6', '8'][x.datasetIndex]; return ' Deficit ' + x.dataset.label + ': ' + fm(r.m[h] || 0) + ' m, Rs ' + cr(r.v[h] || 0) + ' Cr (planned ' + fm(r.p[h] || 0) + ' m, ' + (r.u[h] ? r.u[h].size : 0) + ' UMCs)'; } } } },
+                    scales: { x: Object.assign(sc(), { ticks: { color: cssv('--text-muted') || '#8592a6', autoSkip: false, maxRotation: 60, font: { size: 10 } } }), y: Object.assign(sc(U ? 'Rs crore' : 'metres'), { beginAtZero: true }) } } });
+        }
     }
 
     // ---------------- UMC stock tab ----------------
